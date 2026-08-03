@@ -49,7 +49,7 @@ Referencie a issue no corpo ou no rodapé: `Closes #12`.
 
 ## Issues
 
-- **Milestones** = as fatias do [Roadmap](docs/ROADMAP.md).
+- **Milestones** = as fatias do projeto (ver os milestones do repositório).
 - **Uma issue por tarefa.** Título curto no imperativo; corpo explica o *porquê*
   e critérios de "pronto".
 
@@ -79,5 +79,6 @@ Pré-requisitos: **Java 21** e **Docker Desktop** ligado.
 
 - Código e comentários em **inglês**; interface em **português**.
 - Pacote-por-feature: cada módulo carrega suas camadas dentro; módulos conversam
-  por services públicos, nunca acessando repository/entity do vizinho. Ver
-  [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+  por services públicos, nunca acessando repository/entity do vizinho. Cada módulo
+  é um pacote top-level sob `com.astra` (`user`, `tracking`, `learning`, `roadmap`,
+  `stats`, `shared`).

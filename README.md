@@ -49,10 +49,10 @@ Para rodar os testes (também usam Docker, via Testcontainers):
 
 ## Documentação
 
-- [Arquitetura](docs/ARCHITECTURE.md) — monólito modular, fronteiras de módulo e schema.
-- [Roadmap](docs/ROADMAP.md) — o que será construído, em ordem, e o mapeamento para milestones/issues.
 - [Como contribuir](CONTRIBUTING.md) — fluxo de branches, commits e issues (para quem forkar).
+- O planejamento é acompanhado pelos **milestones e issues** do repositório.
 
 ## Status
 
-Em desenvolvimento — **Fatia 1 (núcleo: registrar tempo)**. Ver o [Roadmap](docs/ROADMAP.md).
+Em desenvolvimento — **Fatia 1 (núcleo: registrar tempo)**. Ver os
+[milestones e issues](../../milestones) do repositório.
