@@ -5,6 +5,7 @@ import com.astra.tracking.category.Category;
 import com.astra.tracking.category.CategoryRepository;
 import com.astra.tracking.session.dto.CreateSessionRequest;
 import com.astra.tracking.session.dto.SessionResponse;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,14 @@ public class SessionService {
                 request.startedAt(), request.note());
         Session saved = sessionRepository.saveAndFlush(session);
         return toResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResponse> listForCurrentUser() {
+        UUID userId = currentUserProvider.currentUserId();
+        return sessionRepository.findByUserId(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private SessionResponse toResponse(Session session) {
