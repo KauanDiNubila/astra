@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:17'
+    environment:
+      - 'POSTGRES_DB=astra'
+      - 'POSTGRES_USER=astra'
+      - 'POSTGRES_PASSWORD=astra'
+    ports:
+      - '5432:5432'
