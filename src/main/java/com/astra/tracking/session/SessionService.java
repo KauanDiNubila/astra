@@ -1,16 +1,15 @@
 package com.astra.tracking.session;
 
 import com.astra.shared.CurrentUserProvider;
+import com.astra.shared.exception.NotFoundException;
 import com.astra.tracking.category.Category;
 import com.astra.tracking.category.CategoryRepository;
 import com.astra.tracking.session.dto.CreateSessionRequest;
 import com.astra.tracking.session.dto.SessionResponse;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class SessionService {
@@ -32,7 +31,7 @@ public class SessionService {
         UUID userId = currentUserProvider.currentUserId();
         Category category = categoryRepository.findById(request.categoryId())
                 .filter(c -> c.getUserId().equals(userId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found"));
 
         Session session = new Session(userId, category, request.focusedMinutes(),
                 request.startedAt(), request.note());
