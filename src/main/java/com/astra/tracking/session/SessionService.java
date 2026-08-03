@@ -37,18 +37,18 @@ public class SessionService {
         Session session = new Session(userId, category, request.focusedMinutes(),
                 request.startedAt(), request.note());
         Session saved = sessionRepository.saveAndFlush(session);
-        return toResponse(saved);
+        return toDto(saved);
     }
 
     @Transactional(readOnly = true)
     public List<SessionResponse> listForCurrentUser() {
         UUID userId = currentUserProvider.currentUserId();
         return sessionRepository.findByUserId(userId).stream()
-                .map(this::toResponse)
+                .map(this::toDto)
                 .toList();
     }
 
-    private SessionResponse toResponse(Session session) {
+    private SessionResponse toDto(Session session) {
         return new SessionResponse(
                 session.getId(),
                 session.getCategory().getId(),
