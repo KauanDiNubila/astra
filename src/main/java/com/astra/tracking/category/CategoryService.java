@@ -25,18 +25,18 @@ public class CategoryService {
         UUID userId = currentUserProvider.currentUserId();
         Category category = new Category(userId, request.name(), request.color());
         Category saved = categoryRepository.save(category);
-        return toResponse(saved);
+        return toDto(saved);
     }
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> listForCurrentUser() {
         UUID userId = currentUserProvider.currentUserId();
         return categoryRepository.findByUserId(userId).stream()
-                .map(this::toResponse)
+                .map(this::toDto)
                 .toList();
     }
 
-    private CategoryResponse toResponse(Category category) {
+    private CategoryResponse toDto(Category category) {
         return new CategoryResponse(category.getId(), category.getName(), category.getColor());
     }
 }
