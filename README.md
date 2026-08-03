@@ -39,7 +39,7 @@ automaticamente e conecta a aplicação — não é preciso configurar datasourc
 
 - API: `http://localhost:8080`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
-- Banco (dev): `localhost:5432`, db/user/senha `astra`
+- Banco (dev): `localhost:5433`, db/user/senha `astra`
 
 Para rodar os testes (também usam Docker, via Testcontainers):
 
