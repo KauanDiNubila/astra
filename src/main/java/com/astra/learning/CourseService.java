@@ -74,6 +74,11 @@ public class CourseService {
         return new ModuleResponse(saved.getId(), saved.getTitle(), saved.getPosition(), saved.isCompleted());
     }
 
+    @Transactional(readOnly = true)
+    public boolean existsForUser(UUID courseId, UUID userId) {
+        return courseRepository.existsByIdAndUserId(courseId, userId);
+    }
+
     private Course ownedCourse(UUID courseId) {
         UUID userId = currentUserProvider.currentUserId();
         return courseRepository.findByIdAndUserId(courseId, userId)

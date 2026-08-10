@@ -36,6 +36,9 @@ public class Session {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @Column(name = "course_id")
+    private UUID courseId;
+
     @Column(name = "focused_minutes", nullable = false)
     private int focusedMinutes;
 
@@ -49,9 +52,11 @@ public class Session {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    public Session(UUID userId, Category category, int focusedMinutes, OffsetDateTime startedAt, String note) {
+    public Session(UUID userId, Category category, UUID courseId, int focusedMinutes,
+                   OffsetDateTime startedAt, String note) {
         this.userId = userId;
         this.category = category;
+        this.courseId = courseId;
         this.focusedMinutes = focusedMinutes;
         this.startedAt = startedAt;
         this.note = note;
