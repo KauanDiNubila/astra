@@ -1,0 +1,59 @@
+package com.astra.learning;
+
+import com.astra.learning.dto.CourseDetailResponse;
+import com.astra.learning.dto.CourseResponse;
+import com.astra.learning.dto.CreateCourseRequest;
+import com.astra.learning.dto.CreateModuleRequest;
+import com.astra.learning.dto.ModuleResponse;
+import com.astra.learning.dto.UpdateModuleRequest;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/courses")
+public class CourseController {
+
+    private final CourseService courseService;
+
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public CourseResponse create(@Valid @RequestBody CreateCourseRequest request) {
+        return courseService.create(request);
+    }
+
+    @GetMapping
+    public List<CourseResponse> list() {
+        return courseService.list();
+    }
+
+    @GetMapping("/{id}")
+    public CourseDetailResponse get(@PathVariable UUID id) {
+        return courseService.get(id);
+    }
+
+    @PostMapping("/{id}/modules")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ModuleResponse addModule(@PathVariable UUID id, @Valid @RequestBody CreateModuleRequest request) {
+        return courseService.addModule(id, request);
+    }
+
+    @PatchMapping("/{courseId}/modules/{moduleId}")
+    public ModuleResponse updateModule(@PathVariable UUID courseId, @PathVariable UUID moduleId,
+                                       @Valid @RequestBody UpdateModuleRequest request) {
+        return courseService.setModuleCompleted(courseId, moduleId, request.completed());
+    }
+}
