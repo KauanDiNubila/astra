@@ -1,12 +1,12 @@
 package com.astra.stats;
 
 import com.astra.stats.dto.DashboardResponse;
+import com.astra.tracking.session.DailyMinutes;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/dashboard")
 public class StatsController {
 
     private final StatsService statsService;
@@ -15,8 +15,13 @@ public class StatsController {
         this.statsService = statsService;
     }
 
-    @GetMapping
+    @GetMapping("/dashboard")
     public DashboardResponse dashboard() {
         return statsService.dashboard();
+    }
+
+    @GetMapping("/heatmap")
+    public List<DailyMinutes> heatmap() {
+        return statsService.heatmap();
     }
 }
