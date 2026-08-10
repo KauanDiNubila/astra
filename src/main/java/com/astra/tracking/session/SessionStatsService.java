@@ -1,6 +1,7 @@
 package com.astra.tracking.session;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,5 +23,12 @@ public class SessionStatsService {
     @Transactional(readOnly = true)
     public long focusedMinutesSince(UUID userId, OffsetDateTime start) {
         return sessionRepository.sumFocusedMinutesSince(userId, start);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DailyMinutes> dailyMinutesSince(UUID userId, OffsetDateTime start) {
+        return sessionRepository.dailyMinutesSince(userId, start).stream()
+                .map(v -> new DailyMinutes(v.getDay(), v.getMinutes()))
+                .toList();
     }
 }
