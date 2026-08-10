@@ -79,6 +79,11 @@ public class CourseService {
         return courseRepository.existsByIdAndUserId(courseId, userId);
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> courseIdsForUser(UUID userId) {
+        return courseRepository.findIdsByUserId(userId);
+    }
+
     private Course ownedCourse(UUID courseId) {
         UUID userId = currentUserProvider.currentUserId();
         return courseRepository.findByIdAndUserId(courseId, userId)
