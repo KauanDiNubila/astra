@@ -1,5 +1,6 @@
 package com.astra.user;
 
+import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.UnauthorizedException;
 import com.astra.shared.security.JwtService;
@@ -20,11 +21,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final CurrentUserProvider currentUserProvider;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       JwtService jwtService, CurrentUserProvider currentUserProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Transactional
@@ -34,7 +38,7 @@ public class UserService {
         }
         User user = new User(request.name(), request.email(), passwordEncoder.encode(request.password()));
         User saved = userRepository.save(user);
-        return new UserResponse(saved.getId(), saved.getName(), saved.getEmail());
+        return toDto(saved);
     }
 
     @Transactional(readOnly = true)
@@ -48,8 +52,20 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public UserResponse me() {
+        UUID userId = currentUserProvider.currentUserId();
+        return userRepository.findById(userId)
+                .map(this::toDto)
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+    }
+
+    @Transactional(readOnly = true)
     public Map<UUID, String> namesByIds(Collection<UUID> ids) {
         return userRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
+    }
+
+    private UserResponse toDto(User user) {
+        return new UserResponse(user.getId(), user.getName(), user.getEmail());
     }
 }
