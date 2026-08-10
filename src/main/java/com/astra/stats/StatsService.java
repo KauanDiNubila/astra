@@ -1,7 +1,10 @@
 package com.astra.stats;
 
+import com.astra.learning.GoalService;
+import com.astra.learning.GoalType;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.stats.dto.DashboardResponse;
+import com.astra.stats.dto.GoalProgress;
 import com.astra.tracking.session.DailyMinutes;
 import com.astra.tracking.session.SessionStatsService;
 import java.time.DayOfWeek;
@@ -22,10 +25,13 @@ public class StatsService {
     private static final int HEATMAP_DAYS = 365;
 
     private final SessionStatsService sessionStatsService;
+    private final GoalService goalService;
     private final CurrentUserProvider currentUserProvider;
 
-    public StatsService(SessionStatsService sessionStatsService, CurrentUserProvider currentUserProvider) {
+    public StatsService(SessionStatsService sessionStatsService, GoalService goalService,
+                        CurrentUserProvider currentUserProvider) {
         this.sessionStatsService = sessionStatsService;
+        this.goalService = goalService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -41,8 +47,9 @@ public class StatsService {
         long weekMinutes = sessionStatsService.focusedMinutesSince(userId, startOfWeek);
         long totalMinutes = sessionStatsService.totalFocusedMinutes(userId);
         int streak = currentStreak(sessionStatsService.dailyMinutesSince(userId, streakWindow), today);
+        List<GoalProgress> goals = goalProgress(userId, todayMinutes, weekMinutes);
 
-        return new DashboardResponse(todayMinutes, weekMinutes, totalMinutes, streak);
+        return new DashboardResponse(todayMinutes, weekMinutes, totalMinutes, streak, goals);
     }
 
     public List<DailyMinutes> heatmap() {
@@ -50,6 +57,17 @@ public class StatsService {
         LocalDate today = LocalDate.now(ZONE);
         OffsetDateTime start = today.minusDays(HEATMAP_DAYS).atStartOfDay(ZONE).toOffsetDateTime();
         return sessionStatsService.dailyMinutesSince(userId, start);
+    }
+
+    private List<GoalProgress> goalProgress(UUID userId, long todayMinutes, long weekMinutes) {
+        return goalService.goalsForUser(userId).stream()
+                .map(g -> {
+                    long achievedMinutes = g.type() == GoalType.DAILY ? todayMinutes : weekMinutes;
+                    double achievedHours = achievedMinutes / 60.0;
+                    boolean reached = achievedHours >= g.targetHours();
+                    return new GoalProgress(g.type(), g.targetHours(), achievedHours, reached);
+                })
+                .toList();
     }
 
     private int currentStreak(List<DailyMinutes> days, LocalDate today) {
