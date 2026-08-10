@@ -1,5 +1,6 @@
 package com.astra.tracking.session;
 
+import com.astra.learning.CourseService;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.tracking.category.Category;
@@ -16,13 +17,14 @@ public class SessionService {
 
     private final SessionRepository sessionRepository;
     private final CategoryRepository categoryRepository;
+    private final CourseService courseService;
     private final CurrentUserProvider currentUserProvider;
 
-    public SessionService(SessionRepository sessionRepository,
-                          CategoryRepository categoryRepository,
-                          CurrentUserProvider currentUserProvider) {
+    public SessionService(SessionRepository sessionRepository, CategoryRepository categoryRepository,
+                          CourseService courseService, CurrentUserProvider currentUserProvider) {
         this.sessionRepository = sessionRepository;
         this.categoryRepository = categoryRepository;
+        this.courseService = courseService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -33,7 +35,12 @@ public class SessionService {
                 .filter(c -> c.getUserId().equals(userId))
                 .orElseThrow(() -> new NotFoundException("Category not found"));
 
-        Session session = new Session(userId, category, request.focusedMinutes(),
+        UUID courseId = request.courseId();
+        if (courseId != null && !courseService.existsForUser(courseId, userId)) {
+            throw new NotFoundException("Course not found");
+        }
+
+        Session session = new Session(userId, category, courseId, request.focusedMinutes(),
                 request.startedAt(), request.note());
         Session saved = sessionRepository.saveAndFlush(session);
         return toDto(saved);
@@ -51,6 +58,7 @@ public class SessionService {
         return new SessionResponse(
                 session.getId(),
                 session.getCategory().getId(),
+                session.getCourseId(),
                 session.getFocusedMinutes(),
                 session.getStartedAt(),
                 session.getNote(),

@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record CreateSessionRequest(
         @NotNull UUID categoryId,
+        UUID courseId,
         @NotNull @Positive Integer focusedMinutes,
         @NotNull OffsetDateTime startedAt,
         @Size(max = 500) String note
