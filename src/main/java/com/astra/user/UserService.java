@@ -6,6 +6,10 @@ import com.astra.shared.security.JwtService;
 import com.astra.user.dto.LoginRequest;
 import com.astra.user.dto.RegisterRequest;
 import com.astra.user.dto.UserResponse;
+import java.util.Collection;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,5 +45,11 @@ public class UserService {
             throw new UnauthorizedException("Invalid credentials");
         }
         return jwtService.generateToken(user.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, String> namesByIds(Collection<UUID> ids) {
+        return userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
     }
 }

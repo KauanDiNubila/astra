@@ -18,6 +18,15 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
     @Query("select coalesce(sum(s.focusedMinutes), 0) from Session s where s.userId = :userId and s.startedAt >= :start")
     long sumFocusedMinutesSince(@Param("userId") UUID userId, @Param("start") OffsetDateTime start);
 
+    @Query("""
+            select new com.astra.tracking.session.UserMinutes(s.userId, sum(s.focusedMinutes))
+            from Session s
+            where s.startedAt >= :start
+            group by s.userId
+            order by sum(s.focusedMinutes) desc
+            """)
+    List<UserMinutes> rankingSince(@Param("start") OffsetDateTime start);
+
     @Query(value = """
             select (s.started_at at time zone 'America/Sao_Paulo')::date as day,
                    sum(s.focused_minutes) as minutes

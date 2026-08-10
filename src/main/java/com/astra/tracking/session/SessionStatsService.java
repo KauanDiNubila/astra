@@ -31,4 +31,9 @@ public class SessionStatsService {
                 .map(v -> new DailyMinutes(v.getDay(), v.getMinutes()))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<UserMinutes> rankingSince(OffsetDateTime start) {
+        return sessionRepository.rankingSince(start);
+    }
 }
