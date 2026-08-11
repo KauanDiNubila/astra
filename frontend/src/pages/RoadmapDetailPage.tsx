@@ -6,7 +6,6 @@ import type { CourseSummary, Pin, RoadmapDetail } from "@/lib/types"
 import { RoadmapDiagram } from "@/components/RoadmapDiagram"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -81,16 +80,12 @@ export function RoadmapDetailPage() {
         {roadmap.predefined && <Badge variant="secondary">Pre-definido</Badge>}
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <RoadmapDiagram
-            steps={roadmap.steps}
-            pinsByStep={pinsByStep}
-            courses={courses}
-            onPinned={loadRoadmap}
-          />
-        </CardContent>
-      </Card>
+      <RoadmapDiagram
+        steps={roadmap.steps}
+        pinsByStep={pinsByStep}
+        courses={courses}
+        onPinned={loadRoadmap}
+      />
 
       {!roadmap.predefined && (
         <form onSubmit={addStep} className="flex flex-wrap gap-2">
