@@ -1,0 +1,133 @@
+import type { PomodoroSettings } from "@/lib/pomodoroSettings"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+
+type Props = {
+  settings: PomodoroSettings
+  onChange: (settings: PomodoroSettings) => void
+}
+
+function range(start: number, end: number, step: number) {
+  const values: number[] = []
+  for (let n = start; n <= end; n += step) values.push(n)
+  return values
+}
+
+const FOCUS_MINUTE_OPTIONS = range(5, 90, 5)
+const BREAK_MINUTE_OPTIONS = range(5, 30, 5)
+const POMODORO_COUNT_OPTIONS = [2, 3, 4, 5, 6, 8]
+
+function SettingSelect({
+  label,
+  value,
+  options,
+  formatOption,
+  onChange,
+}: {
+  label: string
+  value: number
+  options: number[]
+  formatOption: (n: number) => string
+  onChange: (value: number) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>{label}</Label>
+      <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((n) => (
+            <SelectItem key={n} value={String(n)}>
+              {formatOption(n)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function SettingToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <Label className="font-normal">{label}</Label>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  )
+}
+
+export function PomodoroSettingsPanel({ settings, onChange }: Props) {
+  function update<K extends keyof PomodoroSettings>(key: K, value: PomodoroSettings[K]) {
+    onChange({ ...settings, [key]: value })
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SettingSelect
+          label="Duracao do pomodoro"
+          value={settings.focusMinutes}
+          options={FOCUS_MINUTE_OPTIONS}
+          formatOption={(n) => `${n}min`}
+          onChange={(v) => update("focusMinutes", v)}
+        />
+        <SettingSelect
+          label="Duracao da pausa curta"
+          value={settings.shortBreakMinutes}
+          options={BREAK_MINUTE_OPTIONS}
+          formatOption={(n) => `${n}min`}
+          onChange={(v) => update("shortBreakMinutes", v)}
+        />
+        <SettingSelect
+          label="Duracao da pausa longa"
+          value={settings.longBreakMinutes}
+          options={BREAK_MINUTE_OPTIONS}
+          formatOption={(n) => `${n}min`}
+          onChange={(v) => update("longBreakMinutes", v)}
+        />
+        <SettingSelect
+          label="Pomodoros ate pausa longa"
+          value={settings.pomodorosUntilLongBreak}
+          options={POMODORO_COUNT_OPTIONS}
+          formatOption={(n) => `${n} Pomodoro${n === 1 ? "" : "s"}`}
+          onChange={(v) => update("pomodorosUntilLongBreak", v)}
+        />
+      </div>
+
+      <div className="flex flex-col divide-y rounded-lg border">
+        <SettingToggle
+          label="Iniciar proximo pomodoro automaticamente"
+          checked={settings.autoStartNextPomodoro}
+          onChange={(v) => update("autoStartNextPomodoro", v)}
+        />
+        <SettingToggle
+          label="Iniciar pausa automaticamente"
+          checked={settings.autoStartBreak}
+          onChange={(v) => update("autoStartBreak", v)}
+        />
+        <SettingToggle
+          label="Desabilitar pausas"
+          checked={settings.disableBreaks}
+          onChange={(v) => update("disableBreaks", v)}
+        />
+      </div>
+    </div>
+  )
+}
