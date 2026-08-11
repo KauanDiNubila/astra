@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
-import { Pencil, Settings, Timer } from "lucide-react"
+import { Pencil, Timer } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
-import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, Session } from "@/lib/types"
-import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,14 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type RegisterMode = "pomodoro" | "manual" | "settings"
+type RegisterMode = "pomodoro" | "manual"
 
 export function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
-  const [pomodoroSettings, setPomodoroSettings] = useState(loadPomodoroSettings)
 
   const [categoryId, setCategoryId] = useState("")
   const [minutes, setMinutes] = useState("")
@@ -48,10 +45,6 @@ export function SessionsPage() {
   useEffect(() => {
     Promise.all([loadSessions(), loadCategories()]).finally(() => setLoading(false))
   }, [])
-
-  useEffect(() => {
-    savePomodoroSettings(pomodoroSettings)
-  }, [pomodoroSettings])
 
   async function createCategory() {
     const name = newCategory.trim()
@@ -124,27 +117,16 @@ export function SessionsPage() {
               <Pencil className="size-3.5" />
               Manual
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={registerMode === "settings" ? "default" : "ghost"}
-              className="h-7 gap-1.5 px-2"
-              onClick={() => setRegisterMode("settings")}
-            >
-              <Settings className="size-3.5" />
-              Configuracoes
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
           {registerMode === "pomodoro" ? (
             <PomodoroTimer
-              settings={pomodoroSettings}
               categories={categories}
               onCategoryCreated={loadCategories}
               onSessionSaved={loadSessions}
             />
-          ) : registerMode === "manual" ? (
+          ) : (
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Categoria</Label>
@@ -208,8 +190,6 @@ export function SessionsPage() {
                 {saving ? "Salvando..." : "Registrar"}
               </Button>
             </form>
-          ) : (
-            <PomodoroSettingsPanel settings={pomodoroSettings} onChange={setPomodoroSettings} />
           )}
         </CardContent>
       </Card>

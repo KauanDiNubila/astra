@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
+import { ArrowLeft, Settings as SettingsIcon } from "lucide-react"
 import { api } from "@/lib/api"
-import type { PomodoroSettings } from "@/lib/pomodoroSettings"
+import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category } from "@/lib/types"
+import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/select"
 
 type Mode = "focus" | "break"
+type View = "timer" | "settings"
 
 function formatClock(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0")
@@ -25,18 +28,19 @@ function formatClock(totalSeconds: number) {
 }
 
 type Props = {
-  settings: PomodoroSettings
   categories: Category[]
   onCategoryCreated: () => Promise<void>
   onSessionSaved: () => Promise<void>
 }
 
-export function PomodoroTimer({
-  settings,
-  categories,
-  onCategoryCreated,
-  onSessionSaved,
-}: Props) {
+export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }: Props) {
+  const [settings, setSettings] = useState(loadPomodoroSettings)
+  const [view, setView] = useState<View>("timer")
+
+  useEffect(() => {
+    savePomodoroSettings(settings)
+  }, [settings])
+
   const [mode, setMode] = useState<Mode>("focus")
   const [isLongBreak, setIsLongBreak] = useState(false)
   const [timeLeft, setTimeLeft] = useState(settings.focusMinutes * 60)
@@ -156,9 +160,41 @@ export function PomodoroTimer({
     }
   }
 
+  if (view === "settings") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-medium">Configuracoes do pomodoro</h3>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setView("timer")}
+          >
+            <ArrowLeft className="size-3.5" />
+            Voltar
+          </Button>
+        </div>
+        <PomodoroSettingsPanel settings={settings} onChange={setSettings} />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-3 rounded-lg border bg-muted/20 py-8">
+      <div className="relative flex flex-col items-center gap-3 rounded-lg border bg-muted/20 py-8">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-3 top-3 size-8"
+          title="Configuracoes do pomodoro"
+          onClick={() => setView("settings")}
+        >
+          <SettingsIcon className="size-4" />
+        </Button>
+
         <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
         <span className="font-mono text-5xl font-semibold tabular-nums">
           {formatClock(timeLeft)}
