@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { api } from "@/lib/api"
+import type { PomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,9 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const FOCUS_SECONDS = 25 * 60
-const BREAK_SECONDS = 5 * 60
-
 type Mode = "focus" | "break"
 
 function formatClock(totalSeconds: number) {
@@ -27,17 +25,25 @@ function formatClock(totalSeconds: number) {
 }
 
 type Props = {
+  settings: PomodoroSettings
   categories: Category[]
   onCategoryCreated: () => Promise<void>
   onSessionSaved: () => Promise<void>
 }
 
-export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }: Props) {
+export function PomodoroTimer({
+  settings,
+  categories,
+  onCategoryCreated,
+  onSessionSaved,
+}: Props) {
   const [mode, setMode] = useState<Mode>("focus")
-  const [timeLeft, setTimeLeft] = useState(FOCUS_SECONDS)
+  const [isLongBreak, setIsLongBreak] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(settings.focusMinutes * 60)
   const [running, setRunning] = useState(false)
   const [focusedSeconds, setFocusedSeconds] = useState(0)
-  const [cycles, setCycles] = useState(0)
+  const [completedPomodoros, setCompletedPomodoros] = useState(0)
+  const completedRef = useRef(0)
   const startedAtRef = useRef<string | null>(null)
 
   const [categoryId, setCategoryId] = useState("")
@@ -54,18 +60,32 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
           if (mode === "focus") setFocusedSeconds((s) => s + 1)
           return prev - 1
         }
+
         if (mode === "focus") {
           setFocusedSeconds((s) => s + 1)
+          completedRef.current += 1
+          setCompletedPomodoros(completedRef.current)
+
+          if (settings.disableBreaks) {
+            return settings.focusMinutes * 60
+          }
+
+          const longBreak =
+            settings.pomodorosUntilLongBreak > 0 &&
+            completedRef.current % settings.pomodorosUntilLongBreak === 0
+          setIsLongBreak(longBreak)
           setMode("break")
-          return BREAK_SECONDS
+          if (!settings.autoStartBreak) setRunning(false)
+          return (longBreak ? settings.longBreakMinutes : settings.shortBreakMinutes) * 60
         }
+
         setMode("focus")
-        setCycles((c) => c + 1)
-        return FOCUS_SECONDS
+        if (!settings.autoStartNextPomodoro) setRunning(false)
+        return settings.focusMinutes * 60
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [running, mode])
+  }, [running, mode, settings])
 
   function toggleRunning() {
     if (!running && !startedAtRef.current) {
@@ -74,17 +94,24 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
     setRunning((r) => !r)
   }
 
+  function currentModeSeconds() {
+    if (mode === "focus") return settings.focusMinutes * 60
+    return (isLongBreak ? settings.longBreakMinutes : settings.shortBreakMinutes) * 60
+  }
+
   function resetCycle() {
     setRunning(false)
-    setTimeLeft(mode === "focus" ? FOCUS_SECONDS : BREAK_SECONDS)
+    setTimeLeft(currentModeSeconds())
   }
 
   function discard() {
     setRunning(false)
     setMode("focus")
-    setTimeLeft(FOCUS_SECONDS)
+    setIsLongBreak(false)
+    setTimeLeft(settings.focusMinutes * 60)
     setFocusedSeconds(0)
-    setCycles(0)
+    completedRef.current = 0
+    setCompletedPomodoros(0)
     startedAtRef.current = null
   }
 
@@ -98,6 +125,7 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
   }
 
   const focusedMinutes = Math.floor(focusedSeconds / 60)
+  const modeLabel = mode === "focus" ? "Foco" : isLongBreak ? "Pausa longa" : "Pausa"
 
   async function saveSession(event: FormEvent) {
     event.preventDefault()
@@ -131,9 +159,7 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-3 rounded-lg border bg-muted/20 py-8">
-        <Badge variant={mode === "focus" ? "default" : "secondary"}>
-          {mode === "focus" ? "Foco" : "Pausa"}
-        </Badge>
+        <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
         <span className="font-mono text-5xl font-semibold tabular-nums">
           {formatClock(timeLeft)}
         </span>
@@ -150,7 +176,11 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
         </div>
         <p className="text-sm text-muted-foreground">
           {focusedMinutes} min focados
-          {cycles > 0 ? ` · ${cycles} ciclo(s) completo(s)` : ""}
+          {completedPomodoros > 0 && !settings.disableBreaks
+            ? ` · ${completedPomodoros % settings.pomodorosUntilLongBreak || settings.pomodorosUntilLongBreak}/${settings.pomodorosUntilLongBreak} ate pausa longa`
+            : completedPomodoros > 0
+              ? ` · ${completedPomodoros} pomodoro(s) completo(s)`
+              : ""}
         </p>
       </div>
 
