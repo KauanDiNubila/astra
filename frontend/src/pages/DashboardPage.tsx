@@ -1,0 +1,78 @@
+import { useEffect, useState } from "react"
+import { Check, X } from "lucide-react"
+import { api } from "@/lib/api"
+import { formatMinutes } from "@/lib/format"
+import type { Dashboard } from "@/lib/types"
+import { StatCard } from "@/components/StatCard"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
+export function DashboardPage() {
+  const [data, setData] = useState<Dashboard | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    api
+      .get<Dashboard>("/dashboard")
+      .then((res) => setData(res.data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <p className="text-muted-foreground">Carregando...</p>
+  }
+
+  if (error || !data) {
+    return <p className="text-destructive">Nao foi possivel carregar o dashboard.</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
+      <h1 className="text-2xl font-semibold">Dashboard</h1>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Hoje" value={formatMinutes(data.todayMinutes)} />
+        <StatCard label="Esta semana" value={formatMinutes(data.weekMinutes)} />
+        <StatCard label="Total" value={formatMinutes(data.totalMinutes)} />
+        <StatCard label="Streak" value={`${data.currentStreak} dia(s)`} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Metas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.goals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Voce ainda nao definiu metas.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {data.goals.map((goal) => (
+                <li key={goal.type} className="flex items-center justify-between">
+                  <span className="text-sm">
+                    Meta {goal.type === "DAILY" ? "diaria" : "semanal"}:{" "}
+                    <span className="font-medium">
+                      {goal.achievedHours.toFixed(1)}h
+                    </span>{" "}
+                    / {goal.targetHours}h
+                  </span>
+                  {goal.reached ? (
+                    <span className="flex items-center gap-1 text-sm text-green-600">
+                      <Check className="size-4" /> Batida
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <X className="size-4" /> Em andamento
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
