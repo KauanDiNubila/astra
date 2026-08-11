@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button"
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
 
+const links = [
+  { to: "/", label: "Dashboard", end: true },
+  { to: "/sessions", label: "Sessoes", end: false },
+  { to: "/courses", label: "Cursos", end: false },
+  { to: "/roadmaps", label: "Roadmaps", end: false },
+  { to: "/ranking", label: "Ranking", end: false },
+]
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
@@ -21,16 +29,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
             <span className="text-lg font-semibold">Astra</span>
             <nav className="flex items-center gap-4 text-sm">
-              <NavLink to="/" end className={navClass}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/sessions" className={navClass}>
-                Sessoes
-              </NavLink>
+              {links.map((link) => (
+                <NavLink key={link.to} to={link.to} end={link.end} className={navClass}>
+                  {link.label}
+                </NavLink>
+              ))}
             </nav>
           </div>
           <div className="flex items-center gap-3">
