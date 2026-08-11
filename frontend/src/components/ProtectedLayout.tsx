@@ -1,8 +1,8 @@
-import type { ReactNode } from "react"
-import { Navigate } from "react-router-dom"
+import { Navigate, Outlet } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
+import { AppLayout } from "@/components/AppLayout"
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+export function ProtectedLayout() {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -17,5 +17,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>
+  return (
+    <AppLayout>
+      <Outlet />
+    </AppLayout>
+  )
 }
