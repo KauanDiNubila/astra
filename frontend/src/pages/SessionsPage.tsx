@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
+import { Pencil, Timer } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
 import type { Category, Session } from "@/lib/types"
+import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,10 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+type RegisterMode = "manual" | "pomodoro"
+
 export function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [registerMode, setRegisterMode] = useState<RegisterMode>("manual")
 
   const [categoryId, setCategoryId] = useState("")
   const [minutes, setMinutes] = useState("")
@@ -89,73 +94,103 @@ export function SessionsPage() {
       <h1 className="text-2xl font-semibold">Sessoes</h1>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle>Registrar sessao</CardTitle>
+          <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={registerMode === "manual" ? "default" : "ghost"}
+              className="h-7 gap-1.5 px-2"
+              onClick={() => setRegisterMode("manual")}
+            >
+              <Pencil className="size-3.5" />
+              Manual
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={registerMode === "pomodoro" ? "default" : "ghost"}
+              className="h-7 gap-1.5 px-2"
+              onClick={() => setRegisterMode("pomodoro")}
+            >
+              <Timer className="size-3.5" />
+              Pomodoro
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label>Categoria</Label>
-              {categories.length > 0 && (
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nova categoria"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                />
-                <Button type="button" variant="outline" onClick={createCategory}>
-                  Criar
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
+          {registerMode === "manual" ? (
+            <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="minutes">Minutos focados</Label>
-                <Input
-                  id="minutes"
-                  type="number"
-                  min={1}
-                  value={minutes}
-                  onChange={(e) => setMinutes(e.target.value)}
-                  required
-                />
+                <Label>Categoria</Label>
+                {categories.length > 0 && (
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nova categoria"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  />
+                  <Button type="button" variant="outline" onClick={createCategory}>
+                    Criar
+                  </Button>
+                </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="minutes">Minutos focados</Label>
+                  <Input
+                    id="minutes"
+                    type="number"
+                    min={1}
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="startedAt">Quando</Label>
+                  <Input
+                    id="startedAt"
+                    type="datetime-local"
+                    value={startedAt}
+                    onChange={(e) => setStartedAt(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="flex flex-col gap-2">
-                <Label htmlFor="startedAt">Quando</Label>
-                <Input
-                  id="startedAt"
-                  type="datetime-local"
-                  value={startedAt}
-                  onChange={(e) => setStartedAt(e.target.value)}
-                  required
-                />
+                <Label htmlFor="note">Nota (opcional)</Label>
+                <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} />
               </div>
-            </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="note">Nota (opcional)</Label>
-              <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} />
-            </div>
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={saving}>
-              {saving ? "Salvando..." : "Registrar"}
-            </Button>
-          </form>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={saving}>
+                {saving ? "Salvando..." : "Registrar"}
+              </Button>
+            </form>
+          ) : (
+            <PomodoroTimer
+              categories={categories}
+              onCategoryCreated={loadCategories}
+              onSessionSaved={loadSessions}
+            />
+          )}
         </CardContent>
       </Card>
 
