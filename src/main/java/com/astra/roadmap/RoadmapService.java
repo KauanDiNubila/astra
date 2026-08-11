@@ -45,7 +45,7 @@ public class RoadmapService {
     public RoadmapDetailResponse get(UUID roadmapId) {
         Roadmap roadmap = accessibleRoadmap(roadmapId);
         List<StepResponse> steps = stepRepository.findByRoadmapIdOrderByPosition(roadmapId).stream()
-                .map(s -> new StepResponse(s.getId(), s.getTitle(), s.getPosition()))
+                .map(s -> new StepResponse(s.getId(), s.getTitle(), s.getPosition(), s.getParentStepId()))
                 .toList();
         return new RoadmapDetailResponse(roadmap.getId(), roadmap.getTitle(), roadmap.getSource(),
                 roadmap.getOwnerId() == null, steps);
@@ -54,9 +54,17 @@ public class RoadmapService {
     @Transactional
     public StepResponse addStep(UUID roadmapId, CreateStepRequest request) {
         Roadmap roadmap = ownedRoadmap(roadmapId);
-        RoadmapStep step = new RoadmapStep(roadmap, request.title(), request.position());
+        UUID parentStepId = request.parentStepId();
+        if (parentStepId != null) {
+            RoadmapStep parent = stepRepository.findById(parentStepId)
+                    .orElseThrow(() -> new NotFoundException("Parent step not found"));
+            if (!parent.getRoadmap().getId().equals(roadmapId)) {
+                throw new NotFoundException("Parent step not found");
+            }
+        }
+        RoadmapStep step = new RoadmapStep(roadmap, request.title(), request.position(), parentStepId);
         RoadmapStep saved = stepRepository.save(step);
-        return new StepResponse(saved.getId(), saved.getTitle(), saved.getPosition());
+        return new StepResponse(saved.getId(), saved.getTitle(), saved.getPosition(), saved.getParentStepId());
     }
 
     private Roadmap accessibleRoadmap(UUID roadmapId) {

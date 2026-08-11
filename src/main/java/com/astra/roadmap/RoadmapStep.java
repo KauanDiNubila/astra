@@ -36,9 +36,19 @@ public class RoadmapStep {
     @Column(nullable = false)
     private int position;
 
+    @Column(name = "parent_step_id")
+    private UUID parentStepId;
+
     public RoadmapStep(Roadmap roadmap, String title, int position) {
         this.roadmap = roadmap;
         this.title = title;
         this.position = position;
+    }
+
+    public RoadmapStep(Roadmap roadmap, String title, int position, UUID parentStepId) {
+        this.roadmap = roadmap;
+        this.title = title;
+        this.position = position;
+        this.parentStepId = parentStepId;
     }
 }

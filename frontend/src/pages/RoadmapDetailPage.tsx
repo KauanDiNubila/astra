@@ -3,9 +3,10 @@ import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseSummary, Pin, RoadmapDetail } from "@/lib/types"
+import { RoadmapDiagram } from "@/components/RoadmapDiagram"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -15,72 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-function PinForm({
-  stepId,
-  courses,
-  onPinned,
-}: {
-  stepId: string
-  courses: CourseSummary[]
-  onPinned: () => Promise<void>
-}) {
-  const [courseId, setCourseId] = useState("")
-  const [rating, setRating] = useState("")
-  const [saving, setSaving] = useState(false)
-
-  async function pin() {
-    if (!courseId) return
-    setSaving(true)
-    try {
-      await api.post(`/steps/${stepId}/pins`, {
-        courseId,
-        rating: rating ? Number(rating) : null,
-        status: null,
-      })
-      setCourseId("")
-      setRating("")
-      await onPinned()
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (courses.length === 0) {
-    return <p className="text-xs text-muted-foreground">Crie um curso para poder pinar.</p>
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select value={courseId} onValueChange={setCourseId}>
-        <SelectTrigger className="w-48">
-          <SelectValue placeholder="Pinar um curso" />
-        </SelectTrigger>
-        <SelectContent>
-          {courses.map((course) => (
-            <SelectItem key={course.id} value={course.id}>
-              {course.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={rating} onValueChange={setRating}>
-        <SelectTrigger className="w-28">
-          <SelectValue placeholder="Nota" />
-        </SelectTrigger>
-        <SelectContent>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <SelectItem key={n} value={String(n)}>
-              {n}/5
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button type="button" variant="outline" size="sm" onClick={pin} disabled={saving}>
-        Pinar
-      </Button>
-    </div>
-  )
-}
+const NO_PARENT = "none"
 
 export function RoadmapDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -89,6 +25,7 @@ export function RoadmapDetailPage() {
   const [pinsByStep, setPinsByStep] = useState<Record<string, Pin[]>>({})
   const [loading, setLoading] = useState(true)
   const [stepTitle, setStepTitle] = useState("")
+  const [parentStepId, setParentStepId] = useState(NO_PARENT)
 
   async function loadRoadmap() {
     const res = await api.get<RoadmapDetail>(`/roadmaps/${id}`)
@@ -111,16 +48,15 @@ export function RoadmapDetailPage() {
   async function addStep(event: FormEvent) {
     event.preventDefault()
     if (!stepTitle.trim() || !roadmap) return
+    const parent = parentStepId === NO_PARENT ? null : parentStepId
+    const siblings = roadmap.steps.filter((s) => (s.parentStepId ?? null) === parent)
     await api.post(`/roadmaps/${id}/steps`, {
       title: stepTitle.trim(),
-      position: roadmap.steps.length + 1,
+      position: siblings.length + 1,
+      parentStepId: parent,
     })
     setStepTitle("")
     await loadRoadmap()
-  }
-
-  function courseName(courseId: string) {
-    return courses.find((c) => c.id === courseId)?.title ?? "Curso"
   }
 
   if (loading) {
@@ -130,6 +66,10 @@ export function RoadmapDetailPage() {
   if (!roadmap) {
     return <p className="text-destructive">Roadmap nao encontrado.</p>
   }
+
+  const mainSteps = roadmap.steps
+    .filter((s) => !s.parentStepId)
+    .sort((a, b) => a.position - b.position)
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,38 +81,40 @@ export function RoadmapDetailPage() {
         {roadmap.predefined && <Badge variant="secondary">Pre-definido</Badge>}
       </div>
 
-      <div className="flex flex-col gap-4">
-        {roadmap.steps.map((step) => (
-          <Card key={step.id}>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {step.position}. {step.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {(pinsByStep[step.id] ?? []).map((pin) => (
-                <div key={pin.id} className="flex items-center gap-2 text-sm">
-                  <Badge>{courseName(pin.courseId)}</Badge>
-                  {pin.rating != null && (
-                    <span className="text-muted-foreground">Nota {pin.rating}/5</span>
-                  )}
-                </div>
-              ))}
-              <PinForm stepId={step.id} courses={courses} onPinned={loadRoadmap} />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <RoadmapDiagram
+            steps={roadmap.steps}
+            pinsByStep={pinsByStep}
+            courses={courses}
+            onPinned={loadRoadmap}
+          />
+        </CardContent>
+      </Card>
 
       {!roadmap.predefined && (
-        <form onSubmit={addStep} className="flex gap-2">
+        <form onSubmit={addStep} className="flex flex-wrap gap-2">
           <Input
-            placeholder="Nova etapa"
+            placeholder="Titulo da etapa"
             value={stepTitle}
             onChange={(e) => setStepTitle(e.target.value)}
+            className="max-w-56"
           />
+          <Select value={parentStepId} onValueChange={setParentStepId}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="Onde encaixar?" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PARENT}>Novo marco principal</SelectItem>
+              {mainSteps.map((step) => (
+                <SelectItem key={step.id} value={step.id}>
+                  Subtopico de: {step.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button type="submit" variant="outline">
-            Adicionar etapa
+            Adicionar
           </Button>
         </form>
       )}
