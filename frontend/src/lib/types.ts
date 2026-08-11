@@ -18,3 +18,19 @@ export type Dashboard = {
   currentStreak: number
   goals: GoalProgress[]
 }
+
+export type Category = {
+  id: string
+  name: string
+  color: string | null
+}
+
+export type Session = {
+  id: string
+  categoryId: string
+  courseId: string | null
+  focusedMinutes: number
+  startedAt: string
+  note: string | null
+  createdAt: string
+}
