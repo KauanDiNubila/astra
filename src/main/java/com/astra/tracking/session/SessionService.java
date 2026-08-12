@@ -54,6 +54,15 @@ public class SessionService {
                 .toList();
     }
 
+    @Transactional
+    public void delete(UUID id) {
+        UUID userId = currentUserProvider.currentUserId();
+        Session session = sessionRepository.findById(id)
+                .filter(s -> s.getUserId().equals(userId))
+                .orElseThrow(() -> new NotFoundException("Session not found"));
+        sessionRepository.delete(session);
+    }
+
     private SessionResponse toDto(Session session) {
         return new SessionResponse(
                 session.getId(),
