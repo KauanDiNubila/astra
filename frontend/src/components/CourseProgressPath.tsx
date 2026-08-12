@@ -16,6 +16,15 @@ export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
   const sorted = [...modules].sort((a, b) => a.position - b.position)
   if (sorted.length === 0) return null
 
+  const maxCompleted = sorted.reduce(
+    (max, m) => (m.completed && m.position > max ? m.position : max),
+    0,
+  )
+
+  function handleClick(position: number) {
+    onSetProgress(position === maxCompleted ? position - 1 : position)
+  }
+
   const centerY = PADDING + AMPLITUDE
   const points = sorted.map((m, i) => ({
     module: m,
@@ -57,7 +66,7 @@ export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
             type="button"
             title={p.module.title}
             disabled={saving}
-            onClick={() => onSetProgress(p.module.position)}
+            onClick={() => handleClick(p.module.position)}
             className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-semibold shadow-sm transition-colors ${
               p.module.completed
                 ? "border-emerald-500 bg-emerald-500 text-white"
