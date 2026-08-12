@@ -3,7 +3,7 @@ import type { FormEvent } from "react"
 import { ArrowLeft, Settings as SettingsIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
-import type { Category } from "@/lib/types"
+import type { Category, CourseSummary } from "@/lib/types"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,11 +29,12 @@ function formatClock(totalSeconds: number) {
 
 type Props = {
   categories: Category[]
+  courses: CourseSummary[]
   onCategoryCreated: () => Promise<void>
   onSessionSaved: () => Promise<void>
 }
 
-export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }: Props) {
+export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessionSaved }: Props) {
   const [settings, setSettings] = useState(loadPomodoroSettings)
   const [view, setView] = useState<View>("timer")
 
@@ -52,6 +53,7 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
 
   const [categoryId, setCategoryId] = useState("")
   const [newCategory, setNewCategory] = useState("")
+  const [courseId, setCourseId] = useState("")
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -146,6 +148,7 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
     try {
       await api.post("/sessions", {
         categoryId,
+        courseId: courseId || null,
         focusedMinutes,
         startedAt: startedAtRef.current ?? new Date().toISOString(),
         note: note.trim() || null,
@@ -249,13 +252,35 @@ export function PomodoroTimer({ categories, onCategoryCreated, onSessionSaved }:
           </div>
         </div>
 
+        {courses.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label>Curso (opcional)</Label>
+            <Select
+              value={courseId}
+              onValueChange={(v) => setCourseId(v === "none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhum curso" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum curso</SelectItem>
+                {courses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <Label htmlFor="pomodoro-note">Nota (opcional)</Label>
           <Textarea id="pomodoro-note" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={saving || focusedMinutes < 1}>
+        <Button type="submit" disabled={saving}>
           {saving ? "Salvando..." : `Salvar sessao (${focusedMinutes} min)`}
         </Button>
       </form>
