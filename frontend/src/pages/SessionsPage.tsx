@@ -4,19 +4,13 @@ import { Pencil, Timer } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
 import type { Category, CourseSummary, Session } from "@/lib/types"
+import { CategoryPicker } from "@/components/CategoryPicker"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 type RegisterMode = "pomodoro" | "manual"
 
@@ -33,7 +27,6 @@ export function SessionsPage() {
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newCategory, setNewCategory] = useState("")
 
   function loadSessions() {
     return api.get<Session[]>("/sessions").then((res) => setSessions(res.data))
@@ -50,15 +43,6 @@ export function SessionsPage() {
   useEffect(() => {
     Promise.all([loadSessions(), loadCategories(), loadCourses()]).finally(() => setLoading(false))
   }, [])
-
-  async function createCategory() {
-    const name = newCategory.trim()
-    if (!name) return
-    const res = await api.post<Category>("/categories", { name })
-    setNewCategory("")
-    await loadCategories()
-    setCategoryId(res.data.id)
-  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -136,30 +120,12 @@ export function SessionsPage() {
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Categoria</Label>
-                {categories.length > 0 && (
-                  <Select value={categoryId} onValueChange={setCategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nova categoria"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                  />
-                  <Button type="button" variant="outline" onClick={createCategory}>
-                    Criar
-                  </Button>
-                </div>
+                <CategoryPicker
+                  categories={categories}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  onRefresh={loadCategories}
+                />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

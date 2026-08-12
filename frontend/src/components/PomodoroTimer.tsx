@@ -4,10 +4,10 @@ import { ArrowLeft, Settings as SettingsIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, CourseSummary } from "@/lib/types"
+import { CategoryPicker } from "@/components/CategoryPicker"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -57,7 +57,6 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
   }, [running])
 
   const [categoryId, setCategoryId] = useState("")
-  const [newCategory, setNewCategory] = useState("")
   const [courseId, setCourseId] = useState("")
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
@@ -131,15 +130,6 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
     completedRef.current = 0
     setCompletedPomodoros(0)
     startedAtRef.current = null
-  }
-
-  async function createCategory() {
-    const name = newCategory.trim()
-    if (!name) return
-    const res = await api.post<Category>("/categories", { name })
-    setNewCategory("")
-    await onCategoryCreated()
-    setCategoryId(res.data.id)
   }
 
   const focusedMinutes = Math.floor(focusedSeconds / 60)
@@ -238,30 +228,12 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
       <form onSubmit={saveSession} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label>Categoria</Label>
-          {categories.length > 0 && (
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex gap-2">
-            <Input
-              placeholder="Nova categoria"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-            />
-            <Button type="button" variant="outline" onClick={createCategory}>
-              Criar
-            </Button>
-          </div>
+          <CategoryPicker
+            categories={categories}
+            value={categoryId}
+            onChange={setCategoryId}
+            onRefresh={onCategoryCreated}
+          />
         </div>
 
         {courses.length > 0 && (
