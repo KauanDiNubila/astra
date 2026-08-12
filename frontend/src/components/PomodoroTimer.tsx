@@ -159,7 +159,7 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
       setNote("")
       await onSessionSaved()
     } catch {
-      setError("Nao foi possivel registrar a sessao.")
+      setError("Não foi possível registrar a sessão.")
     } finally {
       setSaving(false)
     }
@@ -169,7 +169,7 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
     return (
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium">Configuracoes do pomodoro</h3>
+          <h3 className="font-medium">Configurações do pomodoro</h3>
           <Button
             type="button"
             variant="ghost"
@@ -194,7 +194,7 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
           variant="ghost"
           size="icon"
           className="absolute right-3 top-3 size-8"
-          title="Configuracoes do pomodoro"
+          title="Configurações do pomodoro"
           onClick={() => setView("settings")}
         >
           <SettingsIcon className="size-4" />
@@ -218,7 +218,7 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
         <p className="text-sm text-muted-foreground">
           {focusedMinutes} min focados
           {completedPomodoros > 0 && !settings.disableBreaks
-            ? ` · ${completedPomodoros % settings.pomodorosUntilLongBreak || settings.pomodorosUntilLongBreak}/${settings.pomodorosUntilLongBreak} ate pausa longa`
+            ? ` · ${completedPomodoros % settings.pomodorosUntilLongBreak || settings.pomodorosUntilLongBreak}/${settings.pomodorosUntilLongBreak} até pausa longa`
             : completedPomodoros > 0
               ? ` · ${completedPomodoros} pomodoro(s) completo(s)`
               : ""}
@@ -265,7 +265,7 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
 
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={saving}>
-          {saving ? "Salvando..." : `Salvar sessao (${focusedMinutes} min)`}
+          {saving ? "Salvando..." : `Salvar sessão (${focusedMinutes} min)`}
         </Button>
       </form>
     </div>

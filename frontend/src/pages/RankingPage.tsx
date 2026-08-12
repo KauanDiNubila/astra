@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 const periods = [
   { key: "DAILY", label: "Hoje" },
   { key: "WEEKLY", label: "Semana" },
-  { key: "MONTHLY", label: "Mes" },
+  { key: "MONTHLY", label: "Mês" },
 ] as const
 
 type Period = (typeof periods)[number]["key"]
@@ -51,7 +51,7 @@ export function RankingPage() {
             <p className="p-6 text-muted-foreground">Carregando...</p>
           ) : entries.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
-              Ninguem registrou tempo neste periodo.
+              Ninguém registrou tempo neste período.
             </p>
           ) : (
             <ul className="divide-y">

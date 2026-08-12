@@ -28,7 +28,7 @@ export function DashboardPage() {
   }
 
   if (error || !data) {
-    return <p className="text-destructive">Nao foi possivel carregar o dashboard.</p>
+    return <p className="text-destructive">Não foi possível carregar o dashboard.</p>
   }
 
   return (
@@ -44,7 +44,7 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Atividade (ultimo ano)</CardTitle>
+          <CardTitle>Atividade (último ano)</CardTitle>
         </CardHeader>
         <CardContent>
           <Heatmap data={heatmap} />
@@ -62,13 +62,13 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent>
           {data.goals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Voce ainda nao definiu metas.</p>
+            <p className="text-sm text-muted-foreground">Você ainda não definiu metas.</p>
           ) : (
             <ul className="flex flex-col gap-3">
               {data.goals.map((goal) => (
                 <li key={goal.type} className="flex items-center justify-between">
                   <span className="text-sm">
-                    Meta {goal.type === "DAILY" ? "diaria" : "semanal"}:{" "}
+                    Meta {goal.type === "DAILY" ? "diária" : "semanal"}:{" "}
                     <span className="font-medium">{goal.achievedHours.toFixed(1)}h</span> / {goal.targetHours}h
                   </span>
                   {goal.reached ? (

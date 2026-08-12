@@ -51,7 +51,7 @@ export function RoadmapsPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="flex gap-2">
             <Input
-              placeholder="Titulo do roadmap"
+              placeholder="Título do roadmap"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -70,7 +70,7 @@ export function RoadmapsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">{roadmap.title}</CardTitle>
-                  {roadmap.predefined && <Badge variant="secondary">Pre-definido</Badge>}
+                  {roadmap.predefined && <Badge variant="secondary">Pré-definido</Badge>}
                 </div>
                 {roadmap.source && (
                   <p className="text-sm text-muted-foreground">Fonte: {roadmap.source}</p>

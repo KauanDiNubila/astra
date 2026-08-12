@@ -29,7 +29,7 @@ export function LoginPage() {
       await login(email, password)
       navigate("/")
     } catch {
-      setError("E-mail ou senha invalidos.")
+      setError("E-mail ou senha inválidos.")
     } finally {
       setLoading(false)
     }
@@ -69,7 +69,7 @@ export function LoginPage() {
               {loading ? "Entrando..." : "Entrar"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Nao tem conta?{" "}
+              Não tem conta?{" "}
               <Link to="/register" className="underline underline-offset-4">
                 Cadastre-se
               </Link>

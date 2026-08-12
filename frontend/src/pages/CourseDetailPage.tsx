@@ -43,7 +43,7 @@ export function CourseDetailPage() {
   }
 
   if (!course) {
-    return <p className="text-destructive">Curso nao encontrado.</p>
+    return <p className="text-destructive">Curso não encontrado.</p>
   }
 
   return (
@@ -64,11 +64,11 @@ export function CourseDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Modulos</CardTitle>
+          <CardTitle>Módulos</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {course.modules.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum modulo ainda.</p>
+            <p className="text-sm text-muted-foreground">Nenhum módulo ainda.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {course.modules.map((module) => (
@@ -88,7 +88,7 @@ export function CourseDetailPage() {
           )}
           <form onSubmit={addModule} className="flex gap-2">
             <Input
-              placeholder="Novo modulo"
+              placeholder="Novo módulo"
               value={moduleTitle}
               onChange={(e) => setModuleTitle(e.target.value)}
             />

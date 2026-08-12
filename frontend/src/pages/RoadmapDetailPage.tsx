@@ -63,7 +63,7 @@ export function RoadmapDetailPage() {
   }
 
   if (!roadmap) {
-    return <p className="text-destructive">Roadmap nao encontrado.</p>
+    return <p className="text-destructive">Roadmap não encontrado.</p>
   }
 
   const mainSteps = roadmap.steps
@@ -77,7 +77,7 @@ export function RoadmapDetailPage() {
       </Link>
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-semibold">{roadmap.title}</h1>
-        {roadmap.predefined && <Badge variant="secondary">Pre-definido</Badge>}
+        {roadmap.predefined && <Badge variant="secondary">Pré-definido</Badge>}
       </div>
 
       <RoadmapDiagram
@@ -90,7 +90,7 @@ export function RoadmapDetailPage() {
       {!roadmap.predefined && (
         <form onSubmit={addStep} className="flex flex-wrap gap-2">
           <Input
-            placeholder="Titulo da etapa"
+            placeholder="Título da etapa"
             value={stepTitle}
             onChange={(e) => setStepTitle(e.target.value)}
             className="max-w-56"
@@ -103,7 +103,7 @@ export function RoadmapDetailPage() {
               <SelectItem value={NO_PARENT}>Novo marco principal</SelectItem>
               {mainSteps.map((step) => (
                 <SelectItem key={step.id} value={step.id}>
-                  Subtopico de: {step.title}
+                  Subtópico de: {step.title}
                 </SelectItem>
               ))}
             </SelectContent>

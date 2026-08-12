@@ -91,7 +91,7 @@ export function SessionsPage() {
       setStartedAt(nowForInput())
       await loadSessions()
     } catch {
-      setError("Nao foi possivel registrar a sessao.")
+      setError("Não foi possível registrar a sessão.")
     } finally {
       setSaving(false)
     }
@@ -107,11 +107,11 @@ export function SessionsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold">Sessoes</h1>
+      <h1 className="text-2xl font-semibold">Sessões</h1>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle>Registrar sessao</CardTitle>
+          <CardTitle>Registrar sessão</CardTitle>
           <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
             <Button
               type="button"
@@ -195,11 +195,11 @@ export function SessionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Minhas sessoes</CardTitle>
+          <CardTitle>Minhas sessões</CardTitle>
         </CardHeader>
         <CardContent>
           {sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma sessao registrada ainda.</p>
+            <p className="text-sm text-muted-foreground">Nenhuma sessão registrada ainda.</p>
           ) : (
             <ul className="flex flex-col divide-y">
               {sessions.map((s) => (

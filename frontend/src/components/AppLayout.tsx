@@ -10,7 +10,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 const links = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/sessions", label: "Sessoes", end: false },
+  { to: "/sessions", label: "Sessões", end: false },
   { to: "/courses", label: "Cursos", end: false },
   { to: "/roadmaps", label: "Roadmaps", end: false },
   { to: "/ranking", label: "Ranking", end: false },

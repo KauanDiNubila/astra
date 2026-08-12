@@ -54,7 +54,7 @@ export function GoalsPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="daily">Meta diaria (horas)</Label>
+              <Label htmlFor="daily">Meta diária (horas)</Label>
               <Input
                 id="daily"
                 type="number"
