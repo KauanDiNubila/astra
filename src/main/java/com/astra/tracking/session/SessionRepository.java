@@ -12,6 +12,8 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
 
     List<Session> findByUserId(UUID userId);
 
+    boolean existsByCategoryId(UUID categoryId);
+
     @Query("select coalesce(sum(s.focusedMinutes), 0) from Session s where s.userId = :userId")
     long sumFocusedMinutes(@Param("userId") UUID userId);
 
