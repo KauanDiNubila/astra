@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
+import { Minus, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseSummary } from "@/lib/types"
@@ -10,11 +11,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 
+const MAX_INITIAL_MODULES = 30
+
 export function CoursesPage() {
   const [courses, setCourses] = useState<CourseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState("")
   const [platform, setPlatform] = useState("")
+  const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
 
   function load() {
@@ -30,9 +34,16 @@ export function CoursesPage() {
     if (!title.trim()) return
     setSaving(true)
     try {
-      await api.post("/courses", { title: title.trim(), platform: platform.trim() || null })
+      const res = await api.post<CourseSummary>("/courses", {
+        title: title.trim(),
+        platform: platform.trim() || null,
+      })
+      for (let i = 1; i <= moduleCount; i++) {
+        await api.post(`/courses/${res.data.id}/modules`, { title: `Modulo ${i}`, position: i })
+      }
       setTitle("")
       setPlatform("")
+      setModuleCount(0)
       await load()
     } finally {
       setSaving(false)
@@ -61,8 +72,32 @@ export function CoursesPage() {
               <Label htmlFor="platform">Plataforma</Label>
               <Input id="platform" value={platform} onChange={(e) => setPlatform(e.target.value)} />
             </div>
+            <div className="flex flex-col gap-2">
+              <Label>Modulos</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setModuleCount((n) => Math.max(0, n - 1))}
+                  disabled={moduleCount === 0}
+                >
+                  <Minus className="size-4" />
+                </Button>
+                <span className="w-6 text-center tabular-nums">{moduleCount}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setModuleCount((n) => Math.min(MAX_INITIAL_MODULES, n + 1))}
+                  disabled={moduleCount === MAX_INITIAL_MODULES}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+            </div>
             <Button type="submit" disabled={saving}>
-              Criar
+              {saving ? "Criando..." : "Criar"}
             </Button>
           </form>
         </CardContent>
