@@ -9,7 +9,7 @@ public record CourseResponse(
         String platform,
         CourseStatus status,
         double progress,
-        long totalModules,
-        long completedModules
+        long totalLessons,
+        long completedLessons
 ) {
 }

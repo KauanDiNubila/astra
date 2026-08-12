@@ -3,9 +3,11 @@ package com.astra.learning;
 import com.astra.learning.dto.CourseDetailResponse;
 import com.astra.learning.dto.CourseResponse;
 import com.astra.learning.dto.CreateCourseRequest;
+import com.astra.learning.dto.CreateLessonRequest;
 import com.astra.learning.dto.CreateModuleRequest;
+import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
-import com.astra.learning.dto.UpdateModuleRequest;
+import com.astra.learning.dto.UpdateLessonRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -51,9 +53,16 @@ public class CourseController {
         return courseService.addModule(id, request);
     }
 
-    @PatchMapping("/{courseId}/modules/{moduleId}")
-    public ModuleResponse updateModule(@PathVariable UUID courseId, @PathVariable UUID moduleId,
-                                       @Valid @RequestBody UpdateModuleRequest request) {
-        return courseService.setModuleCompleted(courseId, moduleId, request.completed());
+    @PostMapping("/{courseId}/modules/{moduleId}/lessons")
+    @ResponseStatus(HttpStatus.CREATED)
+    public LessonResponse addLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId,
+                                    @Valid @RequestBody CreateLessonRequest request) {
+        return courseService.addLesson(courseId, moduleId, request);
+    }
+
+    @PatchMapping("/{courseId}/modules/{moduleId}/lessons/{lessonId}")
+    public LessonResponse updateLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId,
+                                       @PathVariable UUID lessonId, @Valid @RequestBody UpdateLessonRequest request) {
+        return courseService.setLessonCompleted(courseId, moduleId, lessonId, request.completed());
     }
 }
