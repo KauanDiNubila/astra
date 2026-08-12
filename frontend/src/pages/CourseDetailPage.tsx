@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseDetail } from "@/lib/types"
+import { CourseProgressPath } from "@/components/CourseProgressPath"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +14,7 @@ export function CourseDetailPage() {
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [moduleTitle, setModuleTitle] = useState("")
+  const [settingProgress, setSettingProgress] = useState(false)
 
   function load() {
     return api.get<CourseDetail>(`/courses/${id}`).then((res) => setCourse(res.data))
@@ -22,9 +24,19 @@ export function CourseDetailPage() {
     load().finally(() => setLoading(false))
   }, [id])
 
-  async function toggle(moduleId: string, completed: boolean) {
-    await api.patch(`/courses/${id}/modules/${moduleId}`, { completed })
-    await load()
+  async function setProgress(uptoPosition: number) {
+    if (!course) return
+    setSettingProgress(true)
+    try {
+      await Promise.all(
+        course.modules.map((m) =>
+          api.patch(`/courses/${id}/modules/${m.id}`, { completed: m.position <= uptoPosition }),
+        ),
+      )
+      await load()
+    } finally {
+      setSettingProgress(false)
+    }
   }
 
   async function addModule(event: FormEvent) {
@@ -70,21 +82,11 @@ export function CourseDetailPage() {
           {course.modules.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum módulo ainda.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {course.modules.map((module) => (
-                <li key={module.id} className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={module.completed}
-                    onChange={(e) => toggle(module.id, e.target.checked)}
-                    className="size-4"
-                  />
-                  <span className={module.completed ? "text-muted-foreground line-through" : ""}>
-                    {module.title}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <CourseProgressPath
+              modules={course.modules}
+              onSetProgress={setProgress}
+              saving={settingProgress}
+            />
           )}
           <form onSubmit={addModule} className="flex gap-2">
             <Input
