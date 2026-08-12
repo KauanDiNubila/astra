@@ -50,6 +50,11 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const completedRef = useRef(0)
   const startedAtRef = useRef<string | null>(null)
+  const runningRef = useRef(running)
+
+  useEffect(() => {
+    runningRef.current = running
+  }, [running])
 
   const [categoryId, setCategoryId] = useState("")
   const [newCategory, setNewCategory] = useState("")
@@ -104,6 +109,13 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
     if (mode === "focus") return settings.focusMinutes * 60
     return (isLongBreak ? settings.longBreakMinutes : settings.shortBreakMinutes) * 60
   }
+
+  useEffect(() => {
+    if (!runningRef.current) {
+      setTimeLeft(currentModeSeconds())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings])
 
   function resetCycle() {
     setRunning(false)
