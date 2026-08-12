@@ -367,7 +367,7 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
               {selectedPins.length > 0 && (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="size-3 text-emerald-500" />
-                  Concluido
+                  Concluído
                 </Badge>
               )}
             </div>

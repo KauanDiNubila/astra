@@ -30,7 +30,7 @@ export function RegisterPage() {
       await register(name, email, password)
       navigate("/")
     } catch {
-      setError("Nao foi possivel criar a conta. O e-mail pode ja estar em uso.")
+      setError("Não foi possível criar a conta. O e-mail pode já estar em uso.")
     } finally {
       setLoading(false)
     }
@@ -80,7 +80,7 @@ export function RegisterPage() {
               {loading ? "Criando..." : "Criar conta"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Ja tem conta?{" "}
+              Já tem conta?{" "}
               <Link to="/login" className="underline underline-offset-4">
                 Entrar
               </Link>

@@ -61,7 +61,7 @@ public class CategoryService {
                 .filter(c -> c.getUserId().equals(userId))
                 .orElseThrow(() -> new NotFoundException("Category not found"));
         if (sessionRepository.existsByCategoryId(id)) {
-            throw new ConflictException("Categoria possui sessões registradas e não pode ser excluída");
+            throw new ConflictException("Category has sessions and cannot be deleted");
         }
         categoryRepository.delete(category);
     }

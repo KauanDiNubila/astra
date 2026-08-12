@@ -82,28 +82,28 @@ export function PomodoroSettingsPanel({ settings, onChange }: Props) {
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <SettingSelect
-          label="Duracao do pomodoro"
+          label="Duração do pomodoro"
           value={settings.focusMinutes}
           options={FOCUS_MINUTE_OPTIONS}
           formatOption={(n) => `${n}min`}
           onChange={(v) => update("focusMinutes", v)}
         />
         <SettingSelect
-          label="Duracao da pausa curta"
+          label="Duração da pausa curta"
           value={settings.shortBreakMinutes}
           options={BREAK_MINUTE_OPTIONS}
           formatOption={(n) => `${n}min`}
           onChange={(v) => update("shortBreakMinutes", v)}
         />
         <SettingSelect
-          label="Duracao da pausa longa"
+          label="Duração da pausa longa"
           value={settings.longBreakMinutes}
           options={BREAK_MINUTE_OPTIONS}
           formatOption={(n) => `${n}min`}
           onChange={(v) => update("longBreakMinutes", v)}
         />
         <SettingSelect
-          label="Pomodoros ate pausa longa"
+          label="Pomodoros até pausa longa"
           value={settings.pomodorosUntilLongBreak}
           options={POMODORO_COUNT_OPTIONS}
           formatOption={(n) => `${n} Pomodoro${n === 1 ? "" : "s"}`}
@@ -113,7 +113,7 @@ export function PomodoroSettingsPanel({ settings, onChange }: Props) {
 
       <div className="flex flex-col divide-y rounded-lg border">
         <SettingToggle
-          label="Iniciar proximo pomodoro automaticamente"
+          label="Iniciar próximo pomodoro automaticamente"
           checked={settings.autoStartNextPomodoro}
           onChange={(v) => update("autoStartNextPomodoro", v)}
         />

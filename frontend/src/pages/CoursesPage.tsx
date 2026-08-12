@@ -39,7 +39,7 @@ export function CoursesPage() {
         platform: platform.trim() || null,
       })
       for (let i = 1; i <= moduleCount; i++) {
-        await api.post(`/courses/${res.data.id}/modules`, { title: `Modulo ${i}`, position: i })
+        await api.post(`/courses/${res.data.id}/modules`, { title: `Módulo ${i}`, position: i })
       }
       setTitle("")
       setPlatform("")
@@ -65,7 +65,7 @@ export function CoursesPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="title">Titulo</Label>
+              <Label htmlFor="title">Título</Label>
               <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
             <div className="flex flex-1 flex-col gap-2">
@@ -73,7 +73,7 @@ export function CoursesPage() {
               <Input id="platform" value={platform} onChange={(e) => setPlatform(e.target.value)} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Modulos</Label>
+              <Label>Módulos</Label>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
