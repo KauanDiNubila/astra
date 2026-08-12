@@ -3,7 +3,7 @@ import type { FormEvent } from "react"
 import { Pencil, Timer } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
-import type { Category, Session } from "@/lib/types"
+import type { Category, CourseSummary, Session } from "@/lib/types"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +23,7 @@ type RegisterMode = "pomodoro" | "manual"
 export function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [courses, setCourses] = useState<CourseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
 
@@ -42,8 +43,12 @@ export function SessionsPage() {
     return api.get<Category[]>("/categories").then((res) => setCategories(res.data))
   }
 
+  function loadCourses() {
+    return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
+  }
+
   useEffect(() => {
-    Promise.all([loadSessions(), loadCategories()]).finally(() => setLoading(false))
+    Promise.all([loadSessions(), loadCategories(), loadCourses()]).finally(() => setLoading(false))
   }, [])
 
   async function createCategory() {
@@ -123,6 +128,7 @@ export function SessionsPage() {
           {registerMode === "pomodoro" ? (
             <PomodoroTimer
               categories={categories}
+              courses={courses}
               onCategoryCreated={loadCategories}
               onSessionSaved={loadSessions}
             />
