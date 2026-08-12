@@ -1,6 +1,7 @@
 package com.astra.user;
 
 import com.astra.shared.CurrentUserProvider;
+import com.astra.shared.event.UserRegisteredEvent;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.UnauthorizedException;
 import com.astra.shared.security.JwtService;
@@ -11,6 +12,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +24,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtService jwtService, CurrentUserProvider currentUserProvider) {
+                       JwtService jwtService, CurrentUserProvider currentUserProvider,
+                       ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.currentUserProvider = currentUserProvider;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -38,6 +43,7 @@ public class UserService {
         }
         User user = new User(request.name(), request.email(), passwordEncoder.encode(request.password()));
         User saved = userRepository.save(user);
+        eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId()));
         return toDto(saved);
     }
 
