@@ -73,7 +73,7 @@ export function CategoryPicker({ categories, value, onChange, onRefresh }: Props
       if (value === id) onChange("")
       await onRefresh()
     } catch {
-      setDeleteError("Essa categoria tem sessoes registradas e nao pode ser excluida.")
+      setDeleteError("Essa categoria tem sessões registradas e não pode ser excluída.")
     } finally {
       setDeletingId(null)
     }

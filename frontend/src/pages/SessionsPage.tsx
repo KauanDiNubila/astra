@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
-import { Pencil, Timer } from "lucide-react"
+import { Pencil, Timer, Trash2 } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
 import type { Category, CourseSummary, Session } from "@/lib/types"
@@ -27,6 +27,9 @@ export function SessionsPage() {
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmSessionId, setConfirmSessionId] = useState<string | null>(null)
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+  const confirmSessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function loadSessions() {
     return api.get<Session[]>("/sessions").then((res) => setSessions(res.data))
@@ -43,6 +46,30 @@ export function SessionsPage() {
   useEffect(() => {
     Promise.all([loadSessions(), loadCategories(), loadCourses()]).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (confirmSessionTimeoutRef.current) clearTimeout(confirmSessionTimeoutRef.current)
+    }
+  }, [])
+
+  function armSessionDelete(id: string) {
+    setConfirmSessionId(id)
+    if (confirmSessionTimeoutRef.current) clearTimeout(confirmSessionTimeoutRef.current)
+    confirmSessionTimeoutRef.current = setTimeout(() => setConfirmSessionId(null), 3000)
+  }
+
+  async function confirmSessionDelete(id: string) {
+    if (confirmSessionTimeoutRef.current) clearTimeout(confirmSessionTimeoutRef.current)
+    setConfirmSessionId(null)
+    setDeletingSessionId(id)
+    try {
+      await api.delete(`/sessions/${id}`)
+      await loadSessions()
+    } finally {
+      setDeletingSessionId(null)
+    }
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -183,11 +210,33 @@ export function SessionsPage() {
                       {categoryName(s.categoryId)} &middot; {formatDateTime(s.startedAt)}
                     </span>
                   </div>
-                  {s.note && (
-                    <span className="max-w-[50%] truncate text-sm text-muted-foreground">
-                      {s.note}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {s.note && (
+                      <span className="max-w-[50%] truncate text-sm text-muted-foreground">
+                        {s.note}
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={
+                        confirmSessionId === s.id
+                          ? "text-destructive"
+                          : "text-muted-foreground hover:text-destructive"
+                      }
+                      disabled={deletingSessionId === s.id}
+                      onClick={() =>
+                        confirmSessionId === s.id ? confirmSessionDelete(s.id) : armSessionDelete(s.id)
+                      }
+                    >
+                      {confirmSessionId === s.id ? (
+                        "Confirmar?"
+                      ) : (
+                        <Trash2 className="size-4" />
+                      )}
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
