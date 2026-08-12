@@ -48,15 +48,24 @@ export type CourseSummary = {
   platform: string | null
   status: CourseStatus
   progress: number
-  totalModules: number
-  completedModules: number
+  totalLessons: number
+  completedLessons: number
+}
+
+export type LessonItem = {
+  id: string
+  title: string
+  position: number
+  completed: boolean
 }
 
 export type ModuleItem = {
   id: string
   title: string
   position: number
-  completed: boolean
+  totalLessons: number
+  completedLessons: number
+  lessons: LessonItem[]
 }
 
 export type CourseDetail = CourseSummary & {

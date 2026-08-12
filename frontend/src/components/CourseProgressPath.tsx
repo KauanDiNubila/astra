@@ -1,8 +1,14 @@
 import { Check } from "lucide-react"
-import type { ModuleItem } from "@/lib/types"
+
+type PathItem = {
+  id: string
+  title: string
+  position: number
+  completed: boolean
+}
 
 type Props = {
-  modules: ModuleItem[]
+  items: PathItem[]
   onSetProgress: (position: number) => void
   saving: boolean
 }
@@ -12,12 +18,12 @@ const SPACING_X = 90
 const AMPLITUDE = 26
 const PADDING = 30
 
-export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
-  const sorted = [...modules].sort((a, b) => a.position - b.position)
+export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
+  const sorted = [...items].sort((a, b) => a.position - b.position)
   if (sorted.length === 0) return null
 
   const maxCompleted = sorted.reduce(
-    (max, m) => (m.completed && m.position > max ? m.position : max),
+    (max, item) => (item.completed && item.position > max ? item.position : max),
     0,
   )
 
@@ -26,8 +32,8 @@ export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
   }
 
   const centerY = PADDING + AMPLITUDE
-  const points = sorted.map((m, i) => ({
-    module: m,
+  const points = sorted.map((item, i) => ({
+    item,
     x: PADDING + i * SPACING_X,
     y: centerY + AMPLITUDE * Math.sin(i * 1.1),
   }))
@@ -46,10 +52,10 @@ export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
           {points.slice(1).map((p, i) => {
             const prev = points[i]
             const midX = (prev.x + p.x) / 2
-            const done = prev.module.completed && p.module.completed
+            const done = prev.item.completed && p.item.completed
             return (
               <path
-                key={p.module.id}
+                key={p.item.id}
                 d={`M ${prev.x} ${prev.y} C ${midX} ${prev.y}, ${midX} ${p.y}, ${p.x} ${p.y}`}
                 fill="none"
                 strokeWidth={4}
@@ -62,19 +68,19 @@ export function CourseProgressPath({ modules, onSetProgress, saving }: Props) {
 
         {points.map((p) => (
           <button
-            key={p.module.id}
+            key={p.item.id}
             type="button"
-            title={p.module.title}
+            title={p.item.title}
             disabled={saving}
-            onClick={() => handleClick(p.module.position)}
+            onClick={() => handleClick(p.item.position)}
             className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-semibold shadow-sm transition-colors ${
-              p.module.completed
+              p.item.completed
                 ? "border-emerald-500 bg-emerald-500 text-white"
                 : "border-border bg-card text-muted-foreground hover:border-foreground/40"
             }`}
             style={{ left: p.x, top: p.y, width: NODE_SIZE, height: NODE_SIZE }}
           >
-            {p.module.completed ? <Check className="size-5" /> : p.module.position}
+            {p.item.completed ? <Check className="size-5" /> : p.item.position}
           </button>
         ))}
       </div>

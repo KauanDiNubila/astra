@@ -10,8 +10,8 @@ public record CourseDetailResponse(
         String platform,
         CourseStatus status,
         double progress,
-        long totalModules,
-        long completedModules,
+        long totalLessons,
+        long completedLessons,
         List<ModuleResponse> modules
 ) {
 }

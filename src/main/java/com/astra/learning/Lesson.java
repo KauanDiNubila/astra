@@ -16,19 +16,19 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "module")
+@Table(name = "lesson")
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CourseModule {
+public class Lesson {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    @JoinColumn(name = "module_id", nullable = false)
+    private CourseModule module;
 
     @Column(nullable = false, length = 160)
     private String title;
@@ -36,9 +36,13 @@ public class CourseModule {
     @Column(nullable = false)
     private int position;
 
-    public CourseModule(Course course, String title, int position) {
-        this.course = course;
+    @Column(nullable = false)
+    private boolean completed;
+
+    public Lesson(CourseModule module, String title, int position) {
+        this.module = module;
         this.title = title;
         this.position = position;
+        this.completed = false;
     }
 }
