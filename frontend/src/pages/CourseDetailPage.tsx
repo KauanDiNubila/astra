@@ -23,8 +23,8 @@ function ModuleRow({
   courseId: string
   onChanged: () => Promise<void>
 }) {
-  const [lessonTitle, setLessonTitle] = useState("")
   const [saving, setSaving] = useState(false)
+  const [addingLesson, setAddingLesson] = useState(false)
 
   async function setLessonProgress(uptoPosition: number) {
     setSaving(true)
@@ -42,15 +42,18 @@ function ModuleRow({
     }
   }
 
-  async function addLesson(event: FormEvent) {
-    event.preventDefault()
-    if (!lessonTitle.trim()) return
-    await api.post(`/courses/${courseId}/modules/${module.id}/lessons`, {
-      title: lessonTitle.trim(),
-      position: module.lessons.length + 1,
-    })
-    setLessonTitle("")
-    await onChanged()
+  async function addLesson() {
+    setAddingLesson(true)
+    try {
+      const position = module.lessons.length + 1
+      await api.post(`/courses/${courseId}/modules/${module.id}/lessons`, {
+        title: `Aula ${position}`,
+        position,
+      })
+      await onChanged()
+    } finally {
+      setAddingLesson(false)
+    }
   }
 
   return (
@@ -61,20 +64,22 @@ function ModuleRow({
           {module.completedLessons}/{module.totalLessons}
         </Badge>
       </div>
-      {module.lessons.length > 0 && (
-        <CourseProgressPath items={module.lessons} onSetProgress={setLessonProgress} saving={saving} />
-      )}
-      <form onSubmit={addLesson} className="flex gap-2">
-        <Input
-          placeholder="Nova aula"
-          value={lessonTitle}
-          onChange={(e) => setLessonTitle(e.target.value)}
-          className="h-8 text-sm"
-        />
-        <Button type="submit" variant="outline" size="sm">
-          Adicionar
+      <div className="flex items-center gap-2">
+        {module.lessons.length > 0 && (
+          <CourseProgressPath items={module.lessons} onSetProgress={setLessonProgress} saving={saving} />
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-6 shrink-0 rounded-full"
+          onClick={addLesson}
+          disabled={addingLesson}
+          title="Adicionar aula"
+        >
+          <Plus className="size-3.5" />
         </Button>
-      </form>
+      </div>
     </div>
   )
 }
