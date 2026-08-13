@@ -103,12 +103,13 @@ export function CourseDetailPage() {
 
   async function addModule(event: FormEvent) {
     event.preventDefault()
-    if (!moduleTitle.trim() || !course) return
+    if (!course) return
     setSaving(true)
     try {
+      const position = course.modules.length + 1
       const res = await api.post<ModuleItem>(`/courses/${id}/modules`, {
-        title: moduleTitle.trim(),
-        position: course.modules.length + 1,
+        title: moduleTitle.trim() || `Módulo ${position}`,
+        position,
       })
       for (let i = 1; i <= lessonCount; i++) {
         await api.post(`/courses/${id}/modules/${res.data.id}/lessons`, {
@@ -165,10 +166,10 @@ export function CourseDetailPage() {
 
           <form onSubmit={addModule} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="module-title">Novo módulo</Label>
+              <Label htmlFor="module-title">Novo módulo (opcional)</Label>
               <Input
                 id="module-title"
-                placeholder="Título do módulo"
+                placeholder={`Módulo ${course.modules.length + 1}`}
                 value={moduleTitle}
                 onChange={(e) => setModuleTitle(e.target.value)}
               />
