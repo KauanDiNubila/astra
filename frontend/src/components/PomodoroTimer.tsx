@@ -3,8 +3,9 @@ import type { FormEvent } from "react"
 import { ArrowLeft, Settings as SettingsIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
-import type { Category, CourseSummary } from "@/lib/types"
+import type { Category, CourseDetail, CourseSummary } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
+import { ModuleRow } from "@/components/ModuleRow"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,9 +59,23 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
 
   const [categoryId, setCategoryId] = useState("")
   const [courseId, setCourseId] = useState("")
+  const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null)
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function loadCourseDetail() {
+    if (!courseId) {
+      setCourseDetail(null)
+      return Promise.resolve()
+    }
+    return api.get<CourseDetail>(`/courses/${courseId}`).then((res) => setCourseDetail(res.data))
+  }
+
+  useEffect(() => {
+    loadCourseDetail()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId])
 
   useEffect(() => {
     if (!running) return
@@ -255,6 +270,23 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {courseDetail && (
+          <div className="flex flex-col gap-3">
+            {courseDetail.modules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum módulo ainda.</p>
+            ) : (
+              courseDetail.modules.map((module) => (
+                <ModuleRow
+                  key={module.id}
+                  module={module}
+                  courseId={courseId}
+                  onChanged={loadCourseDetail}
+                />
+              ))
+            )}
           </div>
         )}
 
