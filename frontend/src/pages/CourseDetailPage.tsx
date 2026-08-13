@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
-import { ChevronDown, Minus, Plus } from "lucide-react"
+import { Minus, Plus } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
@@ -17,14 +17,10 @@ const MAX_INITIAL_LESSONS = 30
 function ModuleRow({
   module,
   courseId,
-  expanded,
-  onToggle,
   onChanged,
 }: {
   module: ModuleItem
   courseId: string
-  expanded: boolean
-  onToggle: () => void
   onChanged: () => Promise<void>
 }) {
   const [lessonTitle, setLessonTitle] = useState("")
@@ -58,39 +54,27 @@ function ModuleRow({
   }
 
   return (
-    <div className="rounded-lg border">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left"
-      >
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
         <span className="font-medium">{module.title}</span>
-        <span className="flex items-center gap-3">
-          <Badge variant="secondary">
-            {module.completedLessons}/{module.totalLessons}
-          </Badge>
-          <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
-        </span>
-      </button>
-      {expanded && (
-        <div className="flex flex-col gap-4 border-t p-4">
-          {module.lessons.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma aula ainda.</p>
-          ) : (
-            <CourseProgressPath items={module.lessons} onSetProgress={setLessonProgress} saving={saving} />
-          )}
-          <form onSubmit={addLesson} className="flex gap-2">
-            <Input
-              placeholder="Nova aula"
-              value={lessonTitle}
-              onChange={(e) => setLessonTitle(e.target.value)}
-            />
-            <Button type="submit" variant="outline">
-              Adicionar
-            </Button>
-          </form>
-        </div>
+        <Badge variant="secondary">
+          {module.completedLessons}/{module.totalLessons}
+        </Badge>
+      </div>
+      {module.lessons.length > 0 && (
+        <CourseProgressPath items={module.lessons} onSetProgress={setLessonProgress} saving={saving} />
       )}
+      <form onSubmit={addLesson} className="flex gap-2">
+        <Input
+          placeholder="Nova aula"
+          value={lessonTitle}
+          onChange={(e) => setLessonTitle(e.target.value)}
+          className="h-8 text-sm"
+        />
+        <Button type="submit" variant="outline" size="sm">
+          Adicionar
+        </Button>
+      </form>
     </div>
   )
 }
@@ -101,7 +85,6 @@ export function CourseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [moduleTitle, setModuleTitle] = useState("")
   const [lessonCount, setLessonCount] = useState(0)
-  const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   function load() {
@@ -169,16 +152,7 @@ export function CourseDetailPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {course.modules.map((module) => (
-                <ModuleRow
-                  key={module.id}
-                  module={module}
-                  courseId={id!}
-                  expanded={expandedModuleId === module.id}
-                  onToggle={() =>
-                    setExpandedModuleId((prev) => (prev === module.id ? null : module.id))
-                  }
-                  onChanged={load}
-                />
+                <ModuleRow key={module.id} module={module} courseId={id!} onChanged={load} />
               ))}
             </div>
           )}
