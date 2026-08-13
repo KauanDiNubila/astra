@@ -169,7 +169,7 @@ export function CourseDetailPage() {
               <Label htmlFor="module-title">Novo módulo (opcional)</Label>
               <Input
                 id="module-title"
-                placeholder="Deixe em branco p/ Módulo N"
+                placeholder={`Módulo ${course.modules.length + 1}`}
                 value={moduleTitle}
                 onChange={(e) => setModuleTitle(e.target.value)}
               />
