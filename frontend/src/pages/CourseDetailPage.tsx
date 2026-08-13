@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
-import { Minus, Plus } from "lucide-react"
+import { Minus, PlayCircle, Plus } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
@@ -60,8 +60,9 @@ function ModuleRow({
     <div className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium">{module.title}</span>
-        <Badge variant="secondary">
-          {module.completedLessons}/{module.totalLessons}
+        <Badge variant="secondary" className="gap-1">
+          <PlayCircle className="size-3" />
+          {module.completedLessons}/{module.totalLessons} aulas
         </Badge>
       </div>
       <div className="flex items-center gap-2">
@@ -143,7 +144,7 @@ export function CourseDetailPage() {
       <div className="flex items-center gap-3">
         <Progress value={Math.round(course.progress * 100)} className="max-w-xs" />
         <span className="text-sm text-muted-foreground">
-          {course.completedLessons}/{course.totalLessons}
+          {course.completedLessons}/{course.totalLessons} aulas
         </span>
       </div>
 

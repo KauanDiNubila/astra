@@ -114,7 +114,7 @@ export function CoursesPage() {
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base">{course.title}</CardTitle>
                     <Badge variant="secondary">
-                      {course.completedLessons}/{course.totalLessons}
+                      {course.completedLessons}/{course.totalLessons} aulas
                     </Badge>
                   </div>
                   {course.platform && (
