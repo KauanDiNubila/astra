@@ -1,5 +1,3 @@
-import { Check } from "lucide-react"
-
 type PathItem = {
   id: string
   title: string
@@ -13,10 +11,9 @@ type Props = {
   saving: boolean
 }
 
-const NODE_SIZE = 40
-const SPACING_X = 90
-const AMPLITUDE = 26
-const PADDING = 30
+const NODE_SIZE = 16
+const SPACING_X = 22
+const PADDING = 8
 
 export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
   const sorted = [...items].sort((a, b) => a.position - b.position)
@@ -31,17 +28,17 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
     onSetProgress(position === maxCompleted ? position - 1 : position)
   }
 
-  const centerY = PADDING + AMPLITUDE
+  const centerY = PADDING + NODE_SIZE / 2
   const points = sorted.map((item, i) => ({
     item,
     x: PADDING + i * SPACING_X,
-    y: centerY + AMPLITUDE * Math.sin(i * 1.1),
+    y: centerY,
   }))
   const width = PADDING * 2 + (points.length - 1) * SPACING_X
-  const height = centerY + AMPLITUDE + PADDING
+  const height = NODE_SIZE + PADDING * 2
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-muted/20 p-4">
+    <div className="overflow-x-auto">
       <div className="relative" style={{ width, height }}>
         <svg
           className="absolute inset-0"
@@ -51,14 +48,15 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
         >
           {points.slice(1).map((p, i) => {
             const prev = points[i]
-            const midX = (prev.x + p.x) / 2
             const done = prev.item.completed && p.item.completed
             return (
-              <path
+              <line
                 key={p.item.id}
-                d={`M ${prev.x} ${prev.y} C ${midX} ${prev.y}, ${midX} ${p.y}, ${p.x} ${p.y}`}
-                fill="none"
-                strokeWidth={4}
+                x1={prev.x}
+                y1={prev.y}
+                x2={p.x}
+                y2={p.y}
+                strokeWidth={2}
                 strokeLinecap="round"
                 className={done ? "stroke-emerald-500" : "stroke-border"}
               />
@@ -73,15 +71,13 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
             title={p.item.title}
             disabled={saving}
             onClick={() => handleClick(p.item.position)}
-            className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-xs font-semibold shadow-sm transition-colors ${
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors ${
               p.item.completed
-                ? "border-emerald-500 bg-emerald-500 text-white"
-                : "border-border bg-card text-muted-foreground hover:border-foreground/40"
+                ? "border-emerald-500 bg-emerald-500"
+                : "border-border bg-card hover:border-foreground/40"
             }`}
             style={{ left: p.x, top: p.y, width: NODE_SIZE, height: NODE_SIZE }}
-          >
-            {p.item.completed ? <Check className="size-5" /> : p.item.position}
-          </button>
+          />
         ))}
       </div>
     </div>
