@@ -431,50 +431,52 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
       </div>
 
       {selected ? (
-        <Card>
-          <CardContent className="flex flex-col gap-3 pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-medium">{selected.step.title}</h3>
-              {selected.step.completed && (
-                <Badge variant="secondary" className="gap-1">
-                  <CheckCircle2 className="size-3 text-emerald-500" />
-                  Concluído
-                </Badge>
-              )}
-            </div>
-            {selectedPins.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedPins.map((pin) => (
-                  <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
-                    {courseTitle(courses, pin.courseId)}
-                    {pin.rating != null ? ` · ${pin.rating}/5` : ""}
-                    <button
-                      type="button"
-                      title="Despinar curso"
-                      onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
-                      className="rounded-full p-0.5 hover:bg-foreground/10"
-                    >
-                      <X className="size-3" />
-                    </button>
+        <div key={selected.step.id} className="animate-in fade-in duration-200 ease-out">
+          <Card>
+            <CardContent className="flex flex-col gap-3 pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-medium">{selected.step.title}</h3>
+                {selected.step.completed && (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckCircle2 className="size-3 text-emerald-500" />
+                    Concluído
                   </Badge>
-                ))}
+                )}
               </div>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant={selected.step.completed ? "outline" : "default"}
-              className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
-              onMouseMove={onMouseMove}
-              onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
-            >
-              {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
-            </Button>
-            <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
-          </CardContent>
-        </Card>
+              {selectedPins.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPins.map((pin) => (
+                    <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
+                      {courseTitle(courses, pin.courseId)}
+                      {pin.rating != null ? ` · ${pin.rating}/5` : ""}
+                      <button
+                        type="button"
+                        title="Despinar curso"
+                        onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
+                        className="rounded-full p-0.5 hover:bg-foreground/10"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
+                onMouseMove={onMouseMove}
+                onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
+              >
+                {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
+              </Button>
+              <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
+            </CardContent>
+          </Card>
+        </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p key="empty" className="animate-in fade-in text-sm text-muted-foreground duration-200 ease-out">
           Clique numa etapa do diagrama para pinar um curso.
         </p>
       )}
