@@ -22,6 +22,11 @@ import {
 type Mode = "focus" | "break"
 type View = "timer" | "settings"
 
+const RING_SIZE = 220
+const RING_STROKE = 10
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+
 function formatClock(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0")
   const s = Math.floor(totalSeconds % 60).toString().padStart(2, "0")
@@ -149,6 +154,9 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
 
   const focusedMinutes = Math.floor(focusedSeconds / 60)
   const modeLabel = mode === "focus" ? "Foco" : isLongBreak ? "Pausa longa" : "Pausa"
+  const totalSeconds = currentModeSeconds()
+  const ringProgress = totalSeconds > 0 ? 1 - timeLeft / totalSeconds : 0
+  const ringDashOffset = RING_CIRCUMFERENCE * (1 - ringProgress)
 
   async function saveSession(event: FormEvent) {
     event.preventDefault()
@@ -215,10 +223,37 @@ export function PomodoroTimer({ categories, courses, onCategoryCreated, onSessio
           <SettingsIcon className="size-4" />
         </Button>
 
-        <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
-        <span className="font-mono text-5xl font-semibold tabular-nums">
-          {formatClock(timeLeft)}
-        </span>
+        <div className="relative flex items-center justify-center">
+          <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90">
+            <circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              fill="none"
+              strokeWidth={RING_STROKE}
+              className="stroke-muted"
+            />
+            <circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              fill="none"
+              strokeWidth={RING_STROKE}
+              strokeLinecap="round"
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={ringDashOffset}
+              className={`transition-[stroke-dashoffset] duration-1000 ease-linear ${
+                mode === "focus" ? "stroke-primary" : "stroke-emerald-500"
+              }`}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
+            <span className="font-mono text-4xl font-semibold tabular-nums">
+              {formatClock(timeLeft)}
+            </span>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button type="button" onClick={toggleRunning}>
             {running ? "Pausar" : "Iniciar"}
