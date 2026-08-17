@@ -527,7 +527,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
             </Card>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="animate-in fade-in text-sm text-muted-foreground duration-150 ease-out">
             Clique numa etapa do diagrama para pinar um curso.
           </p>
         )}
