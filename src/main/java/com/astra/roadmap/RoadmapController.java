@@ -5,11 +5,13 @@ import com.astra.roadmap.dto.CreateStepRequest;
 import com.astra.roadmap.dto.RoadmapDetailResponse;
 import com.astra.roadmap.dto.RoadmapResponse;
 import com.astra.roadmap.dto.StepResponse;
+import com.astra.roadmap.dto.UpdateStepRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,5 +49,11 @@ public class RoadmapController {
     @ResponseStatus(HttpStatus.CREATED)
     public StepResponse addStep(@PathVariable UUID id, @Valid @RequestBody CreateStepRequest request) {
         return roadmapService.addStep(id, request);
+    }
+
+    @PatchMapping("/{id}/steps/{stepId}")
+    public StepResponse updateStep(@PathVariable UUID id, @PathVariable UUID stepId,
+                                   @Valid @RequestBody UpdateStepRequest request) {
+        return roadmapService.setStepCompleted(id, stepId, request);
     }
 }

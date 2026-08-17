@@ -85,10 +85,11 @@ export function RoadmapDetailPage() {
       </div>
 
       <RoadmapDiagram
+        roadmapId={id!}
         steps={roadmap.steps}
         pinsByStep={pinsByStep}
         courses={courses}
-        onPinned={loadRoadmap}
+        onChanged={loadRoadmap}
       />
 
       {!roadmap.predefined && (

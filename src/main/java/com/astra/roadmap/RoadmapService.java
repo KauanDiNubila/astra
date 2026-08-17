@@ -5,6 +5,7 @@ import com.astra.roadmap.dto.CreateStepRequest;
 import com.astra.roadmap.dto.RoadmapDetailResponse;
 import com.astra.roadmap.dto.RoadmapResponse;
 import com.astra.roadmap.dto.StepResponse;
+import com.astra.roadmap.dto.UpdateStepRequest;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.NotFoundException;
 import java.util.List;
@@ -45,7 +46,7 @@ public class RoadmapService {
     public RoadmapDetailResponse get(UUID roadmapId) {
         Roadmap roadmap = accessibleRoadmap(roadmapId);
         List<StepResponse> steps = stepRepository.findByRoadmapIdOrderByPosition(roadmapId).stream()
-                .map(s -> new StepResponse(s.getId(), s.getTitle(), s.getPosition(), s.getParentStepId()))
+                .map(this::toStepResponse)
                 .toList();
         return new RoadmapDetailResponse(roadmap.getId(), roadmap.getTitle(), roadmap.getSource(),
                 roadmap.getOwnerId() == null, steps);
@@ -64,7 +65,20 @@ public class RoadmapService {
         }
         RoadmapStep step = new RoadmapStep(roadmap, request.title(), request.position(), parentStepId);
         RoadmapStep saved = stepRepository.save(step);
-        return new StepResponse(saved.getId(), saved.getTitle(), saved.getPosition(), saved.getParentStepId());
+        return toStepResponse(saved);
+    }
+
+    @Transactional
+    public StepResponse setStepCompleted(UUID roadmapId, UUID stepId, UpdateStepRequest request) {
+        accessibleRoadmap(roadmapId);
+        RoadmapStep step = stepRepository.findById(stepId)
+                .orElseThrow(() -> new NotFoundException("Step not found"));
+        if (!step.getRoadmap().getId().equals(roadmapId)) {
+            throw new NotFoundException("Step not found");
+        }
+        step.setCompleted(request.completed());
+        RoadmapStep saved = stepRepository.save(step);
+        return toStepResponse(saved);
     }
 
     private Roadmap accessibleRoadmap(UUID roadmapId) {
@@ -86,5 +100,10 @@ public class RoadmapService {
     private RoadmapResponse toSummary(Roadmap roadmap) {
         return new RoadmapResponse(roadmap.getId(), roadmap.getTitle(), roadmap.getSource(),
                 roadmap.getOwnerId() == null);
+    }
+
+    private StepResponse toStepResponse(RoadmapStep step) {
+        return new StepResponse(step.getId(), step.getTitle(), step.getPosition(), step.getParentStepId(),
+                step.isCompleted());
     }
 }

@@ -15,10 +15,17 @@ import {
 } from "@/components/ui/select"
 
 type Props = {
+  roadmapId: string
   steps: RoadmapStep[]
   pinsByStep: Record<string, Pin[]>
   courses: CourseSummary[]
-  onPinned: () => Promise<void>
+  onChanged: () => Promise<void>
+}
+
+function toggleStepCompleted(roadmapId: string, step: RoadmapStep, onChanged: () => Promise<void>) {
+  return api
+    .patch(`/roadmaps/${roadmapId}/steps/${step.id}`, { completed: !step.completed })
+    .then(onChanged)
 }
 
 type ViewMode = "graph" | "list"
@@ -104,6 +111,7 @@ function ListNode({
   pins,
   courses,
   onPinned,
+  onToggleCompleted,
   variant,
 }: {
   step: RoadmapStep
@@ -111,10 +119,11 @@ function ListNode({
   pins: Pin[]
   courses: CourseSummary[]
   onPinned: () => Promise<void>
+  onToggleCompleted: () => Promise<void>
   variant: "main" | "sub"
 }) {
   const [open, setOpen] = useState(false)
-  const done = pins.length > 0
+  const done = step.completed
   const isMain = variant === "main"
 
   return (
@@ -156,12 +165,26 @@ function ListNode({
           ))}
         </div>
       )}
-      {open && <PinPanel stepId={step.id} courses={courses} onPinned={onPinned} />}
+      {open && (
+        <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            type="button"
+            size="sm"
+            variant={done ? "secondary" : "outline"}
+            className="h-8 w-fit gap-1.5 text-xs"
+            onClick={onToggleCompleted}
+          >
+            {done ? <CheckCircle2 className="size-3.5" /> : null}
+            {done ? "Concluído" : "Marcar como concluído"}
+          </Button>
+          <PinPanel stepId={step.id} courses={courses} onPinned={onPinned} />
+        </div>
+      )}
     </div>
   )
 }
 
-function ListView({ steps, pinsByStep, courses, onPinned }: Props) {
+function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
   const mains = steps.filter((s) => !s.parentStepId).sort((a, b) => a.position - b.position)
   const childrenOf = (id: string) =>
     steps.filter((s) => s.parentStepId === id).sort((a, b) => a.position - b.position)
@@ -178,7 +201,8 @@ function ListView({ steps, pinsByStep, courses, onPinned }: Props) {
               index={index + 1}
               pins={pinsByStep[main.id] ?? []}
               courses={courses}
-              onPinned={onPinned}
+              onPinned={onChanged}
+              onToggleCompleted={() => toggleStepCompleted(roadmapId, main, onChanged)}
               variant="main"
             />
             {children.length > 0 && (
@@ -191,7 +215,8 @@ function ListView({ steps, pinsByStep, courses, onPinned }: Props) {
                       step={child}
                       pins={pinsByStep[child.id] ?? []}
                       courses={courses}
-                      onPinned={onPinned}
+                      onPinned={onChanged}
+                      onToggleCompleted={() => toggleStepCompleted(roadmapId, child, onChanged)}
                       variant="sub"
                     />
                   ))}
@@ -288,7 +313,7 @@ function edgePath(from: Positioned, to: Positioned, kind: "trunk" | "branch") {
   return `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`
 }
 
-function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
+function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
   const { nodes, edges, width, height } = useMemo(() => computeGraphLayout(steps), [steps])
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -328,8 +353,7 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
           </svg>
 
           {nodes.map((node, index) => {
-            const pins = pinsByStep[node.step.id] ?? []
-            const done = pins.length > 0
+            const done = node.step.completed
             const isMain = node.kind === "main"
             const isSelected = node.step.id === selectedId
             return (
@@ -373,7 +397,7 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
           <CardContent className="flex flex-col gap-3 pt-6">
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-medium">{selected.step.title}</h3>
-              {selectedPins.length > 0 && (
+              {selected.step.completed && (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="size-3 text-emerald-500" />
                   Concluído
@@ -390,7 +414,16 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
                 ))}
               </div>
             )}
-            <PinPanel stepId={selected.step.id} courses={courses} onPinned={onPinned} />
+            <Button
+              type="button"
+              size="sm"
+              variant={selected.step.completed ? "outline" : "default"}
+              className="w-fit gap-1.5"
+              onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
+            >
+              {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
+            </Button>
+            <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
           </CardContent>
         </Card>
       ) : (
