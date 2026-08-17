@@ -36,10 +36,10 @@ export function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Hoje" value={formatMinutes(data.todayMinutes)} />
-        <StatCard label="Esta semana" value={formatMinutes(data.weekMinutes)} />
-        <StatCard label="Total" value={formatMinutes(data.totalMinutes)} />
-        <StatCard label="Streak" value={`${data.currentStreak} dia(s)`} />
+        <StatCard label="Hoje" value={data.todayMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        <StatCard label="Esta semana" value={data.weekMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        <StatCard label="Total" value={data.totalMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        <StatCard label="Streak" value={data.currentStreak} format={(n) => `${Math.round(n)} dia(s)`} />
       </div>
 
       <Card>

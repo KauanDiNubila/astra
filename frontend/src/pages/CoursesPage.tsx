@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
+import { cn, INTERACTIVE_CARD_CLASS } from "@/lib/utils"
 import type { CourseSummary } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -109,7 +110,7 @@ export function CoursesPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {courses.map((course) => (
             <Link key={course.id} to={`/courses/${course.id}`}>
-              <Card className="h-full transition-colors hover:border-foreground/30">
+              <Card className={cn("h-full", INTERACTIVE_CARD_CLASS)}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base">{course.title}</CardTitle>
