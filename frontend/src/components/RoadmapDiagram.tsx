@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { CheckCircle2, GitBranch, List } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
+import { useSpotlight } from "@/hooks/useSpotlight"
+import { BUTTON_REVEAL_CLASS, cn } from "@/lib/utils"
 import type { CourseSummary, Pin, RoadmapStep } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -125,6 +127,7 @@ function ListNode({
   const [open, setOpen] = useState(false)
   const done = step.completed
   const isMain = variant === "main"
+  const { onMouseMove } = useSpotlight()
 
   return (
     <div
@@ -171,7 +174,8 @@ function ListNode({
             type="button"
             size="sm"
             variant={done ? "secondary" : "outline"}
-            className="h-8 w-fit gap-1.5 text-xs"
+            className={cn("h-8 w-fit gap-1.5 text-xs", BUTTON_REVEAL_CLASS)}
+            onMouseMove={onMouseMove}
             onClick={onToggleCompleted}
           >
             {done ? <CheckCircle2 className="size-3.5" /> : null}
@@ -320,6 +324,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
   const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
+  const { onMouseMove } = useSpotlight()
 
   return (
     <div className="flex flex-col gap-4">
@@ -368,11 +373,11 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                 whileTap={{ scale: 0.97 }}
                 className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors ${
                   done
-                    ? "border-emerald-500 bg-emerald-500/10"
+                    ? "border-emerald-500 bg-emerald-500/15"
                     : isMain
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card hover:border-foreground/40"
-                } ${isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
+                } ${isSelected ? (done ? "ring-2 ring-emerald-400" : "ring-2 ring-primary") : ""}`}
                 style={{
                   left: node.x - node.w / 2,
                   top: node.y - node.h / 2,
@@ -418,7 +423,8 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
               type="button"
               size="sm"
               variant={selected.step.completed ? "outline" : "default"}
-              className="w-fit gap-1.5"
+              className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
+              onMouseMove={onMouseMove}
               onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
             >
               {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
