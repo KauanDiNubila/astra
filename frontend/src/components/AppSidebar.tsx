@@ -1,4 +1,5 @@
 import { BookOpen, Clock, LayoutDashboard, Map, Moon, Sun, Target, Trophy } from "lucide-react"
+import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
@@ -63,12 +64,21 @@ export function AppSidebar() {
           <SidebarMenu>
             {links.map((link) => {
               const to = link.to === "/roadmaps" && lastRoadmapId ? `/roadmaps/${lastRoadmapId}` : link.to
+              const active = isLinkActive(pathname, link.to, link.end)
               return (
                 <SidebarMenuItem key={link.to}>
+                  {active && (
+                    <motion.div
+                      layoutId="active-nav-pill"
+                      className="absolute inset-0 rounded-md bg-sidebar-accent"
+                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    />
+                  )}
                   <SidebarMenuButton
                     asChild
                     tooltip={link.label}
-                    isActive={isLinkActive(pathname, link.to, link.end)}
+                    isActive={active}
+                    className="relative z-10 data-active:bg-transparent"
                   >
                     <NavLink to={to} end={link.end}>
                       <link.icon />

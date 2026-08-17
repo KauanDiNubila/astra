@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { AnimatePresence, motion } from "motion/react"
 import { useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Separator } from "@/components/ui/separator"
@@ -22,12 +23,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-4" />
           </header>
-          <div
-            key={pathname}
-            className="mx-auto w-full max-w-5xl animate-in px-6 py-8 fade-in duration-300 ease-out"
-          >
-            {children}
-          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="mx-auto w-full max-w-5xl px-6 py-8"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
