@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
@@ -379,7 +380,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
     el.style.height = "0px"
     let fallback = 0
     function finish() {
-      setVisibleId(null)
+      flushSync(() => setVisibleId(null))
       el!.style.transition = ""
       el!.style.height = ""
       el!.style.overflow = ""
