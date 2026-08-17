@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { flushSync } from "react-dom"
 import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
@@ -340,15 +339,13 @@ function edgePath(from: Positioned, to: Positioned, kind: "trunk" | "branch") {
 function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
   const { nodes, edges, width, height } = useMemo(() => computeGraphLayout(steps), [steps])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [visibleId, setVisibleId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const emptyHeightRef = useRef(0)
-  const collapsingRef = useRef(false)
+  const panelOuterRef = useRef<HTMLDivElement>(null)
+  const panelInnerRef = useRef<HTMLDivElement>(null)
 
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
-  const visibleSelected = visibleId ? byId[visibleId] : null
-  const selectedPins = visibleSelected ? (pinsByStep[visibleSelected.step.id] ?? []) : []
+  const selected = selectedId ? byId[selectedId] : null
+  const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
   const { onMouseMove } = useSpotlight()
 
   useEffect(() => {
@@ -365,47 +362,20 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   }, [selectedId])
 
   useEffect(() => {
-    const el = panelRef.current
-    if (el && !visibleId && !collapsingRef.current) {
-      emptyHeightRef.current = el.getBoundingClientRect().height
-    }
-  })
+    const outer = panelOuterRef.current
+    const inner = panelInnerRef.current
+    if (!outer || !inner) return
+    outer.style.height = `${inner.getBoundingClientRect().height}px`
+    const ro = new ResizeObserver((entries) => {
+      outer.style.height = `${entries[0].contentRect.height}px`
+    })
+    ro.observe(inner)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     if (selectedId) {
-      setVisibleId(selectedId)
-      return
-    }
-    const el = panelRef.current
-    if (!el || !visibleId) return
-
-    const startHeight = el.getBoundingClientRect().height
-    const endHeight = emptyHeightRef.current
-    collapsingRef.current = true
-    el.style.overflow = "hidden"
-    el.style.height = `${startHeight}px`
-    void el.offsetHeight
-    el.style.transition = "height 250ms ease-out"
-    el.style.height = `${endHeight}px`
-
-    let fallback = 0
-    function finish() {
-      flushSync(() => setVisibleId(null))
-      el!.style.transition = ""
-      el!.style.height = ""
-      el!.style.overflow = ""
-      collapsingRef.current = false
-    }
-    function onTransitionEnd(event: TransitionEvent) {
-      if (event.propertyName !== "height") return
-      clearTimeout(fallback)
-      finish()
-    }
-    el.addEventListener("transitionend", onTransitionEnd)
-    fallback = window.setTimeout(finish, 300)
-    return () => {
-      clearTimeout(fallback)
-      el.removeEventListener("transitionend", onTransitionEnd)
+      panelOuterRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
     }
   }, [selectedId])
 
@@ -480,57 +450,59 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
         </div>
       </div>
 
-      <div ref={panelRef}>
-        {visibleSelected ? (
-          <div key={visibleSelected.step.id} className="animate-in fade-in duration-200 ease-out">
-            <Card>
-              <CardContent className="flex flex-col gap-3 pt-6">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-medium">{visibleSelected.step.title}</h3>
-                  {visibleSelected.step.completed && (
-                    <Badge variant="secondary" className="gap-1">
-                      <CheckCircle2 className="size-3 text-emerald-500" />
-                      Concluído
-                    </Badge>
-                  )}
-                </div>
-                {selectedPins.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedPins.map((pin) => (
-                      <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
-                        {courseTitle(courses, pin.courseId)}
-                        {pin.rating != null ? ` · ${pin.rating}/5` : ""}
-                        <button
-                          type="button"
-                          title="Despinar curso"
-                          onClick={() => unpinCourse(visibleSelected.step.id, pin.id, onChanged)}
-                          className="rounded-full p-0.5 hover:bg-foreground/10"
-                        >
-                          <X className="size-3" />
-                        </button>
+      <div ref={panelOuterRef} className="overflow-hidden transition-[height] duration-500 ease-out">
+        <div ref={panelInnerRef}>
+          {selected ? (
+            <div key={selected.step.id} className="animate-in fade-in duration-300 ease-out">
+              <Card>
+                <CardContent className="flex flex-col gap-3 pt-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-medium">{selected.step.title}</h3>
+                    {selected.step.completed && (
+                      <Badge variant="secondary" className="gap-1">
+                        <CheckCircle2 className="size-3 text-emerald-500" />
+                        Concluído
                       </Badge>
-                    ))}
+                    )}
                   </div>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
-                  onMouseMove={onMouseMove}
-                  onClick={() => toggleStepCompleted(roadmapId, visibleSelected.step, onChanged)}
-                >
-                  {visibleSelected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
-                </Button>
-                <PinPanel stepId={visibleSelected.step.id} courses={courses} onPinned={onChanged} />
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <p className="animate-in fade-in text-sm text-muted-foreground duration-150 ease-out">
-            Clique numa etapa do diagrama para pinar um curso.
-          </p>
-        )}
+                  {selectedPins.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedPins.map((pin) => (
+                        <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
+                          {courseTitle(courses, pin.courseId)}
+                          {pin.rating != null ? ` · ${pin.rating}/5` : ""}
+                          <button
+                            type="button"
+                            title="Despinar curso"
+                            onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
+                            className="rounded-full p-0.5 hover:bg-foreground/10"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
+                    onMouseMove={onMouseMove}
+                    onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
+                  >
+                    {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
+                  </Button>
+                  <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="animate-in fade-in text-sm text-muted-foreground duration-300 ease-out">
+              Clique numa etapa do diagrama para pinar um curso.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
