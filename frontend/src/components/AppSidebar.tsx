@@ -2,6 +2,7 @@ import { BookOpen, Clock, LayoutDashboard, Map, Moon, Sun, Target, Trophy } from
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
+import { getLastRoadmapId } from "@/lib/lastRoadmap"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -42,6 +43,7 @@ export function AppSidebar() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { pathname } = useLocation()
+  const lastRoadmapId = getLastRoadmapId()
 
   return (
     <Sidebar collapsible="icon">
@@ -59,20 +61,23 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {links.map((link) => (
-              <SidebarMenuItem key={link.to}>
-                <SidebarMenuButton
-                  asChild
-                  tooltip={link.label}
-                  isActive={isLinkActive(pathname, link.to, link.end)}
-                >
-                  <NavLink to={link.to} end={link.end}>
-                    <link.icon />
-                    <span>{link.label}</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {links.map((link) => {
+              const to = link.to === "/roadmaps" && lastRoadmapId ? `/roadmaps/${lastRoadmapId}` : link.to
+              return (
+                <SidebarMenuItem key={link.to}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={link.label}
+                    isActive={isLinkActive(pathname, link.to, link.end)}
+                  >
+                    <NavLink to={to} end={link.end}>
+                      <link.icon />
+                      <span>{link.label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
