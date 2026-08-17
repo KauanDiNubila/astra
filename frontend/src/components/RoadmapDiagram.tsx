@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
@@ -361,11 +361,17 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [selectedId])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const outer = panelOuterRef.current
     const inner = panelInnerRef.current
     if (!outer || !inner) return
     outer.style.height = `${inner.getBoundingClientRect().height}px`
+  })
+
+  useEffect(() => {
+    const outer = panelOuterRef.current
+    const inner = panelInnerRef.current
+    if (!outer || !inner) return
     const ro = new ResizeObserver((entries) => {
       outer.style.height = `${entries[0].contentRect.height}px`
     })
@@ -374,8 +380,27 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   }, [])
 
   useEffect(() => {
-    if (selectedId) {
-      panelOuterRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    if (!selectedId) return
+    const outer = panelOuterRef.current
+    if (!outer) return
+    let scrolled = false
+    function revealPanel() {
+      if (scrolled) return
+      scrolled = true
+      const hidden = outer!.getBoundingClientRect().bottom - window.innerHeight
+      if (hidden > 0) {
+        window.scrollBy({ top: hidden + 24, behavior: "smooth" })
+      }
+    }
+    function onExpandEnd(event: TransitionEvent) {
+      if (event.propertyName !== "height") return
+      revealPanel()
+    }
+    outer.addEventListener("transitionend", onExpandEnd)
+    const fallback = window.setTimeout(revealPanel, 600)
+    return () => {
+      clearTimeout(fallback)
+      outer.removeEventListener("transitionend", onExpandEnd)
     }
   }, [selectedId])
 
