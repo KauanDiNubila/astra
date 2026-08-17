@@ -365,19 +365,11 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
     const outer = panelOuterRef.current
     const inner = panelInnerRef.current
     if (!outer || !inner) return
-    outer.style.height = `${inner.getBoundingClientRect().height}px`
-  })
-
-  useEffect(() => {
-    const outer = panelOuterRef.current
-    const inner = panelInnerRef.current
-    if (!outer || !inner) return
-    const ro = new ResizeObserver((entries) => {
-      outer.style.height = `${entries[0].contentRect.height}px`
-    })
-    ro.observe(inner)
-    return () => ro.disconnect()
-  }, [])
+    const target = `${Math.ceil(inner.getBoundingClientRect().height)}px`
+    if (outer.style.height !== target) {
+      outer.style.height = target
+    }
+  }, [selectedId, selectedPins.length])
 
   useEffect(() => {
     if (!selectedId) return
@@ -475,7 +467,10 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
         </div>
       </div>
 
-      <div ref={panelOuterRef} className="overflow-hidden transition-[height] duration-500 ease-out">
+      <div
+        ref={panelOuterRef}
+        className="overflow-hidden transition-[height] duration-500 ease-out [contain:layout_paint]"
+      >
         <div ref={panelInnerRef}>
           {selected ? (
             <div key={selected.step.id} className="animate-in fade-in duration-300 ease-out">
