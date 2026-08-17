@@ -42,6 +42,18 @@ public class PinService {
         return toDto(saved);
     }
 
+    @Transactional
+    public void unpin(UUID stepId, UUID pinId) {
+        UUID userId = currentUserProvider.currentUserId();
+        accessibleStep(stepId, userId);
+        CourseStepLink link = linkRepository.findById(pinId)
+                .orElseThrow(() -> new NotFoundException("Pin not found"));
+        if (!link.getStep().getId().equals(stepId)) {
+            throw new NotFoundException("Pin not found");
+        }
+        linkRepository.delete(link);
+    }
+
     @Transactional(readOnly = true)
     public List<PinResponse> listForStep(UUID stepId) {
         UUID userId = currentUserProvider.currentUserId();

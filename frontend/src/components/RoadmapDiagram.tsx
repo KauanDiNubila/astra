@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
-import { CheckCircle2, GitBranch, List } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
 import { useSpotlight } from "@/hooks/useSpotlight"
@@ -28,6 +28,10 @@ function toggleStepCompleted(roadmapId: string, step: RoadmapStep, onChanged: ()
   return api
     .patch(`/roadmaps/${roadmapId}/steps/${step.id}`, { completed: !step.completed })
     .then(onChanged)
+}
+
+function unpinCourse(stepId: string, pinId: string, onChanged: () => Promise<void>) {
+  return api.delete(`/steps/${stepId}/pins/${pinId}`).then(onChanged)
 }
 
 type ViewMode = "graph" | "list"
@@ -113,6 +117,7 @@ function ListNode({
   pins,
   courses,
   onPinned,
+  onUnpinned,
   onToggleCompleted,
   variant,
 }: {
@@ -121,6 +126,7 @@ function ListNode({
   pins: Pin[]
   courses: CourseSummary[]
   onPinned: () => Promise<void>
+  onUnpinned: (pinId: string) => Promise<void>
   onToggleCompleted: () => Promise<void>
   variant: "main" | "sub"
 }) {
@@ -135,7 +141,7 @@ function ListNode({
         isMain ? "min-w-56 px-5 py-3" : "min-w-36 px-3 py-2"
       } ${
         done
-          ? "border-emerald-500 bg-emerald-500/10"
+          ? "border-emerald-500 bg-emerald-950"
           : isMain
             ? "border-primary bg-primary/5"
             : "border-border bg-card hover:border-foreground/30"
@@ -161,9 +167,20 @@ function ListNode({
       {pins.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {pins.map((pin) => (
-            <Badge key={pin.id} variant="secondary" className="text-[10px]">
+            <Badge key={pin.id} variant="secondary" className="gap-1 pr-1 text-[10px]">
               {courseTitle(courses, pin.courseId)}
               {pin.rating != null ? ` · ${pin.rating}/5` : ""}
+              <button
+                type="button"
+                title="Despinar curso"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUnpinned(pin.id)
+                }}
+                className="rounded-full p-0.5 hover:bg-foreground/10"
+              >
+                <X className="size-2.5" />
+              </button>
             </Badge>
           ))}
         </div>
@@ -206,6 +223,7 @@ function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
               pins={pinsByStep[main.id] ?? []}
               courses={courses}
               onPinned={onChanged}
+              onUnpinned={(pinId) => unpinCourse(main.id, pinId, onChanged)}
               onToggleCompleted={() => toggleStepCompleted(roadmapId, main, onChanged)}
               variant="main"
             />
@@ -220,6 +238,7 @@ function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
                       pins={pinsByStep[child.id] ?? []}
                       courses={courses}
                       onPinned={onChanged}
+                      onUnpinned={(pinId) => unpinCourse(child.id, pinId, onChanged)}
                       onToggleCompleted={() => toggleStepCompleted(roadmapId, child, onChanged)}
                       variant="sub"
                     />
@@ -320,14 +339,28 @@ function edgePath(from: Positioned, to: Positioned, kind: "trunk" | "branch") {
 function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
   const { nodes, edges, width, height } = useMemo(() => computeGraphLayout(steps), [steps])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
   const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
   const { onMouseMove } = useSpotlight()
 
+  useEffect(() => {
+    if (!selectedId) return
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement
+      if (target.closest('[data-slot="select-content"]')) return
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setSelectedId(null)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [selectedId])
+
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={containerRef} className="flex flex-col gap-4">
       <div className="overflow-x-auto">
         <div className="relative" style={{ width, height }}>
           <svg
@@ -373,7 +406,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                 whileTap={{ scale: 0.97 }}
                 className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors ${
                   done
-                    ? "border-emerald-500 bg-emerald-500/15"
+                    ? "border-emerald-500 bg-emerald-950"
                     : isMain
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card hover:border-foreground/40"
@@ -412,9 +445,17 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
             {selectedPins.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {selectedPins.map((pin) => (
-                  <Badge key={pin.id} variant="outline">
+                  <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
                     {courseTitle(courses, pin.courseId)}
                     {pin.rating != null ? ` · ${pin.rating}/5` : ""}
+                    <button
+                      type="button"
+                      title="Despinar curso"
+                      onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
+                      className="rounded-full p-0.5 hover:bg-foreground/10"
+                    >
+                      <X className="size-3" />
+                    </button>
                   </Badge>
                 ))}
               </div>
