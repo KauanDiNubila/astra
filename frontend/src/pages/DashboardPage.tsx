@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { Check, X } from "lucide-react"
+import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
 import { formatMinutes } from "@/lib/format"
+import { gridItem, gridStagger } from "@/lib/utils"
 import type { Dashboard, DailyMinutes } from "@/lib/types"
 import { StatCard } from "@/components/StatCard"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
@@ -36,12 +38,25 @@ export function DashboardPage() {
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Hoje" value={data.todayMinutes} format={(n) => formatMinutes(Math.round(n))} />
-        <StatCard label="Esta semana" value={data.weekMinutes} format={(n) => formatMinutes(Math.round(n))} />
-        <StatCard label="Total" value={data.totalMinutes} format={(n) => formatMinutes(Math.round(n))} />
-        <StatCard label="Streak" value={data.currentStreak} format={(n) => `${Math.round(n)} dia(s)`} />
-      </div>
+      <motion.div
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        variants={gridStagger}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={gridItem}>
+          <StatCard label="Hoje" value={data.todayMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        </motion.div>
+        <motion.div variants={gridItem}>
+          <StatCard label="Esta semana" value={data.weekMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        </motion.div>
+        <motion.div variants={gridItem}>
+          <StatCard label="Total" value={data.totalMinutes} format={(n) => formatMinutes(Math.round(n))} />
+        </motion.div>
+        <motion.div variants={gridItem}>
+          <StatCard label="Streak" value={data.currentStreak} format={(n) => `${Math.round(n)} dia(s)`} />
+        </motion.div>
+      </motion.div>
 
       <Card>
         <CardHeader>

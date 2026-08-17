@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Minus, Plus } from "lucide-react"
+import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import { cn, INTERACTIVE_CARD_CLASS } from "@/lib/utils"
+import { useSpotlight } from "@/hooks/useSpotlight"
+import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import type { CourseSummary } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +25,7 @@ export function CoursesPage() {
   const [platform, setPlatform] = useState("")
   const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
+  const { onMouseMove } = useSpotlight()
 
   function load() {
     return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
@@ -111,28 +114,38 @@ export function CoursesPage() {
       {courses.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum curso ainda.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <motion.div
+          className="grid gap-4 sm:grid-cols-2"
+          variants={gridStagger}
+          initial="hidden"
+          animate="show"
+        >
           {courses.map((course) => (
-            <Link key={course.id} to={`/courses/${course.id}`}>
-              <Card className={cn("h-full", INTERACTIVE_CARD_CLASS)}>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base">{course.title}</CardTitle>
-                    <Badge variant="secondary">
-                      {course.completedLessons}/{course.totalLessons} aulas
-                    </Badge>
-                  </div>
-                  {course.platform && (
-                    <p className="text-sm text-muted-foreground">{course.platform}</p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <Progress value={Math.round(course.progress * 100)} />
-                </CardContent>
-              </Card>
-            </Link>
+            <motion.div key={course.id} variants={gridItem}>
+              <Link to={`/courses/${course.id}`}>
+                <Card
+                  className={cn("h-full", INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS)}
+                  onMouseMove={onMouseMove}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-base">{course.title}</CardTitle>
+                      <Badge variant="secondary">
+                        {course.completedLessons}/{course.totalLessons} aulas
+                      </Badge>
+                    </div>
+                    {course.platform && (
+                      <p className="text-sm text-muted-foreground">{course.platform}</p>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <Progress value={Math.round(course.progress * 100)} />
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   )

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
+import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import { cn, INTERACTIVE_CARD_CLASS } from "@/lib/utils"
+import { useSpotlight } from "@/hooks/useSpotlight"
+import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import type { Roadmap } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +19,7 @@ export function RoadmapsPage() {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState("")
   const [saving, setSaving] = useState(false)
+  const { onMouseMove } = useSpotlight()
 
   function load() {
     return api.get<Roadmap[]>("/roadmaps").then((res) => setRoadmaps(res.data))
@@ -68,23 +71,33 @@ export function RoadmapsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <motion.div
+        className="grid gap-4 sm:grid-cols-2"
+        variants={gridStagger}
+        initial="hidden"
+        animate="show"
+      >
         {roadmaps.map((roadmap) => (
-          <Link key={roadmap.id} to={`/roadmaps/${roadmap.id}`}>
-            <Card className={cn("h-full", INTERACTIVE_CARD_CLASS)}>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">{roadmap.title}</CardTitle>
-                  {roadmap.predefined && <Badge variant="secondary">Pré-definido</Badge>}
-                </div>
-                {roadmap.source && (
-                  <p className="text-sm text-muted-foreground">Fonte: {roadmap.source}</p>
-                )}
-              </CardHeader>
-            </Card>
-          </Link>
+          <motion.div key={roadmap.id} variants={gridItem}>
+            <Link to={`/roadmaps/${roadmap.id}`}>
+              <Card
+                className={cn("h-full", INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS)}
+                onMouseMove={onMouseMove}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base">{roadmap.title}</CardTitle>
+                    {roadmap.predefined && <Badge variant="secondary">Pré-definido</Badge>}
+                  </div>
+                  {roadmap.source && (
+                    <p className="text-sm text-muted-foreground">Fonte: {roadmap.source}</p>
+                  )}
+                </CardHeader>
+              </Card>
+            </Link>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   )
 }
