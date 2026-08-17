@@ -343,6 +343,8 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   const [visibleId, setVisibleId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const emptyHeightRef = useRef(0)
+  const collapsingRef = useRef(false)
 
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const visibleSelected = visibleId ? byId[visibleId] : null
@@ -363,27 +365,36 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   }, [selectedId])
 
   useEffect(() => {
+    const el = panelRef.current
+    if (el && !visibleId && !collapsingRef.current) {
+      emptyHeightRef.current = el.getBoundingClientRect().height
+    }
+  })
+
+  useEffect(() => {
     if (selectedId) {
       setVisibleId(selectedId)
       return
     }
     const el = panelRef.current
-    if (!el || !visibleId) {
-      setVisibleId(null)
-      return
-    }
-    const startHeight = el.scrollHeight
+    if (!el || !visibleId) return
+
+    const startHeight = el.getBoundingClientRect().height
+    const endHeight = emptyHeightRef.current
+    collapsingRef.current = true
     el.style.overflow = "hidden"
     el.style.height = `${startHeight}px`
     void el.offsetHeight
     el.style.transition = "height 250ms ease-out"
-    el.style.height = "0px"
+    el.style.height = `${endHeight}px`
+
     let fallback = 0
     function finish() {
       flushSync(() => setVisibleId(null))
       el!.style.transition = ""
       el!.style.height = ""
       el!.style.overflow = ""
+      collapsingRef.current = false
     }
     function onTransitionEnd(event: TransitionEvent) {
       if (event.propertyName !== "height") return
