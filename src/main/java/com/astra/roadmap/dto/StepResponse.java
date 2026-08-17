@@ -6,6 +6,7 @@ public record StepResponse(
         UUID id,
         String title,
         int position,
-        UUID parentStepId
+        UUID parentStepId,
+        boolean completed
 ) {
 }

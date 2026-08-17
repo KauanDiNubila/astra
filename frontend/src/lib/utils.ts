@@ -17,6 +17,14 @@ export const SPOTLIGHT_CLASS =
   "before:bg-[radial-gradient(400px_circle_at_var(--x)_var(--y),color-mix(in_oklch,var(--foreground)_10%,transparent),transparent_70%)] " +
   "hover:before:opacity-100 motion-reduce:before:hidden"
 
+export const BUTTON_REVEAL_CLASS =
+  "relative overflow-hidden isolate " +
+  "before:pointer-events-none before:absolute before:inset-0 before:content-[''] " +
+  "before:bg-emerald-400/30 before:[clip-path:circle(0%_at_var(--x,50%)_var(--y,50%))] " +
+  "before:transition-[clip-path] before:duration-500 before:ease-out " +
+  "hover:before:[clip-path:circle(150%_at_var(--x,50%)_var(--y,50%))] " +
+  "motion-reduce:before:hidden"
+
 export const gridStagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },

@@ -89,6 +89,7 @@ export type RoadmapStep = {
   title: string
   position: number
   parentStepId: string | null
+  completed: boolean
 }
 
 export type RoadmapDetail = Roadmap & {
