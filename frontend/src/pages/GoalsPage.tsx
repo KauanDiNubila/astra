@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { Goal } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PageSkeleton } from "@/components/PageSkeleton"
 
 export function GoalsPage() {
   const [daily, setDaily] = useState("")
   const [weekly, setWeekly] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     api
@@ -29,19 +30,23 @@ export function GoalsPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setSaving(true)
-    setSaved(false)
-    if (daily) {
-      await api.put("/goals", { type: "DAILY", targetHours: Number(daily) })
+    try {
+      if (daily) {
+        await api.put("/goals", { type: "DAILY", targetHours: Number(daily) })
+      }
+      if (weekly) {
+        await api.put("/goals", { type: "WEEKLY", targetHours: Number(weekly) })
+      }
+      toast.success("Metas salvas.")
+    } catch {
+      toast.error("Não foi possível salvar as metas.")
+    } finally {
+      setSaving(false)
     }
-    if (weekly) {
-      await api.put("/goals", { type: "WEEKLY", targetHours: Number(weekly) })
-    }
-    setSaving(false)
-    setSaved(true)
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <PageSkeleton rows={2} />
   }
 
   return (
@@ -76,7 +81,6 @@ export function GoalsPage() {
             <Button type="submit" disabled={saving}>
               {saving ? "Salvando..." : "Salvar"}
             </Button>
-            {saved && <p className="text-sm text-emerald-600">Metas salvas.</p>}
           </form>
         </CardContent>
       </Card>

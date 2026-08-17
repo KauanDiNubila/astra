@@ -5,6 +5,7 @@ import { api } from "@/lib/api"
 import { formatMinutes } from "@/lib/format"
 import type { Dashboard, DailyMinutes } from "@/lib/types"
 import { StatCard } from "@/components/StatCard"
+import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { Heatmap } from "@/components/Heatmap"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -24,7 +25,7 @@ export function DashboardPage() {
   }, [])
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <StatGridSkeleton />
   }
 
   if (error || !data) {
