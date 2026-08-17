@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
 import { ModuleRow } from "@/components/ModuleRow"
+import { PageSkeleton } from "@/components/PageSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -54,7 +55,7 @@ export function CourseDetailPage() {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <PageSkeleton rows={4} />
   }
 
   if (!course) {

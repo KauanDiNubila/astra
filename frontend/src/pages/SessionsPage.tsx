@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { Pencil, Timer, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
 import type { Category, CourseSummary, Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
+import { PageSkeleton } from "@/components/PageSkeleton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -66,6 +68,8 @@ export function SessionsPage() {
     try {
       await api.delete(`/sessions/${id}`)
       await loadSessions()
+    } catch {
+      toast.error("Não foi possível remover a sessão.")
     } finally {
       setDeletingSessionId(null)
     }
@@ -102,7 +106,7 @@ export function SessionsPage() {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <PageSkeleton rows={4} />
   }
 
   return (

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import { setLastRoadmapId } from "@/lib/lastRoadmap"
 import type { CourseSummary, Pin, RoadmapDetail } from "@/lib/types"
+import { PageSkeleton } from "@/components/PageSkeleton"
 import { RoadmapDiagram } from "@/components/RoadmapDiagram"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,7 +63,7 @@ export function RoadmapDetailPage() {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <PageSkeleton rows={4} />
   }
 
   if (!roadmap) {

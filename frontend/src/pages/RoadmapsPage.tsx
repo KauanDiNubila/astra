@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Link } from "react-router-dom"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { cn, INTERACTIVE_CARD_CLASS } from "@/lib/utils"
 import type { Roadmap } from "@/lib/types"
+import { CardGridSkeleton } from "@/components/CardGridSkeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,13 +34,15 @@ export function RoadmapsPage() {
       await api.post("/roadmaps", { title: title.trim(), source: null })
       setTitle("")
       await load()
+    } catch {
+      toast.error("Não foi possível criar o roadmap.")
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) {
-    return <p className="text-muted-foreground">Carregando...</p>
+    return <CardGridSkeleton />
   }
 
   return (

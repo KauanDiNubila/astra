@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom"
 import { ProtectedLayout } from "@/components/ProtectedLayout"
+import { Toaster } from "@/components/ui/sonner"
 import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
 import { DashboardPage } from "@/pages/DashboardPage"
@@ -13,20 +14,23 @@ import { SessionsPage } from "@/pages/SessionsPage"
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/sessions" element={<SessionsPage />} />
-        <Route path="/goals" element={<GoalsPage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/:id" element={<CourseDetailPage />} />
-        <Route path="/roadmaps" element={<RoadmapsPage />} />
-        <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
-        <Route path="/ranking" element={<RankingPage />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:id" element={<CourseDetailPage />} />
+          <Route path="/roadmaps" element={<RoadmapsPage />} />
+          <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
+          <Route path="/ranking" element={<RankingPage />} />
+        </Route>
+      </Routes>
+      <Toaster />
+    </>
   )
 }
 

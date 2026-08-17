@@ -5,6 +5,7 @@ import { formatMinutes } from "@/lib/format"
 import type { RankingEntry } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { PageSkeleton } from "@/components/PageSkeleton"
 
 const periods = [
   { key: "DAILY", label: "Hoje" },
@@ -28,6 +29,10 @@ export function RankingPage() {
       .finally(() => setLoading(false))
   }, [period])
 
+  if (loading) {
+    return <PageSkeleton rows={5} />
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Ranking</h1>
@@ -47,9 +52,7 @@ export function RankingPage() {
 
       <Card>
         <CardContent className="p-0">
-          {loading ? (
-            <p className="p-6 text-muted-foreground">Carregando...</p>
-          ) : entries.length === 0 ? (
+          {entries.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
               Ninguém registrou tempo neste período.
             </p>
