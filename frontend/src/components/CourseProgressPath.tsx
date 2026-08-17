@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from "react"
+import { motion } from "motion/react"
+
 type PathItem = {
   id: string
   title: string
@@ -14,6 +17,48 @@ type Props = {
 const NODE_SIZE = 16
 const SPACING_X = 22
 const PADDING = 8
+
+function ProgressDot({
+  item,
+  x,
+  y,
+  disabled,
+  onClick,
+}: {
+  item: PathItem
+  x: number
+  y: number
+  disabled: boolean
+  onClick: () => void
+}) {
+  const prevCompleted = useRef(item.completed)
+  const [pop, setPop] = useState(false)
+
+  useEffect(() => {
+    if (item.completed && !prevCompleted.current) setPop(true)
+    prevCompleted.current = item.completed
+  }, [item.completed])
+
+  return (
+    <motion.button
+      type="button"
+      title={item.title}
+      disabled={disabled}
+      onClick={onClick}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.85 }}
+      animate={pop ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      onAnimationComplete={() => setPop(false)}
+      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors ${
+        item.completed
+          ? "border-emerald-500 bg-emerald-500"
+          : "border-border bg-card hover:border-foreground/40"
+      }`}
+      style={{ left: x, top: y, width: NODE_SIZE, height: NODE_SIZE }}
+    />
+  )
+}
 
 export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
   const sorted = [...items].sort((a, b) => a.position - b.position)
@@ -65,18 +110,13 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
         </svg>
 
         {points.map((p) => (
-          <button
+          <ProgressDot
             key={p.item.id}
-            type="button"
-            title={p.item.title}
+            item={p.item}
+            x={p.x}
+            y={p.y}
             disabled={saving}
             onClick={() => handleClick(p.item.position)}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors ${
-              p.item.completed
-                ? "border-emerald-500 bg-emerald-500"
-                : "border-border bg-card hover:border-foreground/40"
-            }`}
-            style={{ left: p.x, top: p.y, width: NODE_SIZE, height: NODE_SIZE }}
           />
         ))}
       </div>

@@ -39,7 +39,8 @@ export function Heatmap({ data }: { data: DailyMinutes[] }) {
           {week.map((cell) => (
             <div
               key={cell.key}
-              className={`size-3 rounded-sm ${levelClass(cell.minutes)}`}
+              style={{ animationDelay: `${index * 4}ms`, animationFillMode: "backwards" }}
+              className={`size-3 animate-in rounded-sm fade-in zoom-in-50 duration-300 motion-reduce:animate-none ${levelClass(cell.minutes)}`}
               title={`${cell.key}: ${cell.minutes} min`}
             />
           ))}

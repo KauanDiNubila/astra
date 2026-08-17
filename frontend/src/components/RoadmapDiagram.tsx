@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { CheckCircle2, GitBranch, List } from "lucide-react"
+import { motion } from "motion/react"
 import { api } from "@/lib/api"
 import type { CourseSummary, Pin, RoadmapStep } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
@@ -305,12 +306,12 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
             height={height}
             viewBox={`0 0 ${width} ${height}`}
           >
-            {edges.map((edge) => {
+            {edges.map((edge, index) => {
               const from = byId[edge.from]
               const to = byId[edge.to]
               if (!from || !to) return null
               return (
-                <path
+                <motion.path
                   key={`${edge.from}-${edge.to}`}
                   d={edgePath(from, to, edge.kind)}
                   fill="none"
@@ -318,21 +319,29 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
                   strokeDasharray={edge.kind === "branch" ? "1 7" : undefined}
                   strokeLinecap="round"
                   className={edge.kind === "trunk" ? "stroke-primary/50" : "stroke-border"}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: index * 0.04, ease: "easeOut" }}
                 />
               )
             })}
           </svg>
 
-          {nodes.map((node) => {
+          {nodes.map((node, index) => {
             const pins = pinsByStep[node.step.id] ?? []
             const done = pins.length > 0
             const isMain = node.kind === "main"
             const isSelected = node.step.id === selectedId
             return (
-              <button
+              <motion.button
                 key={node.step.id}
                 type="button"
                 onClick={() => setSelectedId(node.step.id)}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
                 className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors ${
                   done
                     ? "border-emerald-500 bg-emerald-500/10"
@@ -353,7 +362,7 @@ function GraphView({ steps, pinsByStep, courses, onPinned }: Props) {
                 >
                   {node.step.title}
                 </span>
-              </button>
+              </motion.button>
             )
           })}
         </div>
