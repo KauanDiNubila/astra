@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { motion } from "motion/react"
+import { cn, SCROLLBAR_HIDE_CLASS } from "@/lib/utils"
 
 type PathItem = {
   id: string
@@ -83,7 +84,7 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
   const height = NODE_SIZE + PADDING * 2
 
   return (
-    <div className="overflow-x-auto">
+    <div className={cn("overflow-x-auto", SCROLLBAR_HIDE_CLASS)}>
       <div className="relative" style={{ width, height }}>
         <svg
           className="absolute inset-0"

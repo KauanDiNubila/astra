@@ -20,10 +20,13 @@ export const SPOTLIGHT_CLASS =
 export const BUTTON_REVEAL_CLASS =
   "relative overflow-hidden isolate " +
   "before:pointer-events-none before:absolute before:inset-0 before:content-[''] " +
-  "before:bg-emerald-400/30 before:[clip-path:circle(0%_at_var(--x,50%)_var(--y,50%))] " +
+  "before:bg-foreground/10 before:[clip-path:circle(0%_at_var(--x,50%)_var(--y,50%))] " +
   "before:transition-[clip-path] before:duration-500 before:ease-out " +
   "hover:before:[clip-path:circle(150%_at_var(--x,50%)_var(--y,50%))] " +
   "motion-reduce:before:hidden"
+
+export const SCROLLBAR_HIDE_CLASS =
+  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
 
 export const gridStagger = {
   hidden: {},

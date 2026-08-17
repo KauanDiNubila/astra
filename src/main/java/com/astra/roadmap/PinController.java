@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,5 +34,11 @@ public class PinController {
     @GetMapping
     public List<PinResponse> list(@PathVariable UUID stepId) {
         return pinService.listForStep(stepId);
+    }
+
+    @DeleteMapping("/{pinId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unpin(@PathVariable UUID stepId, @PathVariable UUID pinId) {
+        pinService.unpin(stepId, pinId);
     }
 }
