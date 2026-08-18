@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
@@ -187,22 +187,28 @@ function ListNode({
           ))}
         </div>
       )}
-      {open && (
-        <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            type="button"
-            size="sm"
-            variant={done ? "secondary" : "outline"}
-            className={cn("h-8 w-fit gap-1.5 text-xs", BUTTON_REVEAL_CLASS)}
-            onMouseMove={onMouseMove}
-            onClick={onToggleCompleted}
-          >
-            {done ? <CheckCircle2 className="size-3.5" /> : null}
-            {done ? "Concluído" : "Marcar como concluído"}
-          </Button>
-          <PinPanel stepId={step.id} courses={courses} onPinned={onPinned} />
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="button"
+              size="sm"
+              variant={done ? "secondary" : "outline"}
+              className={cn("h-8 w-fit gap-1.5 text-xs", BUTTON_REVEAL_CLASS)}
+              onMouseMove={onMouseMove}
+              onClick={onToggleCompleted}
+            >
+              {done ? <CheckCircle2 className="size-3.5" /> : null}
+              {done ? "Concluído" : "Marcar como concluído"}
+            </Button>
+            <PinPanel stepId={step.id} courses={courses} onPinned={onPinned} />
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -343,7 +349,6 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const panelOuterRef = useRef<HTMLDivElement>(null)
-  const panelInnerRef = useRef<HTMLDivElement>(null)
 
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
@@ -363,16 +368,6 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [selectedId])
 
-  useLayoutEffect(() => {
-    const outer = panelOuterRef.current
-    const inner = panelInnerRef.current
-    if (!outer || !inner) return
-    const target = `${Math.ceil(inner.getBoundingClientRect().height)}px`
-    if (outer.style.height !== target) {
-      outer.style.height = target
-    }
-  }, [selectedId, selectedPins.length])
-
   useEffect(() => {
     if (!selectedId) return
     const outer = panelOuterRef.current
@@ -387,7 +382,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
       }
     }
     function onExpandEnd(event: TransitionEvent) {
-      if (event.propertyName !== "height") return
+      if (event.propertyName !== "grid-template-rows") return
       revealPanel()
     }
     outer.addEventListener("transitionend", onExpandEnd)
@@ -473,9 +468,11 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
 
       <div
         ref={panelOuterRef}
-        className="overflow-hidden transition-[height] duration-500 ease-out [contain:layout_paint]"
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          selected ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
       >
-        <div ref={panelInnerRef}>
+        <div className="overflow-hidden">
           {selected ? (
             <div key={selected.step.id} className="animate-in fade-in duration-300 ease-out">
               <Card>
@@ -522,7 +519,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
               </Card>
             </div>
           ) : (
-            <p className="animate-in fade-in text-sm text-muted-foreground duration-300 ease-out">
+            <p className="text-sm text-muted-foreground">
               Clique numa etapa do diagrama para pinar um curso.
             </p>
           )}
