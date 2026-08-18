@@ -141,7 +141,7 @@ function ListNode({
         isMain ? "min-w-56 px-5 py-3" : "min-w-36 px-3 py-2"
       } ${
         done
-          ? "border-emerald-500 bg-emerald-950"
+          ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
           : isMain
             ? "border-primary bg-primary/5"
             : "border-border bg-card hover:border-foreground/30"
@@ -161,7 +161,9 @@ function ListNode({
             {done ? <CheckCircle2 className="size-4" /> : index}
           </span>
         )}
-        {!isMain && done && <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />}
+        {!isMain && done && (
+          <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+        )}
         <span>{step.title}</span>
       </button>
       {pins.length > 0 && (
@@ -443,7 +445,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                 whileTap={{ scale: 0.97 }}
                 className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors ${
                   done
-                    ? "border-emerald-500 bg-emerald-950"
+                    ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
                     : isMain
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card hover:border-foreground/40"
@@ -455,7 +457,9 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                   height: node.h,
                 }}
               >
-                {done && <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />}
+                {done && (
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+                )}
                 <span
                   className={`line-clamp-2 min-w-0 leading-snug font-medium ${isMain ? "text-sm" : "text-xs"}`}
                 >
