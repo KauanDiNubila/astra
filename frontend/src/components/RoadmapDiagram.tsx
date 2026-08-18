@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CheckCircle2, GitBranch, List, X } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
@@ -42,6 +42,52 @@ function courseTitle(courses: CourseSummary[], courseId: string) {
   return courses.find((c) => c.id === courseId)?.title ?? "Curso"
 }
 
+function useRevealOnOpen(open: boolean, ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return
+    const el = ref.current
+    if (!el) return
+    let revealed = false
+    function reveal() {
+      if (revealed) return
+      revealed = true
+      const hidden = el!.getBoundingClientRect().bottom - window.innerHeight
+      if (hidden > 0) {
+        window.scrollBy({ top: hidden + 24, behavior: "smooth" })
+      }
+    }
+    function onExpandEnd(event: TransitionEvent) {
+      if (event.propertyName !== "grid-template-rows") return
+      reveal()
+    }
+    el.addEventListener("transitionend", onExpandEnd)
+    const fallback = window.setTimeout(reveal, 500)
+    return () => {
+      clearTimeout(fallback)
+      el.removeEventListener("transitionend", onExpandEnd)
+    }
+  }, [open, ref])
+}
+
+function useCloseOnClickOutside(
+  active: boolean,
+  ref: React.RefObject<HTMLElement | null>,
+  onClose: () => void,
+) {
+  useEffect(() => {
+    if (!active) return
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement
+      if (target.closest('[data-slot="select-content"]')) return
+      if (ref.current && !ref.current.contains(target)) {
+        onClose()
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [active, ref, onClose])
+}
+
 function PinPanel({
   stepId,
   courses,
@@ -52,7 +98,6 @@ function PinPanel({
   onPinned: () => Promise<void>
 }) {
   const [courseId, setCourseId] = useState("")
-  const [rating, setRating] = useState("")
   const [saving, setSaving] = useState(false)
 
   if (courses.length === 0) {
@@ -65,11 +110,10 @@ function PinPanel({
     try {
       await api.post(`/steps/${stepId}/pins`, {
         courseId,
-        rating: rating ? Number(rating) : null,
+        rating: null,
         status: null,
       })
       setCourseId("")
-      setRating("")
       await onPinned()
     } finally {
       setSaving(false)
@@ -90,18 +134,6 @@ function PinPanel({
           ))}
         </SelectContent>
       </Select>
-      <Select value={rating} onValueChange={setRating}>
-        <SelectTrigger className="h-8 w-20 text-xs">
-          <SelectValue placeholder="Nota" />
-        </SelectTrigger>
-        <SelectContent>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <SelectItem key={n} value={String(n)}>
-              {n}/5
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
       <Button type="button" size="sm" className="h-8" onClick={pin} disabled={saving}>
         Pinar
       </Button>
@@ -116,6 +148,8 @@ function ListNode({
   index,
   pins,
   courses,
+  open,
+  onToggleOpen,
   onPinned,
   onUnpinned,
   onToggleCompleted,
@@ -125,15 +159,19 @@ function ListNode({
   index?: number
   pins: Pin[]
   courses: CourseSummary[]
+  open: boolean
+  onToggleOpen: () => void
   onPinned: () => Promise<void>
   onUnpinned: (pinId: string) => Promise<void>
   onToggleCompleted: () => Promise<void>
   variant: "main" | "sub"
 }) {
-  const [open, setOpen] = useState(false)
   const done = step.completed
   const isMain = variant === "main"
   const { onMouseMove } = useSpotlight()
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useRevealOnOpen(open, panelRef)
 
   return (
     <div
@@ -149,7 +187,7 @@ function ListNode({
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggleOpen}
         className={`flex items-center gap-2 text-left font-medium ${isMain ? "text-base" : "text-sm"}`}
       >
         {isMain && (
@@ -171,7 +209,6 @@ function ListNode({
           {pins.map((pin) => (
             <Badge key={pin.id} variant="secondary" className="gap-1 pr-1 text-[10px]">
               {courseTitle(courses, pin.courseId)}
-              {pin.rating != null ? ` · ${pin.rating}/5` : ""}
               <button
                 type="button"
                 title="Despinar curso"
@@ -188,6 +225,7 @@ function ListNode({
         </div>
       )}
       <div
+        ref={panelRef}
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
@@ -214,12 +252,20 @@ function ListNode({
 }
 
 function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const closeOpen = useCallback(() => setOpenId(null), [])
+
+  useCloseOnClickOutside(openId !== null, containerRef, closeOpen)
+
   const mains = steps.filter((s) => !s.parentStepId).sort((a, b) => a.position - b.position)
   const childrenOf = (id: string) =>
     steps.filter((s) => s.parentStepId === id).sort((a, b) => a.position - b.position)
 
+  const toggleOpen = (id: string) => setOpenId((current) => (current === id ? null : id))
+
   return (
-    <div className="flex flex-col items-center overflow-x-auto py-2">
+    <div ref={containerRef} className="flex flex-col items-center overflow-x-auto py-2">
       {mains.map((main, index) => {
         const children = childrenOf(main.id)
         return (
@@ -230,6 +276,8 @@ function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
               index={index + 1}
               pins={pinsByStep[main.id] ?? []}
               courses={courses}
+              open={openId === main.id}
+              onToggleOpen={() => toggleOpen(main.id)}
               onPinned={onChanged}
               onUnpinned={(pinId) => unpinCourse(main.id, pinId, onChanged)}
               onToggleCompleted={() => toggleStepCompleted(roadmapId, main, onChanged)}
@@ -245,6 +293,8 @@ function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
                       step={child}
                       pins={pinsByStep[child.id] ?? []}
                       courses={courses}
+                      open={openId === child.id}
+                      onToggleOpen={() => toggleOpen(child.id)}
                       onPinned={onChanged}
                       onUnpinned={(pinId) => unpinCourse(child.id, pinId, onChanged)}
                       onToggleCompleted={() => toggleStepCompleted(roadmapId, child, onChanged)}
@@ -350,47 +400,19 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   const containerRef = useRef<HTMLDivElement>(null)
   const panelOuterRef = useRef<HTMLDivElement>(null)
 
+  const [lastShownId, setLastShownId] = useState<string | null>(null)
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
-  const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
+  const shown = selectedId ? byId[selectedId] : lastShownId ? byId[lastShownId] : null
+  const shownPins = shown ? (pinsByStep[shown.step.id] ?? []) : []
   const { onMouseMove } = useSpotlight()
+  const closeSelected = useCallback(() => setSelectedId(null), [])
+
+  useCloseOnClickOutside(selectedId !== null, containerRef, closeSelected)
+  useRevealOnOpen(selectedId !== null, panelOuterRef)
 
   useEffect(() => {
-    if (!selectedId) return
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement
-      if (target.closest('[data-slot="select-content"]')) return
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setSelectedId(null)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [selectedId])
-
-  useEffect(() => {
-    if (!selectedId) return
-    const outer = panelOuterRef.current
-    if (!outer) return
-    let scrolled = false
-    function revealPanel() {
-      if (scrolled) return
-      scrolled = true
-      const hidden = outer!.getBoundingClientRect().bottom - window.innerHeight
-      if (hidden > 0) {
-        window.scrollBy({ top: hidden + 24, behavior: "smooth" })
-      }
-    }
-    function onExpandEnd(event: TransitionEvent) {
-      if (event.propertyName !== "grid-template-rows") return
-      revealPanel()
-    }
-    outer.addEventListener("transitionend", onExpandEnd)
-    const fallback = window.setTimeout(revealPanel, 600)
-    return () => {
-      clearTimeout(fallback)
-      outer.removeEventListener("transitionend", onExpandEnd)
-    }
+    if (selectedId) setLastShownId(selectedId)
   }, [selectedId])
 
   return (
@@ -466,36 +488,35 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
         </div>
       </div>
 
-      <div
-        ref={panelOuterRef}
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          selected ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          {selected ? (
-            <div key={selected.step.id} className="animate-in fade-in duration-300 ease-out">
+      <div>
+        <div
+          ref={panelOuterRef}
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            selected ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
+            {shown && (
               <Card>
                 <CardContent className="flex flex-col gap-3 pt-6">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-medium">{selected.step.title}</h3>
-                    {selected.step.completed && (
+                    <h3 className="font-medium">{shown.step.title}</h3>
+                    {shown.step.completed && (
                       <Badge variant="secondary" className="gap-1">
                         <CheckCircle2 className="size-3 text-emerald-500" />
                         Concluído
                       </Badge>
                     )}
                   </div>
-                  {selectedPins.length > 0 && (
+                  {shownPins.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedPins.map((pin) => (
+                      {shownPins.map((pin) => (
                         <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
                           {courseTitle(courses, pin.courseId)}
-                          {pin.rating != null ? ` · ${pin.rating}/5` : ""}
                           <button
                             type="button"
                             title="Despinar curso"
-                            onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
+                            onClick={() => unpinCourse(shown.step.id, pin.id, onChanged)}
                             className="rounded-full p-0.5 hover:bg-foreground/10"
                           >
                             <X className="size-3" />
@@ -510,19 +531,27 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                     variant="outline"
                     className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
                     onMouseMove={onMouseMove}
-                    onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
+                    onClick={() => toggleStepCompleted(roadmapId, shown.step, onChanged)}
                   >
-                    {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
+                    {shown.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
                   </Button>
-                  <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
+                  <PinPanel stepId={shown.step.id} courses={courses} onPinned={onChanged} />
                 </CardContent>
               </Card>
-            </div>
-          ) : (
+            )}
+          </div>
+        </div>
+
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            selected ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
             <p className="text-sm text-muted-foreground">
               Clique numa etapa do diagrama para pinar um curso.
             </p>
-          )}
+          </div>
         </div>
       </div>
     </div>
