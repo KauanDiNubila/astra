@@ -8,6 +8,7 @@ import com.astra.learning.dto.CreateModuleRequest;
 import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.learning.dto.UpdateLessonRequest;
+import com.astra.learning.dto.UpdateModuleRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -64,5 +65,11 @@ public class CourseController {
     public LessonResponse updateLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId,
                                        @PathVariable UUID lessonId, @Valid @RequestBody UpdateLessonRequest request) {
         return courseService.setLessonCompleted(courseId, moduleId, lessonId, request.completed());
+    }
+
+    @PatchMapping("/{courseId}/modules/{moduleId}")
+    public ModuleResponse updateModule(@PathVariable UUID courseId, @PathVariable UUID moduleId,
+                                       @Valid @RequestBody UpdateModuleRequest request) {
+        return courseService.setModuleCompleted(courseId, moduleId, request.completed());
     }
 }

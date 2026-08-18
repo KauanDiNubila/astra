@@ -65,6 +65,7 @@ export type ModuleItem = {
   position: number
   totalLessons: number
   completedLessons: number
+  completed: boolean
   lessons: LessonItem[]
 }
 

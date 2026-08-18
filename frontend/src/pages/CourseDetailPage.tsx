@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
-import { Minus, Plus } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
@@ -11,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import { Stepper } from "@/components/ui/stepper"
 
 const MAX_INITIAL_LESSONS = 30
 
@@ -105,27 +105,13 @@ export function CourseDetailPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label>Aulas</Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setLessonCount((n) => Math.max(0, n - 1))}
-                  disabled={lessonCount === 0}
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <span className="w-6 text-center tabular-nums">{lessonCount}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setLessonCount((n) => Math.min(MAX_INITIAL_LESSONS, n + 1))}
-                  disabled={lessonCount === MAX_INITIAL_LESSONS}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+              <Stepper
+                value={lessonCount}
+                onChange={setLessonCount}
+                min={0}
+                max={MAX_INITIAL_LESSONS}
+                aria-label="Quantidade de aulas"
+              />
             </div>
             <Button type="submit" variant="outline" disabled={saving}>
               {saving ? "Adicionando..." : "Adicionar"}

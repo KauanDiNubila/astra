@@ -36,6 +36,9 @@ public class CourseModule {
     @Column(nullable = false)
     private int position;
 
+    @Column(nullable = false)
+    private boolean completed = false;
+
     public CourseModule(Course course, String title, int position) {
         this.course = course;
         this.title = title;

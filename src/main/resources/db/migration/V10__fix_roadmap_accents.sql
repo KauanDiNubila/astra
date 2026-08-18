@@ -1,0 +1,18 @@
+UPDATE roadmap_step SET title = 'APIs REST e segurança' WHERE title = 'APIs REST e seguranca';
+UPDATE roadmap_step SET title = 'Sintaxe e orientação a objetos' WHERE title = 'Sintaxe e orientacao a objetos';
+UPDATE roadmap_step SET title = 'Coleções e streams' WHERE title = 'Colecoes e streams';
+UPDATE roadmap_step SET title = 'Tratamento de exceções' WHERE title = 'Tratamento de excecoes';
+UPDATE roadmap_step SET title = 'Injeção de dependência' WHERE title = 'Injecao de dependencia';
+UPDATE roadmap_step SET title = 'SQL avançado' WHERE title = 'SQL avancado';
+UPDATE roadmap_step SET title = 'Autenticação com JWT' WHERE title = 'Autenticacao com JWT';
+UPDATE roadmap_step SET title = 'Semântica HTML' WHERE title = 'Semantica HTML';
+UPDATE roadmap_step SET title = 'Orquestração e nuvem' WHERE title = 'Orquestracao e nuvem';
+UPDATE roadmap_step SET title = 'Redes básicas' WHERE title = 'Redes basicas';
+UPDATE roadmap_step SET title = 'Permissões e processos' WHERE title = 'Permissoes e processos';
+UPDATE roadmap_step SET title = 'Boas práticas de imagem' WHERE title = 'Boas praticas de imagem';
+UPDATE roadmap_step SET title = 'Deploy contínuo' WHERE title = 'Deploy continuo';
+UPDATE roadmap_step SET title = 'Kubernetes básico' WHERE title = 'Kubernetes basico';
+UPDATE roadmap_step SET title = 'Infraestrutura como código' WHERE title = 'Infraestrutura como codigo';
+UPDATE roadmap_step SET title = 'Métricas e alertas' WHERE title = 'Metricas e alertas';
+UPDATE roadmap_step SET title = 'Tracing distribuído' WHERE title = 'Tracing distribuido';
+UPDATE roadmap_step SET title = 'Monitoramento básico' WHERE title = 'Monitoramento basico';

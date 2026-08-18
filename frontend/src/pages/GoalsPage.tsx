@@ -5,13 +5,13 @@ import { api } from "@/lib/api"
 import type { Goal } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Stepper } from "@/components/ui/stepper"
 import { PageSkeleton } from "@/components/PageSkeleton"
 
 export function GoalsPage() {
-  const [daily, setDaily] = useState("")
-  const [weekly, setWeekly] = useState("")
+  const [daily, setDaily] = useState(0)
+  const [weekly, setWeekly] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -21,8 +21,8 @@ export function GoalsPage() {
       .then((res) => {
         const d = res.data.find((g) => g.type === "DAILY")
         const w = res.data.find((g) => g.type === "WEEKLY")
-        if (d) setDaily(String(d.targetHours))
-        if (w) setWeekly(String(w.targetHours))
+        if (d) setDaily(d.targetHours)
+        if (w) setWeekly(w.targetHours)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -31,11 +31,11 @@ export function GoalsPage() {
     event.preventDefault()
     setSaving(true)
     try {
-      if (daily) {
-        await api.put("/goals", { type: "DAILY", targetHours: Number(daily) })
+      if (daily > 0) {
+        await api.put("/goals", { type: "DAILY", targetHours: daily })
       }
-      if (weekly) {
-        await api.put("/goals", { type: "WEEKLY", targetHours: Number(weekly) })
+      if (weekly > 0) {
+        await api.put("/goals", { type: "WEEKLY", targetHours: weekly })
       }
       toast.success("Metas salvas.")
     } catch {
@@ -60,22 +60,24 @@ export function GoalsPage() {
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="daily">Meta diária (horas)</Label>
-              <Input
+              <Stepper
                 id="daily"
-                type="number"
-                min={1}
+                min={0}
+                max={24}
                 value={daily}
-                onChange={(e) => setDaily(e.target.value)}
+                onChange={setDaily}
+                aria-label="Meta diária em horas"
               />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="weekly">Meta semanal (horas)</Label>
-              <Input
+              <Stepper
                 id="weekly"
-                type="number"
-                min={1}
+                min={0}
+                max={168}
                 value={weekly}
-                onChange={(e) => setWeekly(e.target.value)}
+                onChange={setWeekly}
+                aria-label="Meta semanal em horas"
               />
             </div>
             <Button type="submit" disabled={saving}>

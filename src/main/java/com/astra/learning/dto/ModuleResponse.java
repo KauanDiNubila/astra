@@ -9,6 +9,7 @@ public record ModuleResponse(
         int position,
         long totalLessons,
         long completedLessons,
+        boolean completed,
         List<LessonResponse> lessons
 ) {
 }

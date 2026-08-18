@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { PlayCircle, Plus } from "lucide-react"
+import { CheckCheck, PlayCircle, Plus } from "lucide-react"
 import { api } from "@/lib/api"
 import type { ModuleItem } from "@/lib/types"
 import { CourseProgressPath } from "@/components/CourseProgressPath"
@@ -46,14 +46,42 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
     }
   }
 
+  async function toggleModuleCompleted() {
+    if (module.lessons.length > 0) {
+      await setLessonProgress(module.completed ? 0 : module.lessons.length)
+      return
+    }
+    setSaving(true)
+    try {
+      await api.patch(`/courses/${courseId}/modules/${module.id}`, { completed: !module.completed })
+      await onChanged()
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium">{module.title}</span>
-        <Badge variant="secondary" className="gap-1">
-          <PlayCircle className="size-3" />
-          {module.completedLessons}/{module.totalLessons} aulas
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="gap-1">
+            <PlayCircle className="size-3" />
+            {module.completedLessons}/{module.totalLessons} aulas
+          </Badge>
+          <Button
+            type="button"
+            variant={module.completed ? "secondary" : "outline"}
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={toggleModuleCompleted}
+            disabled={saving}
+            title={module.completed ? "Desmarcar módulo" : "Marcar módulo como concluído"}
+          >
+            <CheckCheck className="size-3.5" />
+            {module.completed ? "Concluído" : "Marcar tudo"}
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {module.lessons.length > 0 && (

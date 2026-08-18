@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
-import { Minus, Plus } from "lucide-react"
 import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
@@ -15,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import { Stepper } from "@/components/ui/stepper"
 
 const MAX_INITIAL_MODULES = 30
 
@@ -82,27 +82,13 @@ export function CoursesPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label>Módulos</Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setModuleCount((n) => Math.max(0, n - 1))}
-                  disabled={moduleCount === 0}
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <span className="w-6 text-center tabular-nums">{moduleCount}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setModuleCount((n) => Math.min(MAX_INITIAL_MODULES, n + 1))}
-                  disabled={moduleCount === MAX_INITIAL_MODULES}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+              <Stepper
+                value={moduleCount}
+                onChange={setModuleCount}
+                min={0}
+                max={MAX_INITIAL_MODULES}
+                aria-label="Quantidade de módulos"
+              />
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? "Criando..." : "Criar"}

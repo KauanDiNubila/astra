@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CheckCircle2, GitBranch, List, X } from "lucide-react"
-import { motion } from "motion/react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { CheckCircle2, X } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
 import { api } from "@/lib/api"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { BUTTON_REVEAL_CLASS, cn } from "@/lib/utils"
@@ -8,6 +8,7 @@ import type { CourseSummary, Pin, RoadmapStep } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ScrollProgress } from "@/components/ui/scroll-progress"
 import {
   Select,
   SelectContent,
@@ -34,39 +35,53 @@ function unpinCourse(stepId: string, pinId: string, onChanged: () => Promise<voi
   return api.delete(`/steps/${stepId}/pins/${pinId}`).then(onChanged)
 }
 
-type ViewMode = "graph" | "list"
-
-const VIEW_MODE_KEY = "astra:roadmap-view-mode"
-
 function courseTitle(courses: CourseSummary[], courseId: string) {
   return courses.find((c) => c.id === courseId)?.title ?? "Curso"
 }
 
-function useRevealOnOpen(open: boolean, ref: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    if (!open) return
-    const el = ref.current
+const PANEL_TRANSITION = { duration: 0.45, ease: "easeInOut" as const }
+
+function revealIfHidden(el: HTMLElement | null) {
+  if (!el) return
+  const hidden = el.getBoundingClientRect().bottom - window.innerHeight
+  if (hidden > 0) {
+    window.scrollBy({ top: hidden + 24, behavior: "smooth" })
+  }
+}
+
+function MeasuredPanel({
+  onAnimationComplete,
+  children,
+}: {
+  onAnimationComplete?: () => void
+  children: React.ReactNode
+}) {
+  const innerRef = useRef<HTMLDivElement>(null)
+  const [contentHeight, setContentHeight] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = innerRef.current
     if (!el) return
-    let revealed = false
-    function reveal() {
-      if (revealed) return
-      revealed = true
-      const hidden = el!.getBoundingClientRect().bottom - window.innerHeight
-      if (hidden > 0) {
-        window.scrollBy({ top: hidden + 24, behavior: "smooth" })
-      }
-    }
-    function onExpandEnd(event: TransitionEvent) {
-      if (event.propertyName !== "grid-template-rows") return
-      reveal()
-    }
-    el.addEventListener("transitionend", onExpandEnd)
-    const fallback = window.setTimeout(reveal, 500)
-    return () => {
-      clearTimeout(fallback)
-      el.removeEventListener("transitionend", onExpandEnd)
-    }
-  }, [open, ref])
+    setContentHeight(el.scrollHeight)
+    const observer = new ResizeObserver((entries) => {
+      setContentHeight(entries[0].contentRect.height)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: contentHeight, opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={PANEL_TRANSITION}
+      className="overflow-hidden"
+      onAnimationComplete={onAnimationComplete}
+    >
+      <div ref={innerRef}>{children}</div>
+    </motion.div>
+  )
 }
 
 function useCloseOnClickOutside(
@@ -141,177 +156,7 @@ function PinPanel({
   )
 }
 
-// ---------- Visao "lista": marcos empilhados com subtopicos em leque ----------
-
-function ListNode({
-  step,
-  index,
-  pins,
-  courses,
-  open,
-  onToggleOpen,
-  onPinned,
-  onUnpinned,
-  onToggleCompleted,
-  variant,
-}: {
-  step: RoadmapStep
-  index?: number
-  pins: Pin[]
-  courses: CourseSummary[]
-  open: boolean
-  onToggleOpen: () => void
-  onPinned: () => Promise<void>
-  onUnpinned: (pinId: string) => Promise<void>
-  onToggleCompleted: () => Promise<void>
-  variant: "main" | "sub"
-}) {
-  const done = step.completed
-  const isMain = variant === "main"
-  const { onMouseMove } = useSpotlight()
-  const panelRef = useRef<HTMLDivElement>(null)
-
-  useRevealOnOpen(open, panelRef)
-
-  return (
-    <div
-      className={`flex flex-col gap-2 rounded-xl border-2 transition-colors ${
-        isMain ? "min-w-56 px-5 py-3" : "min-w-36 px-3 py-2"
-      } ${
-        done
-          ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
-          : isMain
-            ? "border-primary bg-primary/5"
-            : "border-border bg-card hover:border-foreground/30"
-      }`}
-    >
-      <button
-        type="button"
-        onClick={onToggleOpen}
-        className={`flex items-center gap-2 text-left font-medium ${isMain ? "text-base" : "text-sm"}`}
-      >
-        {isMain && (
-          <span
-            className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-              done ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"
-            }`}
-          >
-            {done ? <CheckCircle2 className="size-4" /> : index}
-          </span>
-        )}
-        {!isMain && done && (
-          <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
-        )}
-        <span>{step.title}</span>
-      </button>
-      {pins.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {pins.map((pin) => (
-            <Badge key={pin.id} variant="secondary" className="gap-1 pr-1 text-[10px]">
-              {courseTitle(courses, pin.courseId)}
-              <button
-                type="button"
-                title="Despinar curso"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onUnpinned(pin.id)
-                }}
-                className="rounded-full p-0.5 hover:bg-foreground/10"
-              >
-                <X className="size-2.5" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div
-        ref={panelRef}
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="button"
-              size="sm"
-              variant={done ? "secondary" : "outline"}
-              className={cn("h-8 w-fit gap-1.5 text-xs", BUTTON_REVEAL_CLASS)}
-              onMouseMove={onMouseMove}
-              onClick={onToggleCompleted}
-            >
-              {done ? <CheckCircle2 className="size-3.5" /> : null}
-              {done ? "Concluído" : "Marcar como concluído"}
-            </Button>
-            <PinPanel stepId={step.id} courses={courses} onPinned={onPinned} />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ListView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
-  const [openId, setOpenId] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const closeOpen = useCallback(() => setOpenId(null), [])
-
-  useCloseOnClickOutside(openId !== null, containerRef, closeOpen)
-
-  const mains = steps.filter((s) => !s.parentStepId).sort((a, b) => a.position - b.position)
-  const childrenOf = (id: string) =>
-    steps.filter((s) => s.parentStepId === id).sort((a, b) => a.position - b.position)
-
-  const toggleOpen = (id: string) => setOpenId((current) => (current === id ? null : id))
-
-  return (
-    <div ref={containerRef} className="flex flex-col items-center overflow-x-auto py-2">
-      {mains.map((main, index) => {
-        const children = childrenOf(main.id)
-        return (
-          <div key={main.id} className="flex w-full flex-col items-center">
-            {index > 0 && <div className="h-8 w-px bg-border" />}
-            <ListNode
-              step={main}
-              index={index + 1}
-              pins={pinsByStep[main.id] ?? []}
-              courses={courses}
-              open={openId === main.id}
-              onToggleOpen={() => toggleOpen(main.id)}
-              onPinned={onChanged}
-              onUnpinned={(pinId) => unpinCourse(main.id, pinId, onChanged)}
-              onToggleCompleted={() => toggleStepCompleted(roadmapId, main, onChanged)}
-              variant="main"
-            />
-            {children.length > 0 && (
-              <>
-                <div className="h-6 w-px bg-border" />
-                <div className="flex max-w-3xl flex-wrap justify-center gap-3 pb-2">
-                  {children.map((child) => (
-                    <ListNode
-                      key={child.id}
-                      step={child}
-                      pins={pinsByStep[child.id] ?? []}
-                      courses={courses}
-                      open={openId === child.id}
-                      onToggleOpen={() => toggleOpen(child.id)}
-                      onPinned={onChanged}
-                      onUnpinned={(pinId) => unpinCourse(child.id, pinId, onChanged)}
-                      onToggleCompleted={() => toggleStepCompleted(roadmapId, child, onChanged)}
-                      variant="sub"
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ---------- Visao "grafo": layout calculado com conectores em curva ----------
+// ---------- Visão "grafo": layout calculado com conectores em curva ----------
 
 const MAIN_W = 224
 const MAIN_H = 56
@@ -399,124 +244,126 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const panelOuterRef = useRef<HTMLDivElement>(null)
+  const canvasScrollRef = useRef<HTMLDivElement>(null)
 
-  const [lastShownId, setLastShownId] = useState<string | null>(null)
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
-  const shown = selectedId ? byId[selectedId] : lastShownId ? byId[lastShownId] : null
-  const shownPins = shown ? (pinsByStep[shown.step.id] ?? []) : []
+  const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
   const { onMouseMove } = useSpotlight()
   const closeSelected = useCallback(() => setSelectedId(null), [])
 
   useCloseOnClickOutside(selectedId !== null, containerRef, closeSelected)
-  useRevealOnOpen(selectedId !== null, panelOuterRef)
 
+  const prevSelectedIdRef = useRef<string | null>(null)
+  const isFreshOpen = selectedId !== null && prevSelectedIdRef.current === null
   useEffect(() => {
-    if (selectedId) setLastShownId(selectedId)
+    prevSelectedIdRef.current = selectedId
   }, [selectedId])
+
+  const edgesSvg = useMemo(
+    () => (
+      <svg className="absolute inset-0" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        {edges.map((edge, index) => {
+          const from = byId[edge.from]
+          const to = byId[edge.to]
+          if (!from || !to) return null
+          return (
+            <motion.path
+              key={`${edge.from}-${edge.to}`}
+              d={edgePath(from, to, edge.kind)}
+              fill="none"
+              strokeWidth={edge.kind === "trunk" ? 2.5 : 2}
+              strokeDasharray={edge.kind === "branch" ? "1 7" : undefined}
+              strokeLinecap="round"
+              className={edge.kind === "trunk" ? "stroke-primary/50" : "stroke-border"}
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: index * 0.04, ease: "easeOut" }}
+            />
+          )
+        })}
+      </svg>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [edges, width, height],
+  )
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4">
-      <div className="overflow-x-auto">
-        <div className="relative" style={{ width, height }}>
-          <svg
-            className="absolute inset-0"
-            width={width}
-            height={height}
-            viewBox={`0 0 ${width} ${height}`}
-          >
-            {edges.map((edge, index) => {
-              const from = byId[edge.from]
-              const to = byId[edge.to]
-              if (!from || !to) return null
+      <div className="relative">
+        <div ref={canvasScrollRef} className="overflow-x-auto">
+          <div className="relative" style={{ width, height }}>
+            {edgesSvg}
+
+            {nodes.map((node, index) => {
+              const done = node.step.completed
+              const isMain = node.kind === "main"
+              const isSelected = node.step.id === selectedId
               return (
-                <motion.path
-                  key={`${edge.from}-${edge.to}`}
-                  d={edgePath(from, to, edge.kind)}
-                  fill="none"
-                  strokeWidth={edge.kind === "trunk" ? 2.5 : 2}
-                  strokeDasharray={edge.kind === "branch" ? "1 7" : undefined}
-                  strokeLinecap="round"
-                  className={edge.kind === "trunk" ? "stroke-primary/50" : "stroke-border"}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.04, ease: "easeOut" }}
-                />
+                <motion.button
+                  key={node.step.id}
+                  type="button"
+                  onClick={() => setSelectedId(node.step.id)}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
+                  className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors hover:brightness-110 ${
+                    done
+                      ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
+                      : isMain
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:border-foreground/40"
+                  } ${isSelected ? (done ? "ring-2 ring-emerald-400" : "ring-2 ring-primary") : ""}`}
+                  style={{
+                    left: node.x - node.w / 2,
+                    top: node.y - node.h / 2,
+                    width: node.w,
+                    height: node.h,
+                  }}
+                >
+                  {done && (
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+                  )}
+                  <span
+                    className={`line-clamp-2 min-w-0 leading-snug font-medium ${isMain ? "text-sm" : "text-xs"}`}
+                  >
+                    {node.step.title}
+                  </span>
+                </motion.button>
               )
             })}
-          </svg>
-
-          {nodes.map((node, index) => {
-            const done = node.step.completed
-            const isMain = node.kind === "main"
-            const isSelected = node.step.id === selectedId
-            return (
-              <motion.button
-                key={node.step.id}
-                type="button"
-                onClick={() => setSelectedId(node.step.id)}
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors ${
-                  done
-                    ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
-                    : isMain
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card hover:border-foreground/40"
-                } ${isSelected ? (done ? "ring-2 ring-emerald-400" : "ring-2 ring-primary") : ""}`}
-                style={{
-                  left: node.x - node.w / 2,
-                  top: node.y - node.h / 2,
-                  width: node.w,
-                  height: node.h,
-                }}
-              >
-                {done && (
-                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
-                )}
-                <span
-                  className={`line-clamp-2 min-w-0 leading-snug font-medium ${isMain ? "text-sm" : "text-xs"}`}
-                >
-                  {node.step.title}
-                </span>
-              </motion.button>
-            )
-          })}
+          </div>
         </div>
+        <ScrollProgress containerRef={canvasScrollRef} axis="x" />
       </div>
 
-      <div>
-        <div
-          ref={panelOuterRef}
-          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-            selected ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="overflow-hidden">
-            {shown && (
+      <div ref={panelOuterRef} className="relative">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {selected ? (
+            <MeasuredPanel
+              key="content"
+              onAnimationComplete={() => isFreshOpen && revealIfHidden(panelOuterRef.current)}
+            >
               <Card>
                 <CardContent className="flex flex-col gap-3 pt-6">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-medium">{shown.step.title}</h3>
-                    {shown.step.completed && (
+                    <h3 className="font-medium">{selected.step.title}</h3>
+                    {selected.step.completed && (
                       <Badge variant="secondary" className="gap-1">
                         <CheckCircle2 className="size-3 text-emerald-500" />
                         Concluído
                       </Badge>
                     )}
                   </div>
-                  {shownPins.length > 0 && (
+                  {selectedPins.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {shownPins.map((pin) => (
+                      {selectedPins.map((pin) => (
                         <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
                           {courseTitle(courses, pin.courseId)}
                           <button
                             type="button"
                             title="Despinar curso"
-                            onClick={() => unpinCourse(shown.step.id, pin.id, onChanged)}
+                            onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
                             className="rounded-full p-0.5 hover:bg-foreground/10"
                           >
                             <X className="size-3" />
@@ -531,76 +378,38 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                     variant="outline"
                     className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
                     onMouseMove={onMouseMove}
-                    onClick={() => toggleStepCompleted(roadmapId, shown.step, onChanged)}
+                    onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
                   >
-                    {shown.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
+                    {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
                   </Button>
-                  <PinPanel stepId={shown.step.id} courses={courses} onPinned={onChanged} />
+                  <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
                 </CardContent>
               </Card>
-            )}
-          </div>
-        </div>
-
-        <div
-          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-            selected ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
-          }`}
-        >
-          <div className="overflow-hidden">
-            <p className="text-sm text-muted-foreground">
-              Clique numa etapa do diagrama para pinar um curso.
-            </p>
-          </div>
-        </div>
+            </MeasuredPanel>
+          ) : (
+            <MeasuredPanel key="hint">
+              <p className="text-sm text-muted-foreground">
+                Clique numa etapa do diagrama para pinar um curso.
+              </p>
+            </MeasuredPanel>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
 }
 
-// ---------- Container: alterna entre as duas visoes ----------
+// ---------- Container ----------
 
 export function RoadmapDiagram(props: Props) {
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") return "graph"
-    return (localStorage.getItem(VIEW_MODE_KEY) as ViewMode | null) ?? "graph"
-  })
-
-  useEffect(() => {
-    localStorage.setItem(VIEW_MODE_KEY, viewMode)
-  }, [viewMode])
-
   const hasSteps = props.steps.some((s) => !s.parentStepId)
   if (!hasSteps) {
     return <p className="text-sm text-muted-foreground">Nenhuma etapa ainda.</p>
   }
 
   return (
-    <div className="relative rounded-lg border bg-muted/20 p-3 pt-14">
-      <div className="absolute right-3 top-3 z-20 flex gap-1 rounded-md border bg-background/95 p-1 shadow-sm">
-        <Button
-          type="button"
-          size="icon"
-          variant={viewMode === "graph" ? "default" : "ghost"}
-          className="size-7"
-          title="Diagrama"
-          onClick={() => setViewMode("graph")}
-        >
-          <GitBranch className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant={viewMode === "list" ? "default" : "ghost"}
-          className="size-7"
-          title="Lista"
-          onClick={() => setViewMode("list")}
-        >
-          <List className="size-4" />
-        </Button>
-      </div>
-
-      {viewMode === "graph" ? <GraphView {...props} /> : <ListView {...props} />}
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <GraphView {...props} />
     </div>
   )
 }

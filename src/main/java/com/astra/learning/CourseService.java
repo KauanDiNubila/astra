@@ -87,6 +87,10 @@ public class CourseService {
         ownedCourse(courseId);
         CourseModule module = moduleRepository.findByIdAndCourseId(moduleId, courseId)
                 .orElseThrow(() -> new NotFoundException("Module not found"));
+        if (module.isCompleted()) {
+            module.setCompleted(false);
+            moduleRepository.save(module);
+        }
         Lesson lesson = new Lesson(module, request.title(), request.position());
         Lesson saved = lessonRepository.save(lesson);
         return toLessonResponse(saved);
@@ -102,6 +106,17 @@ public class CourseService {
         lesson.setCompleted(completed);
         Lesson saved = lessonRepository.save(lesson);
         return toLessonResponse(saved);
+    }
+
+    @Transactional
+    public ModuleResponse setModuleCompleted(UUID courseId, UUID moduleId, boolean completed) {
+        ownedCourse(courseId);
+        CourseModule module = moduleRepository.findByIdAndCourseId(moduleId, courseId)
+                .orElseThrow(() -> new NotFoundException("Module not found"));
+        module.setCompleted(completed);
+        CourseModule saved = moduleRepository.save(module);
+        List<Lesson> lessons = lessonRepository.findByModuleIdInOrderByPosition(List.of(moduleId));
+        return toModuleResponse(saved, lessons);
     }
 
     @Transactional(readOnly = true)
@@ -128,9 +143,10 @@ public class CourseService {
     private ModuleResponse toModuleResponse(CourseModule module, List<Lesson> lessons) {
         long total = lessons.size();
         long completed = lessons.stream().filter(Lesson::isCompleted).count();
+        boolean allLessonsDone = total > 0 && completed == total;
         List<LessonResponse> lessonResponses = lessons.stream().map(this::toLessonResponse).toList();
         return new ModuleResponse(module.getId(), module.getTitle(), module.getPosition(),
-                total, completed, lessonResponses);
+                total, completed, module.isCompleted() || allLessonsDone, lessonResponses);
     }
 
     private LessonResponse toLessonResponse(Lesson lesson) {
