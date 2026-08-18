@@ -9,21 +9,23 @@ nunca armazenado como tabela.
 > Projeto de portfólio. Interface em português, código em inglês. O primeiro
 > usuário é o próprio autor (dogfooding).
 
-## Funcionalidades (MVP completo)
+## Funcionalidades
 
 - **Autenticação** — registro e login com JWT (senha em BCrypt); tudo isolado por dono.
 - **Sessões** — registrar tempo focado (Pomodoro ou manual → minutos) e listar.
 - **Categorias** — separar o tempo por tipo (estudo, trabalho, leitura…).
 - **Dashboard** — horas de hoje/semana/total, streak e progresso das metas.
 - **Heatmap** — minutos por dia (estilo GitHub), no fuso de Brasília.
-- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); ligar uma sessão a um curso.
+- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); marcar um módulo inteiro como concluído de uma vez; ligar uma sessão a um curso.
 - **Metas** — objetivo de horas diário/semanal (bateu ou não).
-- **Roadmaps** — trilhas com etapas ordenadas (próprias + pré-definidas) e o "pin": pendurar um curso numa etapa, com status e nota (1-5).
+- **Roadmaps** — trilhas com etapas ordenadas (próprias + pré-definidas), diagrama visual interativo, e o "pin": pendurar um curso numa etapa.
 - **Ranking** — placar diário/semanal/mensal de tempo focado (reseta à meia-noite de Brasília).
 
 > Princípio central: nada de "total", "streak" ou "ranking" é armazenado — tudo é **agregação sobre `session`**.
 
 ## Stack
+
+**Backend**
 
 | Camada | Tecnologia |
 |---|---|
@@ -41,9 +43,25 @@ nunca armazenado como tabela.
 | Utilitário | Lombok |
 | CI | GitHub Actions (`mvnw verify` a cada PR) |
 
+**Frontend**
+
+| Camada | Tecnologia |
+|---|---|
+| Linguagem | TypeScript |
+| Framework | React 19 + Vite |
+| Roteamento | React Router 7 |
+| Estilo | Tailwind CSS 4 + shadcn (Radix UI) |
+| Animação | Motion (`motion/react`) |
+| HTTP | Axios |
+| Ícones | Lucide |
+| Notificações | Sonner |
+| Lint | oxlint |
+
 ## Como rodar (dev)
 
-Pré-requisito: **Java 21** e **Docker Desktop** ligado.
+Pré-requisito: **Java 21**, **Node.js** e **Docker Desktop** ligado.
+
+**Backend**
 
 ```bash
 ./mvnw spring-boot:run
@@ -62,7 +80,22 @@ Testes (também usam Docker, via Testcontainers):
 ./mvnw test
 ```
 
+**Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- App: `http://localhost:5173`
+- Aponta para a API em `http://localhost:8080` por padrão; ajustável via `VITE_API_URL`.
+
+Backend e frontend rodam como dois processos separados — não há orquestração única entre eles.
+
 ## Configuração (variáveis de ambiente)
+
+**Backend**
 
 | Variável | Default (dev) | Descrição |
 |---|---|---|
@@ -70,6 +103,12 @@ Testes (também usam Docker, via Testcontainers):
 | `ASTRA_CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origens liberadas no CORS (front-end). |
 
 Ajuste fino em `application.properties`: `astra.jwt.expiration-minutes` (default `1440`).
+
+**Frontend**
+
+| Variável | Default (dev) | Descrição |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8080` | Base URL da API. |
 
 > **Antes de produção:** servir por **HTTPS** e definir `ASTRA_JWT_SECRET`. Sem isso, o token trafega/valida de forma insegura.
 
@@ -87,10 +126,11 @@ Tudo (exceto `/auth/**` e o Swagger) exige `Authorization: Bearer <token>`. Erro
 
 ## Arquitetura
 
-Monólito modular, **pacote-por-feature**. Cada módulo é um pacote sob `com.astra` e
-carrega suas próprias camadas (controller / service / repository / entity / dto).
-Regra de fronteira: módulos conversam por *services públicos*, nunca acessando o
-repository ou a entity do vizinho — mantendo o grafo de dependências **sem ciclos**.
+**Backend** — monólito modular, **pacote-por-feature**. Cada módulo é um pacote sob
+`com.astra` e carrega suas próprias camadas (controller / service / repository /
+entity / dto). Regra de fronteira: módulos conversam por *services públicos*, nunca
+acessando o repository ou a entity do vizinho — mantendo o grafo de dependências
+**sem ciclos**.
 
 ```
 com.astra
@@ -102,11 +142,12 @@ com.astra
 └── shared     → config, security, exceptions, base
 ```
 
-## Contribuindo
-
-Ver [CONTRIBUTING.md](CONTRIBUTING.md) — fluxo de branches, Conventional Commits, issues e labels.
+**Frontend** — SPA em `frontend/`, uma página por rota sob `src/pages`, componentes
+de UI reutilizáveis (shadcn) em `src/components/ui`, e componentes de domínio
+(diagrama de roadmap, timer Pomodoro, heatmap etc.) em `src/components`.
 
 ## Status
 
-**Backend: MVP completo** (das sessões ao ranking, tudo por agregação sobre `session`).
-Próximo: **front-end** (React + Vite + TypeScript) e o deploy.
+**Backend e frontend completos** — sessões, dashboard, heatmap, cursos/módulos,
+metas, roadmaps (com diagrama interativo) e ranking, ponta a ponta.
+Em polimento contínuo de UX e correções.
