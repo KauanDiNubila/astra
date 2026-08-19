@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sidebar"
 
 const links = [
-  { to: "/", label: "Dashboard", end: true, icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", end: true, icon: LayoutDashboard },
   { to: "/sessions", label: "Sessões", end: false, icon: Clock },
   { to: "/goals", label: "Metas", end: false, icon: Target },
   { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
@@ -52,7 +52,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip="Astra">
-              <NavLink to="/">
+              <NavLink to="/dashboard">
                 <span className="text-lg font-semibold">Astra</span>
               </NavLink>
             </SidebarMenuButton>

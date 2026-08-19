@@ -28,7 +28,7 @@ export function RegisterPage() {
     setLoading(true)
     try {
       await register(name, email, password)
-      navigate("/")
+      navigate("/dashboard")
     } catch {
       setError("Não foi possível criar a conta. O e-mail pode já estar em uso.")
     } finally {
