@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
+import { flushSync } from "react-dom"
+import { runThemeTransition } from "@/lib/themeTransition"
 
 type Theme = "light" | "dark"
 
@@ -26,7 +28,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme])
 
   function toggleTheme() {
-    setTheme((current) => (current === "dark" ? "light" : "dark"))
+    runThemeTransition(() => {
+      flushSync(() => {
+        setTheme((current) => (current === "dark" ? "light" : "dark"))
+      })
+    })
   }
 
   return (
