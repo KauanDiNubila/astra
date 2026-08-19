@@ -47,7 +47,7 @@ export function PomodoroFocusView({ ring, primaryLabel, onPrimaryClick, focusedM
       <div className="flex flex-1 flex-col items-center justify-center gap-6">
         <PomodoroRing
           size={280}
-          glow
+          emphasize
           mode={ring.mode}
           isLongBreak={ring.isLongBreak}
           timeLeft={ring.timeLeft}

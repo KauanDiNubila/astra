@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { Clock, X, Zap } from "lucide-react"
+import { Clock, Moon, Sparkles, Sun, X, Zap } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { useBatteryStatus } from "@/hooks/useBatteryStatus"
 import { useCountUp } from "@/hooks/use-count-up"
+import { useTheme } from "@/context/ThemeContext"
 import { cn } from "@/lib/utils"
+import { Particles } from "@/components/magicui/particles"
 import { Button } from "@/components/ui/button"
 
 type Props = {
   open: boolean
   onExit: () => void
   children: ReactNode
+}
+
+const PARTICLES_KEY = "astra:focus-particles-enabled"
+
+function loadParticlesEnabled() {
+  if (typeof window === "undefined") return true
+  const raw = localStorage.getItem(PARTICLES_KEY)
+  return raw === null ? true : raw === "true"
 }
 
 function LiveClock() {
@@ -95,6 +105,16 @@ function BatteryIndicator() {
 
 export function FocusModeOverlay({ open, onExit, children }: Props) {
   const reducedMotion = useReducedMotion()
+  const { theme, toggleTheme } = useTheme()
+  const [particlesEnabled, setParticlesEnabled] = useState(loadParticlesEnabled)
+
+  function toggleParticles() {
+    setParticlesEnabled((enabled) => {
+      const next = !enabled
+      localStorage.setItem(PARTICLES_KEY, String(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!open) return
@@ -124,21 +144,60 @@ export function FocusModeOverlay({ open, onExit, children }: Props) {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[100] overflow-y-auto bg-background"
         >
+          <AnimatePresence>
+            {particlesEnabled && !reducedMotion && (
+              <motion.div
+                key="particles"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="pointer-events-none absolute inset-0 z-0"
+              >
+                <Particles
+                  className="h-full w-full"
+                  quantity={100}
+                  ease={80}
+                  color={theme === "dark" ? "#ffffff" : "#000000"}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="fixed left-4 top-4 z-10 flex items-center gap-3">
             <LiveClock />
             <BatteryIndicator />
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="fixed right-4 top-4 z-10"
-            title="Sair do modo foco"
-            onClick={onExit}
-          >
-            <X className="size-4" />
-          </Button>
+          <div className="fixed right-4 top-4 z-10 flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={particlesEnabled ? "Desligar partículas" : "Ligar partículas"}
+              onClick={toggleParticles}
+            >
+              <Sparkles className={cn("size-4", !particlesEnabled && "text-muted-foreground/50")} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Sair do modo foco"
+              onClick={onExit}
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
           <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-2xl flex-col px-4 py-16 sm:px-8">
             {children}
           </div>

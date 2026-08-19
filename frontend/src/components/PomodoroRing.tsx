@@ -11,7 +11,7 @@ type Props = {
   timeLeft: number
   totalSeconds: number
   caption?: string
-  glow?: boolean
+  emphasize?: boolean
 }
 
 function formatClock(totalSeconds: number) {
@@ -20,7 +20,7 @@ function formatClock(totalSeconds: number) {
   return `${m}:${s}`
 }
 
-export function PomodoroRing({ size, mode, isLongBreak, timeLeft, totalSeconds, caption, glow }: Props) {
+export function PomodoroRing({ size, mode, isLongBreak, timeLeft, totalSeconds, caption, emphasize }: Props) {
   const reducedMotion = useReducedMotion()
   const stroke = Math.round(size * 0.045)
   const radius = (size - stroke) / 2
@@ -32,27 +32,15 @@ export function PomodoroRing({ size, mode, isLongBreak, timeLeft, totalSeconds, 
   return (
     <motion.div
       initial={
-        !glow || reducedMotion ? false : { opacity: 0, scale: 0.82, filter: "blur(6px)" }
+        !emphasize || reducedMotion ? false : { opacity: 0, scale: 0.82, filter: "blur(6px)" }
       }
       animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className="relative flex items-center justify-center"
       style={{ width: size, height: size }}
     >
-      {glow && (
-        <div
-          aria-hidden
-          className="absolute rounded-full blur-2xl"
-          style={{
-            width: size * 1.15,
-            height: size * 1.15,
-            background: "color-mix(in oklch, var(--foreground) 8%, transparent)",
-            animation: reducedMotion ? "none" : "astra-focus-breathe 4s ease-in-out infinite",
-          }}
-        />
-      )}
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} className="stroke-muted" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} className="stroke-foreground/15" />
         <circle
           cx={size / 2}
           cy={size / 2}
