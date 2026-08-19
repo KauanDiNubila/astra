@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
-import { Pencil, Timer, Trash2 } from "lucide-react"
+import { CalendarIcon, Pencil, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
-import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
+import { formatDateTime, formatMinutes, formatMinutesCompact, parseMinutesCompact } from "@/lib/format"
 import type { Category, Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Stepper } from "@/components/ui/stepper"
 import { Textarea } from "@/components/ui/textarea"
+
+function combineDateWithNow(date: Date) {
+  const now = new Date()
+  const combined = new Date(date)
+  combined.setHours(now.getHours(), now.getMinutes(), 0, 0)
+  return combined
+}
 
 type RegisterMode = "pomodoro" | "manual"
 
@@ -25,8 +34,9 @@ export function SessionsPage() {
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
 
   const [categoryId, setCategoryId] = useState("")
-  const [minutes, setMinutes] = useState("")
-  const [startedAt, setStartedAt] = useState(nowForInput())
+  const [minutes, setMinutes] = useState(25)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,13 +98,13 @@ export function SessionsPage() {
     try {
       await api.post("/sessions", {
         categoryId,
-        focusedMinutes: Number(minutes),
-        startedAt: new Date(startedAt).toISOString(),
+        focusedMinutes: minutes,
+        startedAt: combineDateWithNow(selectedDate).toISOString(),
         note: note.trim() || null,
       })
-      setMinutes("")
+      setMinutes(25)
       setNote("")
-      setStartedAt(nowForInput())
+      setSelectedDate(new Date())
       await loadSessions()
     } catch {
       setError("Não foi possível registrar a sessão.")
@@ -158,25 +168,43 @@ export function SessionsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="minutes">Minutos focados</Label>
-                  <Input
+                  <Label htmlFor="minutes">Tempo de foco</Label>
+                  <Stepper
                     id="minutes"
-                    type="number"
-                    min={1}
+                    editable
+                    size="sm"
+                    step={5}
+                    min={5}
+                    max={1440}
                     value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
-                    required
+                    onChange={setMinutes}
+                    formatDisplay={formatMinutesCompact}
+                    parseDisplay={parseMinutesCompact}
+                    aria-label="Tempo de foco"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="startedAt">Quando</Label>
-                  <Input
-                    id="startedAt"
-                    type="datetime-local"
-                    value={startedAt}
-                    onChange={(e) => setStartedAt(e.target.value)}
-                    required
-                  />
+                  <Label>Quando</Label>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="outline" className="w-full justify-between font-normal">
+                        {selectedDate.toLocaleDateString("pt-BR")}
+                        <CalendarIcon className="size-4 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        disabled={{ after: new Date() }}
+                        onSelect={(date) => {
+                          if (!date) return
+                          setSelectedDate(date)
+                          setDatePickerOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
