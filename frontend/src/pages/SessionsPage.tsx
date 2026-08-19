@@ -3,8 +3,9 @@ import type { FormEvent } from "react"
 import { Pencil, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { usePomodoro } from "@/context/PomodoroContext"
 import { formatDateTime, formatMinutes, nowForInput } from "@/lib/format"
-import type { Category, CourseSummary, Session } from "@/lib/types"
+import type { Category, Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
@@ -17,9 +18,9 @@ import { Textarea } from "@/components/ui/textarea"
 type RegisterMode = "pomodoro" | "manual"
 
 export function SessionsPage() {
+  const { sessionSavedAt } = usePomodoro()
   const [sessions, setSessions] = useState<Session[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [courses, setCourses] = useState<CourseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
 
@@ -41,13 +42,14 @@ export function SessionsPage() {
     return api.get<Category[]>("/categories").then((res) => setCategories(res.data))
   }
 
-  function loadCourses() {
-    return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
-  }
+  useEffect(() => {
+    Promise.all([loadSessions(), loadCategories()]).finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
-    Promise.all([loadSessions(), loadCategories(), loadCourses()]).finally(() => setLoading(false))
-  }, [])
+    if (sessionSavedAt !== null) loadSessions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionSavedAt])
 
   useEffect(() => {
     return () => {
@@ -141,12 +143,7 @@ export function SessionsPage() {
         </CardHeader>
         <CardContent>
           {registerMode === "pomodoro" ? (
-            <PomodoroTimer
-              categories={categories}
-              courses={courses}
-              onCategoryCreated={loadCategories}
-              onSessionSaved={loadSessions}
-            />
+            <PomodoroTimer />
           ) : (
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">

@@ -2,6 +2,8 @@ import type { ReactNode } from "react"
 import { motion } from "motion/react"
 import { useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
+import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
+import { PomodoroMiniWidget } from "@/components/PomodoroMiniWidget"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -34,6 +36,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </motion.div>
         </SidebarInset>
       </SidebarProvider>
+      <GlobalPomodoroFocus />
+      <PomodoroMiniWidget />
     </TooltipProvider>
   )
 }
