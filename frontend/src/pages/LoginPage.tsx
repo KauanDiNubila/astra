@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
+import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -37,46 +38,53 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-6">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Entrar no Astra</CardTitle>
-          <CardDescription>Acesse sua conta para registrar seu tempo.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Não tem conta?{" "}
-              <Link to="/register" className="underline underline-offset-4">
-                Cadastre-se
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-sm"
+      >
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl">Entrar no Astra</CardTitle>
+            <CardDescription>Acesse sua conta para registrar seu tempo.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Não tem conta?{" "}
+                <Link to="/register" className="underline underline-offset-4">
+                  Cadastre-se
+                </Link>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   )
 }
