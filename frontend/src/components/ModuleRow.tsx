@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { CheckCheck, PlayCircle, Plus } from "lucide-react"
 import { api } from "@/lib/api"
+import { useModuleProgress } from "@/hooks/useModuleProgress"
 import type { ModuleItem } from "@/lib/types"
 import { CourseProgressPath } from "@/components/CourseProgressPath"
 import { Badge } from "@/components/ui/badge"
@@ -13,24 +14,8 @@ type Props = {
 }
 
 export function ModuleRow({ module, courseId, onChanged }: Props) {
-  const [saving, setSaving] = useState(false)
+  const { saving, setLessonProgress, toggleModuleCompleted } = useModuleProgress(courseId, module, onChanged)
   const [addingLesson, setAddingLesson] = useState(false)
-
-  async function setLessonProgress(uptoPosition: number) {
-    setSaving(true)
-    try {
-      await Promise.all(
-        module.lessons.map((l) =>
-          api.patch(`/courses/${courseId}/modules/${module.id}/lessons/${l.id}`, {
-            completed: l.position <= uptoPosition,
-          }),
-        ),
-      )
-      await onChanged()
-    } finally {
-      setSaving(false)
-    }
-  }
 
   async function addLesson() {
     setAddingLesson(true)
@@ -43,20 +28,6 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
       await onChanged()
     } finally {
       setAddingLesson(false)
-    }
-  }
-
-  async function toggleModuleCompleted() {
-    if (module.lessons.length > 0) {
-      await setLessonProgress(module.completed ? 0 : module.lessons.length)
-      return
-    }
-    setSaving(true)
-    try {
-      await api.patch(`/courses/${courseId}/modules/${module.id}`, { completed: !module.completed })
-      await onChanged()
-    } finally {
-      setSaving(false)
     }
   }
 
