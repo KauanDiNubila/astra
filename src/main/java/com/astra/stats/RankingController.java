@@ -18,7 +18,9 @@ public class RankingController {
     }
 
     @GetMapping
-    public List<RankingEntry> ranking(@RequestParam(defaultValue = "DAILY") RankingPeriod period) {
-        return rankingService.ranking(period);
+    public List<RankingEntry> ranking(
+            @RequestParam(defaultValue = "DAILY") RankingPeriod period,
+            @RequestParam(defaultValue = "GLOBAL") RankingScope scope) {
+        return rankingService.ranking(period, scope);
     }
 }

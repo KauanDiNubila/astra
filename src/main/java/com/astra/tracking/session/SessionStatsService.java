@@ -1,6 +1,7 @@
 package com.astra.tracking.session;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -35,5 +36,13 @@ public class SessionStatsService {
     @Transactional(readOnly = true)
     public List<UserMinutes> rankingSince(OffsetDateTime start) {
         return sessionRepository.rankingSince(start);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserMinutes> rankingSinceForUsers(OffsetDateTime start, Collection<UUID> userIds) {
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+        return sessionRepository.rankingSinceForUsers(start, userIds);
     }
 }
