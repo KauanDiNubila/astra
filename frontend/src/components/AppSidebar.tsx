@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BookOpen, Clock, LayoutDashboard, Map, MessageCircle, Moon, Sun, Target, Trophy, Users } from "lucide-react"
+import { BookOpen, Clock, LayoutDashboard, Map, MessageCircle, Target, Trophy, Users } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { EditProfileModal } from "@/components/EditProfileModal"
 import { Separator } from "@/components/ui/separator"
+import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import {
   Sidebar,
   SidebarContent,
@@ -124,7 +125,7 @@ export function AppSidebar() {
               tooltip={theme === "dark" ? "Modo claro" : "Modo escuro"}
               onClick={toggleTheme}
             >
-              {theme === "dark" ? <Sun /> : <Moon />}
+              <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
               <span>{theme === "dark" ? "Modo claro" : "Modo escuro"}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

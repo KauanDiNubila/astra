@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { Clock, Moon, Sparkles, Sun, X, Zap } from "lucide-react"
+import { Clock, Sparkles, X, Zap } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { useBatteryStatus } from "@/hooks/useBatteryStatus"
 import { useCountUp } from "@/hooks/use-count-up"
@@ -9,6 +9,7 @@ import { useTheme } from "@/context/ThemeContext"
 import { cn } from "@/lib/utils"
 import { Particles } from "@/components/magicui/particles"
 import { Button } from "@/components/ui/button"
+import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 
 type Props = {
   open: boolean
@@ -186,7 +187,7 @@ export function FocusModeOverlay({ open, onExit, children }: Props) {
               title={theme === "dark" ? "Modo claro" : "Modo escuro"}
               onClick={toggleTheme}
             >
-              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
             </Button>
             <Button
               type="button"

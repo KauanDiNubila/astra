@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import { BookOpen, Clock, Code2, LayoutDashboard, Moon, Sun, Trophy } from "lucide-react"
+import { BookOpen, Clock, Code2, LayoutDashboard, Trophy } from "lucide-react"
 import { motion } from "motion/react"
 import { Navigate, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -7,6 +7,7 @@ import { useTheme } from "@/context/ThemeContext"
 import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SCROLLBAR_HIDE_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { SessionFlowScroll } from "@/components/SessionFlowScroll"
+import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -58,7 +59,7 @@ export function LandingPage() {
             title={theme === "dark" ? "Modo claro" : "Modo escuro"}
             onClick={toggleTheme}
           >
-            {theme === "dark" ? <Sun /> : <Moon />}
+            <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
           </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/login">Entrar</Link>
