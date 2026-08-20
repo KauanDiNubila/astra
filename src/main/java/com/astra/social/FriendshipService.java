@@ -105,6 +105,13 @@ public class FriendshipService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public boolean areFriends(UUID a, UUID b) {
+        return friendshipRepository.findBetween(a, b)
+                .map(f -> Friendship.ACCEPTED.equals(f.getStatus()))
+                .orElse(false);
+    }
+
     private FriendshipResponse toDto(Friendship f, UUID viewerId) {
         UUID otherId = f.otherUserId(viewerId);
         String otherName = userRepository.findById(otherId).map(User::getName).orElse("");

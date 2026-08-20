@@ -1,0 +1,13 @@
+package com.astra.chat.dto;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+public record MessageResponse(
+        UUID id,
+        UUID senderId,
+        UUID recipientId,
+        String content,
+        OffsetDateTime createdAt,
+        boolean read) {
+}
