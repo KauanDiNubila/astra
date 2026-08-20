@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { Send } from "lucide-react"
+import { motion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
@@ -27,6 +28,7 @@ export function ChatPage() {
 
   useEffect(() => {
     setActiveFriendId(friendId ?? null)
+    setDraft("")
     if (friendId) {
       loadHistory(friendId)
       markRead(friendId)
@@ -73,12 +75,17 @@ export function ChatPage() {
         ) : (
           <ul className="divide-y">
             {conversations.map((c) => (
-              <li key={c.friendUserId}>
+              <li key={c.friendUserId} className="relative">
+                {c.friendUserId === friendId && (
+                  <motion.div
+                    layoutId="chat-conversation-pill"
+                    className="absolute inset-0 bg-muted"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
                 <Link
                   to={`/chat/${c.friendUserId}`}
-                  className={`flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/50 ${
-                    c.friendUserId === friendId ? "bg-muted" : ""
-                  }`}
+                  className="relative z-10 flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/50"
                 >
                   <span className="flex items-center gap-2">
                     <UserAvatar userId={c.friendUserId} name={c.friendName} size="sm" />
@@ -109,7 +116,13 @@ export function ChatPage() {
             Selecione uma conversa.
           </div>
         ) : (
-          <>
+          <motion.div
+            key={friendId}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-1 flex-col overflow-hidden"
+          >
             <div className="flex items-center gap-2 border-b px-4 py-3 font-medium">
               {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
               {activeFriend?.friendName}
@@ -140,19 +153,22 @@ export function ChatPage() {
                 <div ref={bottomRef} />
               </div>
             </div>
-            <form onSubmit={onSubmit} className="flex items-end gap-2 border-t p-3">
-              <Textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Escreva uma mensagem..."
-                className="min-h-10 flex-1 resize-none"
-              />
+            <form onSubmit={onSubmit} className="flex items-center gap-2 border-t p-3">
+              <div className="flex-1">
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder="Escreva uma mensagem..."
+                  className="min-h-12 w-full resize-none"
+                  style={{ fieldSizing: "fixed" }}
+                />
+              </div>
               <Button type="submit" size="icon" disabled={!draft.trim()}>
                 <Send className="size-4" />
               </Button>
             </form>
-          </>
+          </motion.div>
         )}
       </Card>
     </div>
