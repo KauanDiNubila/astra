@@ -1,0 +1,7 @@
+target/
+frontend/
+.git/
+.idea/
+.claude/
+*.md
+compose.yaml
