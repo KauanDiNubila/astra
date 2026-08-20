@@ -8,6 +8,7 @@ import { formatDateTime, formatMinutes, formatMinutesCompact, parseMinutesCompac
 import type { Category, Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
+import { PillToggleButton } from "@/components/PillToggleButton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -129,26 +130,24 @@ export function SessionsPage() {
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle>Registrar sessão</CardTitle>
           <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={registerMode === "pomodoro" ? "default" : "ghost"}
-              className="h-7 gap-1.5 px-2"
+            <PillToggleButton
+              active={registerMode === "pomodoro"}
+              layoutId="sessions-mode-pill"
               onClick={() => setRegisterMode("pomodoro")}
+              className="h-7 gap-1.5 px-2"
             >
               <Timer className="size-3.5" />
               Pomodoro
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={registerMode === "manual" ? "default" : "ghost"}
-              className="h-7 gap-1.5 px-2"
+            </PillToggleButton>
+            <PillToggleButton
+              active={registerMode === "manual"}
+              layoutId="sessions-mode-pill"
               onClick={() => setRegisterMode("manual")}
+              className="h-7 gap-1.5 px-2"
             >
               <Pencil className="size-3.5" />
               Manual
-            </Button>
+            </PillToggleButton>
           </div>
         </CardHeader>
         <CardContent>
