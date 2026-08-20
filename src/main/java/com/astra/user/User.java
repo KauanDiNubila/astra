@@ -38,6 +38,14 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    @Column(length = 80)
+    private String bio;
+
+    private byte[] avatar;
+
+    @Column(name = "avatar_content_type", length = 50)
+    private String avatarContentType;
+
     public User(String name, String email, String passwordHash) {
         this.name = name;
         this.email = email;
