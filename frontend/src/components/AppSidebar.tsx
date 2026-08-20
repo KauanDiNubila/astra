@@ -1,12 +1,15 @@
+import { useState } from "react"
 import { BookOpen, Clock, LayoutDashboard, Map, MessageCircle, Moon, Sun, Target, Trophy, Users } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
+import { baseURL } from "@/lib/api"
 import { getLastRoadmapId } from "@/lib/lastRoadmap"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { EditProfileModal } from "@/components/EditProfileModal"
 import { Separator } from "@/components/ui/separator"
 import {
   Sidebar,
@@ -49,6 +52,7 @@ export function AppSidebar() {
   const { totalUnread } = useChat()
   const { pathname } = useLocation()
   const lastRoadmapId = getLastRoadmapId()
+  const [profileOpen, setProfileOpen] = useState(false)
 
   return (
     <Sidebar collapsible="icon">
@@ -101,12 +105,18 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:hidden">
+        <button
+          type="button"
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
+        >
           <Avatar size="sm">
+            {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar`} />}
             <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
           </Avatar>
           <span className="truncate text-sm text-muted-foreground">{user?.name}</span>
-        </div>
+        </button>
+        <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
         <Separator />
         <SidebarMenu>
           <SidebarMenuItem>
