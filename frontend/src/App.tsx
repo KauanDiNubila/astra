@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
 import { DashboardPage } from "@/pages/DashboardPage"
+import { FriendsPage } from "@/pages/FriendsPage"
 import { GoalsPage } from "@/pages/GoalsPage"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
@@ -28,6 +29,7 @@ function App() {
           <Route path="/courses/:id" element={<CourseDetailPage />} />
           <Route path="/roadmaps" element={<RoadmapsPage />} />
           <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
           <Route path="/ranking" element={<RankingPage />} />
         </Route>
       </Routes>

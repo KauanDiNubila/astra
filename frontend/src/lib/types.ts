@@ -111,3 +111,12 @@ export type RankingEntry = {
   name: string
   minutes: number
 }
+
+export type Friendship = {
+  id: string
+  friendUserId: string
+  friendName: string
+  status: "PENDING" | "ACCEPTED"
+  incoming: boolean
+  createdAt: string
+}

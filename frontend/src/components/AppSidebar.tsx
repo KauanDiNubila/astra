@@ -1,4 +1,4 @@
-import { BookOpen, Clock, LayoutDashboard, Map, Moon, Sun, Target, Trophy } from "lucide-react"
+import { BookOpen, Clock, LayoutDashboard, Map, Moon, Sun, Target, Trophy, Users } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -25,6 +25,7 @@ const links = [
   { to: "/goals", label: "Metas", end: false, icon: Target },
   { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
   { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
+  { to: "/friends", label: "Amigos", end: false, icon: Users },
   { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
 ]
 
