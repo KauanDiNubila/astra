@@ -24,13 +24,14 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             String header = accessor.getFirstNativeHeader("Authorization");
-            if (header != null && header.startsWith("Bearer ")) {
-                try {
-                    UUID userId = jwtService.extractUserId(header.substring(7));
-                    accessor.setUser((Principal) () -> userId.toString());
-                } catch (Exception ex) {
-                    return null;
-                }
+            if (header == null || !header.startsWith("Bearer ")) {
+                throw new StompAuthenticationException("Token ausente");
+            }
+            try {
+                UUID userId = jwtService.extractUserId(header.substring(7));
+                accessor.setUser((Principal) () -> userId.toString());
+            } catch (Exception ex) {
+                throw new StompAuthenticationException("Token invalido");
             }
         }
         return message;
