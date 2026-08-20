@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
 import { PageSkeleton } from "@/components/PageSkeleton"
+import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -79,16 +80,21 @@ export function ChatPage() {
                     c.friendUserId === friendId ? "bg-muted" : ""
                   }`}
                 >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate font-medium">{c.friendName}</span>
-                    {c.unreadCount > 0 && (
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
-                        {c.unreadCount}
+                  <span className="flex items-center gap-2">
+                    <UserAvatar userId={c.friendUserId} name={c.friendName} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate font-medium">{c.friendName}</span>
+                        {c.unreadCount > 0 && (
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                            {c.unreadCount}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {c.lastMessage ?? "Nenhuma mensagem ainda"}
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {c.lastMessage ?? "Nenhuma mensagem ainda"}
+                      </span>
+                    </span>
                   </span>
                 </Link>
               </li>
@@ -104,7 +110,10 @@ export function ChatPage() {
           </div>
         ) : (
           <>
-            <div className="border-b px-4 py-3 font-medium">{activeFriend?.friendName}</div>
+            <div className="flex items-center gap-2 border-b px-4 py-3 font-medium">
+              {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
+              {activeFriend?.friendName}
+            </div>
             <div className="flex-1 overflow-y-auto px-4 py-3">
               <div className="flex flex-col gap-2">
                 {messages.map((m) => {

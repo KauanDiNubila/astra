@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { Friendship } from "@/lib/types"
 import { PageSkeleton } from "@/components/PageSkeleton"
+import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -112,7 +113,10 @@ export function FriendsPage() {
             <ul className="flex flex-col divide-y">
               {received.map((r) => (
                 <li key={r.id} className="flex items-center justify-between py-3">
-                  <span className="font-medium">{r.friendName}</span>
+                  <span className="flex items-center gap-2">
+                    <UserAvatar userId={r.friendUserId} name={r.friendName} size="sm" />
+                    <span className="font-medium">{r.friendName}</span>
+                  </span>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => accept(r.id)}>
                       <Check className="size-3.5" />
@@ -144,7 +148,10 @@ export function FriendsPage() {
             <ul className="flex flex-col divide-y">
               {sent.map((r) => (
                 <li key={r.id} className="flex items-center justify-between py-3">
-                  <span className="font-medium">{r.friendName}</span>
+                  <span className="flex items-center gap-2">
+                    <UserAvatar userId={r.friendUserId} name={r.friendName} size="sm" />
+                    <span className="font-medium">{r.friendName}</span>
+                  </span>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -171,7 +178,10 @@ export function FriendsPage() {
             <ul className="flex flex-col divide-y">
               {friends.map((f) => (
                 <li key={f.id} className="flex items-center justify-between py-3">
-                  <span className="font-medium">{f.friendName}</span>
+                  <span className="flex items-center gap-2">
+                    <UserAvatar userId={f.friendUserId} name={f.friendName} size="sm" />
+                    <span className="font-medium">{f.friendName}</span>
+                  </span>
                   <Button
                     size="sm"
                     variant="ghost"
