@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom"
 import { ProtectedLayout } from "@/components/ProtectedLayout"
 import { Toaster } from "@/components/ui/sonner"
+import { ChatPage } from "@/pages/ChatPage"
 import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
 import { DashboardPage } from "@/pages/DashboardPage"
@@ -30,6 +31,8 @@ function App() {
           <Route path="/roadmaps" element={<RoadmapsPage />} />
           <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
           <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:friendId" element={<ChatPage />} />
           <Route path="/ranking" element={<RankingPage />} />
         </Route>
       </Routes>

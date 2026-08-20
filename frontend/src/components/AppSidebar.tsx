@@ -1,7 +1,8 @@
-import { BookOpen, Clock, LayoutDashboard, Map, Moon, Sun, Target, Trophy, Users } from "lucide-react"
+import { BookOpen, Clock, LayoutDashboard, Map, MessageCircle, Moon, Sun, Target, Trophy, Users } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
+import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { getLastRoadmapId } from "@/lib/lastRoadmap"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -26,6 +27,7 @@ const links = [
   { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
   { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
   { to: "/friends", label: "Amigos", end: false, icon: Users },
+  { to: "/chat", label: "Chat", end: false, icon: MessageCircle },
   { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
 ]
 
@@ -44,6 +46,7 @@ function initials(name: string) {
 export function AppSidebar() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { totalUnread } = useChat()
   const { pathname } = useLocation()
   const lastRoadmapId = getLastRoadmapId()
 
@@ -84,6 +87,11 @@ export function AppSidebar() {
                     <NavLink to={to} end={link.end}>
                       <link.icon />
                       <span>{link.label}</span>
+                      {link.to === "/chat" && totalUnread > 0 && (
+                        <span className="ml-auto flex size-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                          {totalUnread}
+                        </span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

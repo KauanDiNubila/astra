@@ -120,3 +120,20 @@ export type Friendship = {
   incoming: boolean
   createdAt: string
 }
+
+export type Message = {
+  id: string
+  senderId: string
+  recipientId: string
+  content: string
+  createdAt: string
+  read: boolean
+}
+
+export type ConversationSummary = {
+  friendUserId: string
+  friendName: string
+  lastMessage: string | null
+  lastMessageAt: string | null
+  unreadCount: number
+}

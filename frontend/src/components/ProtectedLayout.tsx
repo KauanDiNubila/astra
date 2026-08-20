@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
+import { ChatProvider } from "@/context/ChatContext"
 import { PomodoroProvider } from "@/context/PomodoroContext"
 import { AppLayout } from "@/components/AppLayout"
 
@@ -20,9 +21,11 @@ export function ProtectedLayout() {
 
   return (
     <PomodoroProvider>
-      <AppLayout>
-        <Outlet />
-      </AppLayout>
+      <ChatProvider>
+        <AppLayout>
+          <Outlet />
+        </AppLayout>
+      </ChatProvider>
     </PomodoroProvider>
   )
 }
