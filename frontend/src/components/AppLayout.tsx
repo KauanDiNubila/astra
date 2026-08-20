@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { PomodoroMiniWidget } from "@/components/PomodoroMiniWidget"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -24,6 +25,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <header className="flex h-14 items-center gap-2 border-b px-4">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-4" />
+            <div className="ml-auto">
+              <NotificationsPopover />
+            </div>
           </header>
           <motion.div
             key={pathname}
