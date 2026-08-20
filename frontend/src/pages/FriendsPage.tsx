@@ -84,7 +84,11 @@ export function FriendsPage() {
               <Label htmlFor="friend-email">E-mail</Label>
               <Input
                 id="friend-email"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
+                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                title="Digite um e-mail válido"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

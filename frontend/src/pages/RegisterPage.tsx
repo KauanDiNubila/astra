@@ -65,7 +65,11 @@ export function RegisterPage() {
                 <Label htmlFor="email">E-mail</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="email"
+                  pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                  title="Digite um e-mail válido"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
