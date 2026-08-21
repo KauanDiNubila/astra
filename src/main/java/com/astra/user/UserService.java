@@ -6,13 +6,17 @@ import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.shared.exception.UnauthorizedException;
 import com.astra.shared.security.JwtService;
+import com.astra.user.dto.AdminUserResponse;
+import com.astra.user.dto.AuthInfo;
 import com.astra.user.dto.AvatarData;
 import com.astra.user.dto.LoginRequest;
 import com.astra.user.dto.RegisterRequest;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -118,7 +122,56 @@ public class UserService {
         return new AvatarData(user.getAvatar(), user.getAvatarContentType());
     }
 
+    @Transactional(readOnly = true)
+    public AuthInfo authInfo(UUID userId) {
+        return userRepository.findById(userId)
+                .map(user -> new AuthInfo(user.getRole(), user.isBanned()))
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminUserResponse> listUsers() {
+        return userRepository.findAll().stream()
+                .map(this::toAdminDto)
+                .toList();
+    }
+
+    @Transactional
+    public void ban(UUID targetId) {
+        UUID me = currentUserProvider.currentUserId();
+        if (targetId.equals(me)) {
+            throw new ConflictException("Não é possível banir a própria conta");
+        }
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        target.setBannedAt(OffsetDateTime.now());
+    }
+
+    @Transactional
+    public void unban(UUID targetId) {
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        target.setBannedAt(null);
+    }
+
+    @Transactional
+    public void delete(UUID targetId) {
+        UUID me = currentUserProvider.currentUserId();
+        if (targetId.equals(me)) {
+            throw new ConflictException("Não é possível excluir a própria conta");
+        }
+        if (!userRepository.existsById(targetId)) {
+            throw new NotFoundException("Usuário não encontrado");
+        }
+        userRepository.deleteById(targetId);
+    }
+
     private UserResponse toDto(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio());
+    }
+
+    private AdminUserResponse toAdminDto(User user) {
+        return new AdminUserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(),
+                user.isBanned(), user.getCreatedAt());
     }
 }

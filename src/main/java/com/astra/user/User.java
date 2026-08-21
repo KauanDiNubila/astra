@@ -21,6 +21,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
+    public static final String ROLE_USER = "USER";
+    public static final String ROLE_ADMIN = "ADMIN";
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -46,9 +49,19 @@ public class User {
     @Column(name = "avatar_content_type", length = 50)
     private String avatarContentType;
 
+    @Column(nullable = false, length = 20)
+    private String role = ROLE_USER;
+
+    @Column(name = "banned_at")
+    private OffsetDateTime bannedAt;
+
     public User(String name, String email, String passwordHash) {
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
+    }
+
+    public boolean isBanned() {
+        return bannedAt != null;
     }
 }
