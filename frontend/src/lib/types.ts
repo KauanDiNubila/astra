@@ -3,6 +3,16 @@ export type User = {
   name: string
   email: string
   bio: string | null
+  role: "USER" | "ADMIN"
+}
+
+export type AdminUser = {
+  id: string
+  name: string
+  email: string
+  role: "USER" | "ADMIN"
+  banned: boolean
+  createdAt: string
 }
 
 export type AuthResponse = {

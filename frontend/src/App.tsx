@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom"
+import { AdminRoute } from "@/components/AdminRoute"
 import { ProtectedLayout } from "@/components/ProtectedLayout"
 import { Toaster } from "@/components/ui/sonner"
+import { AdminPage } from "@/pages/AdminPage"
 import { ChatPage } from "@/pages/ChatPage"
 import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
@@ -34,6 +36,9 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:friendId" element={<ChatPage />} />
           <Route path="/ranking" element={<RankingPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
         </Route>
       </Routes>
       <Toaster />

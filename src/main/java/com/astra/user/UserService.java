@@ -170,7 +170,7 @@ public class UserService {
     }
 
     private UserResponse toDto(User user) {
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole());
     }
 
     private AdminUserResponse toAdminDto(User user) {

@@ -1,5 +1,15 @@
 import { useState } from "react"
-import { BookOpen, Clock, LayoutDashboard, Map, MessageCircle, Target, Trophy, Users } from "lucide-react"
+import {
+  BookOpen,
+  Clock,
+  LayoutDashboard,
+  Map,
+  MessageCircle,
+  ShieldCheck,
+  Target,
+  Trophy,
+  Users,
+} from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
@@ -35,6 +45,8 @@ const links = [
   { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
 ]
 
+const adminLink = { to: "/admin", label: "Admin", end: false, icon: ShieldCheck }
+
 function isLinkActive(pathname: string, to: string, end: boolean) {
   if (end) return pathname === to
   return pathname === to || pathname.startsWith(`${to}/`)
@@ -54,6 +66,7 @@ export function AppSidebar() {
   const { pathname } = useLocation()
   const lastRoadmapId = getLastRoadmapId()
   const [profileOpen, setProfileOpen] = useState(false)
+  const visibleLinks = user?.role === "ADMIN" ? [...links, adminLink] : links
 
   return (
     <Sidebar collapsible="icon">
@@ -71,7 +84,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {links.map((link) => {
+            {visibleLinks.map((link) => {
               const to = link.to === "/roadmaps" && lastRoadmapId ? `/roadmaps/${lastRoadmapId}` : link.to
               const active = isLinkActive(pathname, link.to, link.end)
               return (
