@@ -38,7 +38,7 @@ class SessionIntegrationTest {
                         .content("{\"email\":\"" + email + "\",\"password\":\"segredo123\"}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        return JsonPath.read(body, "$.token");
+        return JsonPath.read(body, "$.accessToken");
     }
 
     private String createCategory(String token) throws Exception {

@@ -5,6 +5,11 @@ export type User = {
   bio: string | null
 }
 
+export type AuthResponse = {
+  accessToken: string
+  refreshToken: string
+}
+
 export type GoalProgress = {
   type: "DAILY" | "WEEKLY"
   targetHours: number

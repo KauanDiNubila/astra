@@ -1,14 +1,22 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { api, clearToken, getToken, setToken } from "@/lib/api"
-import type { User } from "@/lib/types"
+import {
+  api,
+  clearAccessToken,
+  clearRefreshToken,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from "@/lib/api"
+import type { AuthResponse, User } from "@/lib/types"
 
 type AuthContextValue = {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -19,20 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!getToken()) {
+    if (!getAccessToken()) {
       setLoading(false)
       return
     }
     api
       .get<User>("/me")
       .then((res) => setUser(res.data))
-      .catch(() => clearToken())
+      .catch(() => {
+        clearAccessToken()
+        clearRefreshToken()
+      })
       .finally(() => setLoading(false))
   }, [])
 
   async function login(email: string, password: string) {
-    const res = await api.post<{ token: string }>("/auth/login", { email, password })
-    setToken(res.data.token)
+    const res = await api.post<AuthResponse>("/auth/login", { email, password })
+    setAccessToken(res.data.accessToken)
+    setRefreshToken(res.data.refreshToken)
     const me = await api.get<User>("/me")
     setUser(me.data)
   }
@@ -42,8 +54,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password)
   }
 
-  function logout() {
-    clearToken()
+  async function logout() {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      try {
+        await api.post("/auth/logout", { refreshToken })
+      } catch {
+        /* empty */
+      }
+    }
+    clearAccessToken()
+    clearRefreshToken()
     setUser(null)
   }
 

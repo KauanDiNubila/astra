@@ -5,7 +5,6 @@ import com.astra.shared.event.UserRegisteredEvent;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.shared.exception.UnauthorizedException;
-import com.astra.shared.security.JwtService;
 import com.astra.user.dto.AdminUserResponse;
 import com.astra.user.dto.AuthInfo;
 import com.astra.user.dto.AvatarData;
@@ -31,16 +30,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtService jwtService, CurrentUserProvider currentUserProvider,
+                       CurrentUserProvider currentUserProvider,
                        ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
         this.currentUserProvider = currentUserProvider;
         this.eventPublisher = eventPublisher;
     }
@@ -57,13 +54,13 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public String login(LoginRequest request) {
+    public UUID login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid credentials");
         }
-        return jwtService.generateToken(user.getId());
+        return user.getId();
     }
 
     @Transactional(readOnly = true)
