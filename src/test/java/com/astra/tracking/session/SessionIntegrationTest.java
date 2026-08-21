@@ -31,11 +31,11 @@ class SessionIntegrationTest {
         String email = "test-" + UUID.randomUUID() + "@astra.local";
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"email\":\"" + email + "\",\"password\":\"segredo123\"}"))
+                        .content("{\"name\":\"Test\",\"email\":\"" + email + "\",\"password\":\"Xk9$mQ2vN8pL4wR7\"}"))
                 .andExpect(status().isCreated());
         String body = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"segredo123\"}"))
+                        .content("{\"email\":\"" + email + "\",\"password\":\"Xk9$mQ2vN8pL4wR7\"}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(body, "$.accessToken");

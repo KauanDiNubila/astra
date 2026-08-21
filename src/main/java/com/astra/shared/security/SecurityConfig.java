@@ -1,10 +1,11 @@
 package com.astra.shared.security;
 
-import jakarta.servlet.http.HttpServletResponse;
+import com.astra.shared.exception.ApiErrorWriter;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -37,10 +38,10 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(
-                                (request, response, authException) -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED))
-                        .accessDeniedHandler(
-                                (request, response, accessDeniedException) -> response.setStatus(HttpServletResponse.SC_FORBIDDEN)))
+                        .authenticationEntryPoint((request, response, authException) -> ApiErrorWriter.write(
+                                response, request, HttpStatus.UNAUTHORIZED, "Não autenticado"))
+                        .accessDeniedHandler((request, response, accessDeniedException) -> ApiErrorWriter.write(
+                                response, request, HttpStatus.FORBIDDEN, "Acesso negado")))
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

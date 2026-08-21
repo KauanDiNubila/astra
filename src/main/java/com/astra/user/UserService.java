@@ -32,18 +32,24 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
+    private final PasswordBreachChecker passwordBreachChecker;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        CurrentUserProvider currentUserProvider,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher,
+                       PasswordBreachChecker passwordBreachChecker) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUserProvider = currentUserProvider;
         this.eventPublisher = eventPublisher;
+        this.passwordBreachChecker = passwordBreachChecker;
     }
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
+        if (passwordBreachChecker.isBreached(request.password())) {
+            throw new ConflictException("Essa senha já apareceu em vazamentos conhecidos - escolha outra");
+        }
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new ConflictException("Email already registered");
         }
