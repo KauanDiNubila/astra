@@ -3,33 +3,20 @@ import type { AuthResponse } from "@/lib/types"
 
 export const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8080"
 
-export const api = axios.create({ baseURL })
+export const api = axios.create({ baseURL, withCredentials: true })
 
-const ACCESS_TOKEN_KEY = "astra_token"
-const REFRESH_TOKEN_KEY = "astra_refresh_token"
+let accessToken: string | null = null
 
 export function getAccessToken() {
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
+  return accessToken
 }
 
 export function setAccessToken(token: string) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  accessToken = token
 }
 
 export function clearAccessToken() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-}
-
-export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function setRefreshToken(token: string) {
-  localStorage.setItem(REFRESH_TOKEN_KEY, token)
-}
-
-export function clearRefreshToken() {
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  accessToken = null
 }
 
 api.interceptors.request.use((config) => {
@@ -43,19 +30,13 @@ api.interceptors.request.use((config) => {
 let refreshPromise: Promise<string> | null = null
 
 async function performRefresh(): Promise<string> {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) {
-    throw new Error("Sem refresh token")
-  }
-  const res = await axios.post<AuthResponse>(`${baseURL}/auth/refresh`, { refreshToken })
+  const res = await axios.post<AuthResponse>(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
   setAccessToken(res.data.accessToken)
-  setRefreshToken(res.data.refreshToken)
   return res.data.accessToken
 }
 
 function logoutLocally() {
   clearAccessToken()
-  clearRefreshToken()
   if (!window.location.pathname.startsWith("/login")) {
     window.location.href = "/login"
   }

@@ -1,14 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import {
-  api,
-  clearAccessToken,
-  clearRefreshToken,
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-} from "@/lib/api"
+import { api, clearAccessToken, setAccessToken } from "@/lib/api"
 import type { AuthResponse, User } from "@/lib/types"
 
 type AuthContextValue = {
@@ -27,24 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      setLoading(false)
-      return
-    }
     api
-      .get<User>("/me")
-      .then((res) => setUser(res.data))
-      .catch(() => {
-        clearAccessToken()
-        clearRefreshToken()
+      .post<AuthResponse>("/auth/refresh")
+      .then((res) => {
+        setAccessToken(res.data.accessToken)
+        return api.get<User>("/me")
       })
+      .then((res) => setUser(res.data))
+      .catch(() => clearAccessToken())
       .finally(() => setLoading(false))
   }, [])
 
   async function login(email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password })
     setAccessToken(res.data.accessToken)
-    setRefreshToken(res.data.refreshToken)
     const me = await api.get<User>("/me")
     setUser(me.data)
   }
@@ -55,16 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    const refreshToken = getRefreshToken()
-    if (refreshToken) {
-      try {
-        await api.post("/auth/logout", { refreshToken })
-      } catch {
-        /* empty */
-      }
+    try {
+      await api.post("/auth/logout")
+    } catch {
+      /* empty */
     }
     clearAccessToken()
-    clearRefreshToken()
     setUser(null)
   }
 
