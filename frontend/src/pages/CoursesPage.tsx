@@ -4,6 +4,7 @@ import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { usePomodoro } from "@/context/PomodoroContext"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import type { CourseSummary } from "@/lib/types"
@@ -26,6 +27,7 @@ export function CoursesPage() {
   const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
   const { onMouseMove } = useSpotlight()
+  const { loadCourses } = usePomodoro()
 
   function load() {
     return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
@@ -50,7 +52,7 @@ export function CoursesPage() {
       setTitle("")
       setPlatform("")
       setModuleCount(0)
-      await load()
+      await Promise.all([load(), loadCourses()])
     } catch {
       toast.error("Não foi possível criar o curso.")
     } finally {

@@ -26,6 +26,7 @@ type PomodoroContextValue = {
   categories: Category[]
   courses: CourseSummary[]
   loadCategories: () => Promise<void>
+  loadCourses: () => Promise<void>
   categoryId: string
   setCategoryId: (id: string) => void
   courseId: string
@@ -306,6 +307,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         categories,
         courses,
         loadCategories,
+        loadCourses,
         categoryId,
         setCategoryId,
         courseId,
