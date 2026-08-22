@@ -39,14 +39,10 @@ public class RoadmapStep {
     @Column(name = "parent_step_id")
     private UUID parentStepId;
 
-    @Column(nullable = false)
-    private boolean completed;
-
     public RoadmapStep(Roadmap roadmap, String title, int position) {
         this.roadmap = roadmap;
         this.title = title;
         this.position = position;
-        this.completed = false;
     }
 
     public RoadmapStep(Roadmap roadmap, String title, int position, UUID parentStepId) {
@@ -54,6 +50,5 @@ public class RoadmapStep {
         this.title = title;
         this.position = position;
         this.parentStepId = parentStepId;
-        this.completed = false;
     }
 }

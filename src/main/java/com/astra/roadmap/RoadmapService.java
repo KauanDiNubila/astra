@@ -9,6 +9,7 @@ import com.astra.roadmap.dto.UpdateStepRequest;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.NotFoundException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,12 +19,15 @@ public class RoadmapService {
 
     private final RoadmapRepository roadmapRepository;
     private final RoadmapStepRepository stepRepository;
+    private final RoadmapStepCompletionRepository completionRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public RoadmapService(RoadmapRepository roadmapRepository, RoadmapStepRepository stepRepository,
+                          RoadmapStepCompletionRepository completionRepository,
                           CurrentUserProvider currentUserProvider) {
         this.roadmapRepository = roadmapRepository;
         this.stepRepository = stepRepository;
+        this.completionRepository = completionRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -44,12 +48,18 @@ public class RoadmapService {
 
     @Transactional(readOnly = true)
     public RoadmapDetailResponse get(UUID roadmapId) {
+        UUID userId = currentUserProvider.currentUserId();
         Roadmap roadmap = accessibleRoadmap(roadmapId);
-        List<StepResponse> steps = stepRepository.findByRoadmapIdOrderByPosition(roadmapId).stream()
-                .map(this::toStepResponse)
+        List<RoadmapStep> steps = stepRepository.findByRoadmapIdOrderByPosition(roadmapId);
+        Set<UUID> completedStepIds = steps.isEmpty()
+                ? Set.of()
+                : Set.copyOf(completionRepository.findCompletedStepIds(userId,
+                        steps.stream().map(RoadmapStep::getId).toList()));
+        List<StepResponse> stepResponses = steps.stream()
+                .map(step -> toStepResponse(step, completedStepIds.contains(step.getId())))
                 .toList();
         return new RoadmapDetailResponse(roadmap.getId(), roadmap.getTitle(), roadmap.getSource(),
-                roadmap.getOwnerId() == null, steps);
+                roadmap.getOwnerId() == null, stepResponses);
     }
 
     @Transactional
@@ -65,20 +75,25 @@ public class RoadmapService {
         }
         RoadmapStep step = new RoadmapStep(roadmap, request.title(), request.position(), parentStepId);
         RoadmapStep saved = stepRepository.save(step);
-        return toStepResponse(saved);
+        return toStepResponse(saved, false);
     }
 
     @Transactional
     public StepResponse setStepCompleted(UUID roadmapId, UUID stepId, UpdateStepRequest request) {
+        UUID userId = currentUserProvider.currentUserId();
         accessibleRoadmap(roadmapId);
         RoadmapStep step = stepRepository.findById(stepId)
                 .orElseThrow(() -> new NotFoundException("Step not found"));
         if (!step.getRoadmap().getId().equals(roadmapId)) {
             throw new NotFoundException("Step not found");
         }
-        step.setCompleted(request.completed());
-        RoadmapStep saved = stepRepository.save(step);
-        return toStepResponse(saved);
+        boolean exists = completionRepository.existsByUserIdAndStepId(userId, stepId);
+        if (request.completed() && !exists) {
+            completionRepository.save(new RoadmapStepCompletion(userId, stepId));
+        } else if (!request.completed() && exists) {
+            completionRepository.deleteByUserIdAndStepId(userId, stepId);
+        }
+        return toStepResponse(step, request.completed());
     }
 
     private Roadmap accessibleRoadmap(UUID roadmapId) {
@@ -102,8 +117,8 @@ public class RoadmapService {
                 roadmap.getOwnerId() == null);
     }
 
-    private StepResponse toStepResponse(RoadmapStep step) {
+    private StepResponse toStepResponse(RoadmapStep step, boolean completed) {
         return new StepResponse(step.getId(), step.getTitle(), step.getPosition(), step.getParentStepId(),
-                step.isCompleted());
+                completed);
     }
 }
