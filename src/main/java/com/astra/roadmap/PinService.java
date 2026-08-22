@@ -51,6 +51,9 @@ public class PinService {
         if (!link.getStep().getId().equals(stepId)) {
             throw new NotFoundException("Pin not found");
         }
+        if (!courseService.existsForUser(link.getCourseId(), userId)) {
+            throw new NotFoundException("Pin not found");
+        }
         linkRepository.delete(link);
     }
 
