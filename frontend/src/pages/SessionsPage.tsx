@@ -28,7 +28,7 @@ function combineDateWithNow(date: Date) {
 type RegisterMode = "pomodoro" | "manual"
 
 export function SessionsPage() {
-  const { sessionSavedAt } = usePomodoro()
+  const { sessionSavedAt, loadCategories: loadContextCategories } = usePomodoro()
   const [sessions, setSessions] = useState<Session[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,8 +49,11 @@ export function SessionsPage() {
     return api.get<Session[]>("/sessions").then((res) => setSessions(res.data))
   }
 
-  function loadCategories() {
-    return api.get<Category[]>("/categories").then((res) => setCategories(res.data))
+  async function loadCategories() {
+    await Promise.all([
+      api.get<Category[]>("/categories").then((res) => setCategories(res.data)),
+      loadContextCategories(),
+    ])
   }
 
   useEffect(() => {

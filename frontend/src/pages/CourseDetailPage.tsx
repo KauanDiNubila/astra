@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
+import { usePomodoro } from "@/context/PomodoroContext"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
 import { ModuleRow } from "@/components/ModuleRow"
 import { PageSkeleton } from "@/components/PageSkeleton"
@@ -16,6 +17,7 @@ const MAX_INITIAL_LESSONS = 30
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { courseId: pomodoroCourseId, loadCourseDetail } = usePomodoro()
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [moduleTitle, setModuleTitle] = useState("")
@@ -24,6 +26,14 @@ export function CourseDetailPage() {
 
   function load() {
     return api.get<CourseDetail>(`/courses/${id}`).then((res) => setCourse(res.data))
+  }
+
+  async function refreshAll() {
+    if (pomodoroCourseId === id) {
+      await Promise.all([load(), loadCourseDetail()])
+    } else {
+      await load()
+    }
   }
 
   useEffect(() => {
@@ -48,7 +58,7 @@ export function CourseDetailPage() {
       }
       setModuleTitle("")
       setLessonCount(0)
-      await load()
+      await refreshAll()
     } finally {
       setSaving(false)
     }
@@ -88,7 +98,7 @@ export function CourseDetailPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {course.modules.map((module) => (
-                <ModuleRow key={module.id} module={module} courseId={id!} onChanged={load} />
+                <ModuleRow key={module.id} module={module} courseId={id!} onChanged={refreshAll} />
               ))}
             </div>
           )}
