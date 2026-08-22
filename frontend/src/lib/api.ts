@@ -64,7 +64,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthCall) {
       logoutLocally()
     }
     return Promise.reject(error)
