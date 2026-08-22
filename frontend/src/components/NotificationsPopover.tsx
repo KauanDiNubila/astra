@@ -1,30 +1,19 @@
-import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Bell, Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { useFriends } from "@/context/FriendsContext"
 import { formatRelativeTime } from "@/lib/format"
-import type { Friendship } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export function NotificationsPopover() {
-  const [requests, setRequests] = useState<Friendship[]>([])
-
-  function load() {
-    return api
-      .get<Friendship[]>("/friends/requests")
-      .then((res) => setRequests(res.data.filter((r) => r.incoming)))
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  const { incomingRequests: requests, refresh } = useFriends()
 
   async function accept(id: string) {
     try {
       await api.post(`/friends/${id}/accept`)
-      await load()
+      await refresh()
       toast.success("Pedido de amizade aceito.")
     } catch {
       toast.error("Não foi possível aceitar o convite.")
@@ -34,14 +23,14 @@ export function NotificationsPopover() {
   async function decline(id: string) {
     try {
       await api.delete(`/friends/${id}`)
-      await load()
+      await refresh()
     } catch {
       toast.error("Não foi possível concluir a ação.")
     }
   }
 
   return (
-    <Popover onOpenChange={(next) => next && load()}>
+    <Popover onOpenChange={(next) => next && refresh()}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="size-4.5" />

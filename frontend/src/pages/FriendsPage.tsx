@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type { FormEvent } from "react"
 import { Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import type { Friendship } from "@/lib/types"
+import { useFriends } from "@/context/FriendsContext"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
@@ -12,24 +12,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export function FriendsPage() {
-  const [friends, setFriends] = useState<Friendship[]>([])
-  const [requests, setRequests] = useState<Friendship[]>([])
-  const [loading, setLoading] = useState(true)
+  const { friends, requests, loading, refresh } = useFriends()
   const [email, setEmail] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  function loadFriends() {
-    return api.get<Friendship[]>("/friends").then((res) => setFriends(res.data))
-  }
-
-  function loadRequests() {
-    return api.get<Friendship[]>("/friends/requests").then((res) => setRequests(res.data))
-  }
-
-  useEffect(() => {
-    Promise.all([loadFriends(), loadRequests()]).finally(() => setLoading(false))
-  }, [])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -38,7 +24,7 @@ export function FriendsPage() {
     try {
       await api.post("/friends", { email })
       setEmail("")
-      await Promise.all([loadFriends(), loadRequests()])
+      await refresh()
     } catch {
       setError("Não foi possível enviar o convite. Confira o e-mail e tente de novo.")
     } finally {
@@ -49,7 +35,7 @@ export function FriendsPage() {
   async function accept(id: string) {
     try {
       await api.post(`/friends/${id}/accept`)
-      await Promise.all([loadFriends(), loadRequests()])
+      await refresh()
     } catch {
       toast.error("Não foi possível aceitar o convite.")
     }
@@ -58,7 +44,7 @@ export function FriendsPage() {
   async function remove(id: string) {
     try {
       await api.delete(`/friends/${id}`)
-      await Promise.all([loadFriends(), loadRequests()])
+      await refresh()
     } catch {
       toast.error("Não foi possível concluir a ação.")
     }
