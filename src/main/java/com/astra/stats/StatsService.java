@@ -38,18 +38,34 @@ public class StatsService {
     public DashboardResponse dashboard() {
         UUID userId = currentUserProvider.currentUserId();
         LocalDate today = LocalDate.now(ZONE);
-        OffsetDateTime startOfToday = today.atStartOfDay(ZONE).toOffsetDateTime();
-        OffsetDateTime startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                .atStartOfDay(ZONE).toOffsetDateTime();
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         OffsetDateTime streakWindow = today.minusDays(HEATMAP_DAYS + 1L).atStartOfDay(ZONE).toOffsetDateTime();
 
-        long todayMinutes = sessionStatsService.focusedMinutesSince(userId, startOfToday);
-        long weekMinutes = sessionStatsService.focusedMinutesSince(userId, startOfWeek);
+        // hoje/semana/streak vêm todos do mesmo intervalo de 366 dias — uma query só,
+        // em vez de uma SUM separada pra cada, economiza viagens ao banco
+        List<DailyMinutes> dailyMinutes = sessionStatsService.dailyMinutesSince(userId, streakWindow);
+        long todayMinutes = minutesForDay(dailyMinutes, today);
+        long weekMinutes = sumMinutesSince(dailyMinutes, weekStart);
         long totalMinutes = sessionStatsService.totalFocusedMinutes(userId);
-        int streak = currentStreak(sessionStatsService.dailyMinutesSince(userId, streakWindow), today);
+        int streak = currentStreak(dailyMinutes, today);
         List<GoalProgress> goals = goalProgress(userId, todayMinutes, weekMinutes);
 
         return new DashboardResponse(todayMinutes, weekMinutes, totalMinutes, streak, goals);
+    }
+
+    private long minutesForDay(List<DailyMinutes> days, LocalDate day) {
+        return days.stream()
+                .filter(d -> d.day().equals(day))
+                .mapToLong(DailyMinutes::minutes)
+                .findFirst()
+                .orElse(0);
+    }
+
+    private long sumMinutesSince(List<DailyMinutes> days, LocalDate start) {
+        return days.stream()
+                .filter(d -> !d.day().isBefore(start))
+                .mapToLong(DailyMinutes::minutes)
+                .sum();
     }
 
     public List<DailyMinutes> heatmap() {
