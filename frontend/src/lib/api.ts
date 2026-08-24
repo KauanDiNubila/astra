@@ -5,6 +5,13 @@ export const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8080"
 
 export const api = axios.create({ baseURL, withCredentials: true })
 
+export function getErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error) && typeof error.response?.data?.message === "string") {
+    return error.response.data.message
+  }
+  return fallback
+}
+
 let accessToken: string | null = null
 
 export function getAccessToken() {

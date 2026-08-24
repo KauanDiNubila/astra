@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
+import { getErrorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,8 +30,9 @@ export function LoginPage() {
     try {
       await login(email, password)
       navigate("/dashboard")
-    } catch {
-      setError("E-mail ou senha inválidos.")
+    } catch (err) {
+      const message = getErrorMessage(err, "E-mail ou senha inválidos.")
+      setError(message === "Invalid credentials" ? "E-mail ou senha inválidos." : message)
     } finally {
       setLoading(false)
     }

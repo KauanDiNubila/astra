@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
+import { getErrorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,8 +31,8 @@ export function RegisterPage() {
     try {
       await register(name, email, password)
       navigate("/dashboard")
-    } catch {
-      setError("Não foi possível criar a conta. O e-mail pode já estar em uso.")
+    } catch (err) {
+      setError(getErrorMessage(err, "Não foi possível criar a conta. Tente novamente."))
     } finally {
       setLoading(false)
     }
