@@ -170,7 +170,6 @@ export function EditProfileModal({ open, onClose }: Props) {
                         id="profile-bio"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
-                        placeholder="Dev, Nutricionista..."
                         maxLength={80}
                       />
                     </div>

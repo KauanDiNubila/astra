@@ -114,8 +114,10 @@ public class FriendshipService {
 
     private FriendshipResponse toDto(Friendship f, UUID viewerId) {
         UUID otherId = f.otherUserId(viewerId);
-        String otherName = userRepository.findById(otherId).map(User::getName).orElse("");
+        Optional<User> other = userRepository.findById(otherId);
+        String otherName = other.map(User::getName).orElse("");
+        String otherBio = other.map(User::getBio).orElse(null);
         boolean incoming = f.getAddresseeId().equals(viewerId);
-        return new FriendshipResponse(f.getId(), otherId, otherName, f.getStatus(), incoming, f.getCreatedAt());
+        return new FriendshipResponse(f.getId(), otherId, otherName, otherBio, f.getStatus(), incoming, f.getCreatedAt());
     }
 }

@@ -166,7 +166,12 @@ export function FriendsPage() {
                 <li key={f.id} className="flex items-center justify-between py-3">
                   <span className="flex items-center gap-2">
                     <UserAvatar userId={f.friendUserId} name={f.friendName} size="sm" />
-                    <span className="font-medium">{f.friendName}</span>
+                    <span className="flex flex-col">
+                      <span className="font-medium">{f.friendName}</span>
+                      {f.friendBio && (
+                        <span className="text-xs text-muted-foreground">{f.friendBio}</span>
+                      )}
+                    </span>
                   </span>
                   <Button
                     size="sm"

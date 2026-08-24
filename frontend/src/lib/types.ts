@@ -131,6 +131,7 @@ export type Friendship = {
   id: string
   friendUserId: string
   friendName: string
+  friendBio: string | null
   status: "PENDING" | "ACCEPTED"
   incoming: boolean
   createdAt: string
@@ -148,6 +149,7 @@ export type Message = {
 export type ConversationSummary = {
   friendUserId: string
   friendName: string
+  friendBio: string | null
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number

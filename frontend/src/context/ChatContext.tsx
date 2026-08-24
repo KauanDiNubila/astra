@@ -76,6 +76,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const updated: ConversationSummary = {
       friendUserId: otherId,
       friendName: found?.friendName ?? "",
+      friendBio: found?.friendBio ?? null,
       lastMessage: message.content,
       lastMessageAt: message.createdAt,
       unreadCount: (found?.unreadCount ?? 0) + 1,

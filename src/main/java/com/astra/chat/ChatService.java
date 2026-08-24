@@ -10,6 +10,7 @@ import com.astra.user.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -74,12 +75,14 @@ public class ChatService {
     }
 
     private ConversationSummary toConversationSummary(UUID me, UUID friendId) {
-        String friendName = userRepository.findById(friendId).map(User::getName).orElse("");
+        Optional<User> friend = userRepository.findById(friendId);
+        String friendName = friend.map(User::getName).orElse("");
+        String friendBio = friend.map(User::getBio).orElse(null);
         long unread = messageRepository.countBySenderIdAndRecipientIdAndReadAtIsNull(friendId, me);
         return messageRepository.findConversation(me, friendId, PageRequest.of(0, 1)).stream()
                 .findFirst()
-                .map(last -> new ConversationSummary(friendId, friendName, last.getContent(), last.getCreatedAt(), unread))
-                .orElseGet(() -> new ConversationSummary(friendId, friendName, null, null, unread));
+                .map(last -> new ConversationSummary(friendId, friendName, friendBio, last.getContent(), last.getCreatedAt(), unread))
+                .orElseGet(() -> new ConversationSummary(friendId, friendName, friendBio, null, null, unread));
     }
 
     private void requireFriends(UUID a, UUID b) {

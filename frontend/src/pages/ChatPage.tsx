@@ -123,9 +123,14 @@ export function ChatPage() {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-1 flex-col overflow-hidden"
           >
-            <div className="flex items-center gap-2 border-b px-4 py-3 font-medium">
+            <div className="flex items-center gap-2 border-b px-4 py-3">
               {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
-              {activeFriend?.friendName}
+              <span className="flex flex-col">
+                <span className="font-medium">{activeFriend?.friendName}</span>
+                {activeFriend?.friendBio && (
+                  <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
+                )}
+              </span>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3">
               <div className="flex flex-col gap-2">
