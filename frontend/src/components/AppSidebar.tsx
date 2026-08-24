@@ -60,7 +60,7 @@ function initials(name: string) {
 }
 
 export function AppSidebar() {
-  const { user, logout } = useAuth()
+  const { user, logout, avatarVersion } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { totalUnread } = useChat()
   const { pathname } = useLocation()
@@ -125,10 +125,13 @@ export function AppSidebar() {
           className="flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
         >
           <Avatar size="sm">
-            {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar`} />}
+            {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar?v=${avatarVersion}`} />}
             <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
           </Avatar>
-          <span className="truncate text-sm text-muted-foreground">{user?.name}</span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-sm text-muted-foreground">{user?.name}</span>
+            {user?.bio && <span className="truncate text-xs text-muted-foreground/70">{user.bio}</span>}
+          </span>
         </button>
         <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
         <Separator />

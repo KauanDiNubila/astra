@@ -6,6 +6,7 @@ import type { AuthResponse, User } from "@/lib/types"
 type AuthContextValue = {
   user: User | null
   loading: boolean
+  avatarVersion: number
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [avatarVersion, setAvatarVersion] = useState(() => Date.now())
 
   useEffect(() => {
     api
@@ -55,10 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refreshUser() {
     const res = await api.get<User>("/me")
     setUser(res.data)
+    setAvatarVersion(Date.now())
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, avatarVersion, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
