@@ -10,8 +10,7 @@ nunca armazenado como tabela.
 
 **🔗 No ar:** [astra-eight-sigma.vercel.app](https://astra-eight-sigma.vercel.app)
 
-> Projeto de portfólio. Interface em português, código em inglês. O primeiro
-> usuário é o próprio autor (dogfooding).
+> Projeto de portfólio. Interface em português, código em inglês.
 
 ## Funcionalidades
 
