@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ArrowLeft, Maximize2, Settings as SettingsIcon } from "lucide-react"
 import { usePomodoro } from "@/context/PomodoroContext"
+import { formatMinutes } from "@/lib/format"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { ModuleRow } from "@/components/ModuleRow"
 import { PomodoroRing } from "@/components/PomodoroRing"
@@ -110,7 +111,7 @@ export function PomodoroTimer() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          {focusedMinutes} min focados
+          {formatMinutes(focusedMinutes)} focados
           {completedPomodoros > 0 && !settings.disableBreaks
             ? ` · ${completedPomodoros % settings.pomodorosUntilLongBreak || settings.pomodorosUntilLongBreak}/${settings.pomodorosUntilLongBreak} até pausa longa`
             : completedPomodoros > 0
@@ -176,7 +177,7 @@ export function PomodoroTimer() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={saving}>
-          {saving ? "Salvando..." : `Salvar sessão (${focusedMinutes} min)`}
+          {saving ? "Salvando..." : `Salvar sessão (${formatMinutes(focusedMinutes)})`}
         </Button>
       </form>
     </div>

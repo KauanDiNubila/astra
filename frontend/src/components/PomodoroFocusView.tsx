@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { motion } from "motion/react"
+import { formatMinutes } from "@/lib/format"
 import { PomodoroRing } from "@/components/PomodoroRing"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -58,7 +59,7 @@ export function PomodoroFocusView({ ring, primaryLabel, onPrimaryClick, focusedM
           <Button type="button" variant="outline" onClick={onPrimaryClick}>
             {primaryLabel}
           </Button>
-          <p className="text-sm text-muted-foreground">{focusedMinutes} min focados</p>
+          <p className="text-sm text-muted-foreground">{formatMinutes(focusedMinutes)} focados</p>
         </div>
       </div>
 

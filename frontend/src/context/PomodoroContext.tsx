@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { api } from "@/lib/api"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
+import { playChime } from "@/lib/sound"
 import type { PomodoroSettings } from "@/lib/pomodoroSettings"
-import type { Category, CourseDetail, CourseSummary } from "@/lib/types"
+import type { Category, CourseDetail, CourseSummary, Dashboard, GoalProgress } from "@/lib/types"
 
 export type Mode = "focus" | "break"
 
@@ -44,6 +45,9 @@ type PomodoroContextValue = {
   setFocusMode: (open: boolean) => void
   selectedModuleId: string | null
   setSelectedModuleId: (id: string | null) => void
+
+  dailyGoal: GoalProgress | null
+  loadDailyGoal: () => Promise<void>
 }
 
 const PomodoroContext = createContext<PomodoroContextValue | undefined>(undefined)
@@ -97,6 +101,19 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [focusMode, setFocusMode] = useState(false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
+  const [dailyGoal, setDailyGoal] = useState<GoalProgress | null>(null)
+
+  function loadDailyGoal() {
+    return api.get<Dashboard>("/dashboard").then((res) => {
+      setDailyGoal(res.data.goals.find((g) => g.type === "DAILY") ?? null)
+    })
+  }
+
+  useEffect(() => {
+    if (focusMode) loadDailyGoal()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMode])
+
   const [categories, setCategories] = useState<Category[]>([])
   const [courses, setCourses] = useState<CourseSummary[]>([])
 
@@ -140,6 +157,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
 
   function advancePhase() {
     const s = settingsRef.current
+    if (s.soundEnabled) playChime(s.soundId)
 
     if (modeRef.current === "focus") {
       completedRef.current += 1
@@ -324,6 +342,8 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         setFocusMode,
         selectedModuleId,
         setSelectedModuleId,
+        dailyGoal,
+        loadDailyGoal,
       }}
     >
       {children}

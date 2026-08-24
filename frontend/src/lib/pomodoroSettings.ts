@@ -1,3 +1,5 @@
+import type { ChimeId } from "@/lib/sound"
+
 export type PomodoroSettings = {
   focusMinutes: number
   shortBreakMinutes: number
@@ -6,6 +8,8 @@ export type PomodoroSettings = {
   autoStartNextPomodoro: boolean
   autoStartBreak: boolean
   disableBreaks: boolean
+  soundEnabled: boolean
+  soundId: ChimeId
 }
 
 export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
@@ -16,6 +20,8 @@ export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
   autoStartNextPomodoro: false,
   autoStartBreak: false,
   disableBreaks: false,
+  soundEnabled: true,
+  soundId: "sino",
 }
 
 const STORAGE_KEY = "astra:pomodoro-settings"

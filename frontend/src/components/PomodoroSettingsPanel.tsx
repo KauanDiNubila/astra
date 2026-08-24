@@ -1,4 +1,7 @@
+import { Volume2 } from "lucide-react"
 import type { PomodoroSettings } from "@/lib/pomodoroSettings"
+import { CHIME_OPTIONS, playChime } from "@/lib/sound"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -127,6 +130,40 @@ export function PomodoroSettingsPanel({ settings, onChange }: Props) {
           checked={settings.disableBreaks}
           onChange={(v) => update("disableBreaks", v)}
         />
+        <SettingToggle
+          label="Som ao terminar o ciclo"
+          checked={settings.soundEnabled}
+          onChange={(v) => update("soundEnabled", v)}
+        />
+        {settings.soundEnabled && (
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <Label className="font-normal">Som</Label>
+            <div className="flex items-center gap-1.5">
+              <Select value={settings.soundId} onValueChange={(v) => update("soundId", v as PomodoroSettings["soundId"])}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHIME_OPTIONS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                title="Ouvir"
+                onClick={() => playChime(settings.soundId)}
+              >
+                <Volume2 className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

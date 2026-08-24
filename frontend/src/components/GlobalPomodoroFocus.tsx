@@ -13,6 +13,7 @@ export function GlobalPomodoroFocus() {
     totalSeconds,
     focusedMinutes,
     completedPomodoros,
+    dailyGoal,
     settings,
     primaryLabel,
     handlePrimaryClick,
@@ -55,7 +56,13 @@ export function GlobalPomodoroFocus() {
       : null
 
   return (
-    <FocusModeOverlay open={focusMode && pathname === "/sessions"} onExit={() => setFocusMode(false)}>
+    <FocusModeOverlay
+      open={focusMode && pathname === "/sessions"}
+      onExit={() => setFocusMode(false)}
+      dailyGoal={dailyGoal}
+      focusedMinutes={focusedMinutes}
+      pomodoroMinutes={settings.focusMinutes}
+    >
       <PomodoroFocusView
         ring={{ mode, isLongBreak, timeLeft, totalSeconds, sessionCaption }}
         primaryLabel={primaryLabel}
