@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import type { FormEvent } from "react"
 import { CheckCircle2, X } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import { api } from "@/lib/api"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { BUTTON_REVEAL_CLASS, cn } from "@/lib/utils"
-import type { CourseSummary, Pin, RoadmapStep } from "@/lib/types"
+import type { CourseSummary, Pin, RoadmapStep, StepStatus } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { ScrollProgress } from "@/components/ui/scroll-progress"
 import {
   Select,
@@ -22,13 +24,17 @@ type Props = {
   steps: RoadmapStep[]
   pinsByStep: Record<string, Pin[]>
   courses: CourseSummary[]
+  predefined: boolean
   onChanged: () => Promise<void>
 }
 
-function toggleStepCompleted(roadmapId: string, step: RoadmapStep, onChanged: () => Promise<void>) {
-  return api
-    .patch(`/roadmaps/${roadmapId}/steps/${step.id}`, { completed: !step.completed })
-    .then(onChanged)
+function setStepStatus(
+  roadmapId: string,
+  step: RoadmapStep,
+  status: StepStatus | null,
+  onChanged: () => Promise<void>,
+) {
+  return api.patch(`/roadmaps/${roadmapId}/steps/${step.id}`, { status }).then(onChanged)
 }
 
 function unpinCourse(stepId: string, pinId: string, onChanged: () => Promise<void>) {
@@ -37,6 +43,14 @@ function unpinCourse(stepId: string, pinId: string, onChanged: () => Promise<voi
 
 function courseTitle(courses: CourseSummary[], courseId: string) {
   return courses.find((c) => c.id === courseId)?.title ?? "Curso"
+}
+
+function addResource(stepId: string, label: string, url: string, onChanged: () => Promise<void>) {
+  return api.post(`/steps/${stepId}/resources`, { label, url }).then(onChanged)
+}
+
+function removeResource(stepId: string, resourceId: string, onChanged: () => Promise<void>) {
+  return api.delete(`/steps/${stepId}/resources/${resourceId}`).then(onChanged)
 }
 
 const PANEL_TRANSITION = { duration: 0.45, ease: "easeInOut" as const }
@@ -156,6 +170,51 @@ function PinPanel({
   )
 }
 
+function ResourceForm({
+  stepId,
+  onAdded,
+}: {
+  stepId: string
+  onAdded: () => Promise<void>
+}) {
+  const [label, setLabel] = useState("")
+  const [url, setUrl] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!label.trim() || !url.trim()) return
+    setSaving(true)
+    try {
+      await addResource(stepId, label.trim(), url.trim(), onAdded)
+      setLabel("")
+      setUrl("")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <Input
+        placeholder="Título do link"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        className="h-8 w-32 text-xs"
+      />
+      <Input
+        placeholder="URL"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        className="h-8 w-40 text-xs"
+      />
+      <Button type="submit" size="sm" className="h-8" disabled={saving}>
+        Adicionar link
+      </Button>
+    </form>
+  )
+}
+
 // ---------- Visão "grafo": layout calculado com conectores em curva ----------
 
 const MAIN_W = 224
@@ -239,7 +298,7 @@ function edgePath(from: Positioned, to: Positioned, kind: "trunk" | "branch") {
   return `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`
 }
 
-function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) {
+function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChanged }: Props) {
   const { nodes, edges, width, height } = useMemo(() => computeGraphLayout(steps), [steps])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -296,9 +355,26 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
             {edgesSvg}
 
             {nodes.map((node, index) => {
-              const done = node.step.completed
+              const status = node.step.status
               const isMain = node.kind === "main"
               const isSelected = node.step.id === selectedId
+              const statusClass =
+                status === "DONE"
+                  ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
+                  : status === "LEARNING"
+                    ? "border-amber-500 bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-50"
+                    : status === "SKIPPED"
+                      ? "border-muted-foreground/40 bg-muted text-muted-foreground opacity-70"
+                      : isMain
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:border-foreground/40"
+              const ringClass = isSelected
+                ? status === "DONE"
+                  ? "ring-2 ring-emerald-400"
+                  : status === "LEARNING"
+                    ? "ring-2 ring-amber-400"
+                    : "ring-2 ring-primary"
+                : ""
               return (
                 <motion.button
                   key={node.step.id}
@@ -307,13 +383,7 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3, delay: index * 0.03, ease: "easeOut" }}
-                  className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors hover:brightness-110 ${
-                    done
-                      ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50"
-                      : isMain
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card hover:border-foreground/40"
-                  } ${isSelected ? (done ? "ring-2 ring-emerald-400" : "ring-2 ring-primary") : ""}`}
+                  className={`absolute flex items-start gap-1.5 overflow-hidden rounded-lg border-2 px-3 py-2 text-left shadow-sm transition-colors hover:brightness-110 ${statusClass} ${ringClass}`}
                   style={{
                     left: node.x - node.w / 2,
                     top: node.y - node.h / 2,
@@ -321,11 +391,11 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                     height: node.h,
                   }}
                 >
-                  {done && (
+                  {status === "DONE" && (
                     <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
                   )}
                   <span
-                    className={`line-clamp-2 min-w-0 leading-snug font-medium ${isMain ? "text-sm" : "text-xs"}`}
+                    className={`line-clamp-2 min-w-0 leading-snug font-medium ${isMain ? "text-sm" : "text-xs"} ${status === "SKIPPED" ? "line-through" : ""}`}
                   >
                     {node.step.title}
                   </span>
@@ -348,13 +418,50 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                 <CardContent className="flex flex-col gap-3 pt-6">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-medium">{selected.step.title}</h3>
-                    {selected.step.completed && (
+                    {selected.step.status === "DONE" && (
                       <Badge variant="secondary" className="gap-1">
                         <CheckCircle2 className="size-3 text-emerald-500" />
                         Concluído
                       </Badge>
                     )}
                   </div>
+
+                  {(selected.step.description || selected.step.resources.length > 0) && (
+                    <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-3">
+                      {selected.step.description && (
+                        <p className="text-sm leading-relaxed">{selected.step.description}</p>
+                      )}
+                      {selected.step.resources.length > 0 && (
+                        <ul className="flex flex-col gap-1">
+                          {selected.step.resources.map((resource) => (
+                            <li key={resource.id} className="flex items-center gap-1.5">
+                              <a
+                                href={resource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-primary underline-offset-2 hover:underline"
+                              >
+                                {resource.label}
+                              </a>
+                              {!predefined && (
+                                <button
+                                  type="button"
+                                  title="Remover link"
+                                  onClick={() => removeResource(selected.step.id, resource.id, onChanged)}
+                                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {!predefined && <ResourceForm stepId={selected.step.id} onAdded={onChanged} />}
+
                   {selectedPins.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedPins.map((pin) => (
@@ -372,16 +479,19 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, onChanged }: Props) 
                       ))}
                     </div>
                   )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className={cn("w-fit gap-1.5", BUTTON_REVEAL_CLASS)}
-                    onMouseMove={onMouseMove}
-                    onClick={() => toggleStepCompleted(roadmapId, selected.step, onChanged)}
+                  <Select
+                    value={selected.step.status ?? ""}
+                    onValueChange={(value) => setStepStatus(roadmapId, selected.step, value as StepStatus, onChanged)}
                   >
-                    {selected.step.completed ? "Desmarcar conclusão" : "Marcar como concluído"}
-                  </Button>
+                    <SelectTrigger className={cn("h-8 w-fit text-xs", BUTTON_REVEAL_CLASS)} onMouseMove={onMouseMove}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LEARNING">Aprendendo</SelectItem>
+                      <SelectItem value="DONE">Concluído</SelectItem>
+                      <SelectItem value="SKIPPED">Pulado</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
                 </CardContent>
               </Card>

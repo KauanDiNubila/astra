@@ -9,6 +9,7 @@ import java.util.UUID;
 public record CreateStepRequest(
         @NotBlank @Size(max = 160) String title,
         @NotNull @PositiveOrZero Integer position,
-        UUID parentStepId
+        UUID parentStepId,
+        @Size(max = 2000) String description
 ) {
 }

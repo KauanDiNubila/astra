@@ -39,16 +39,20 @@ public class RoadmapStep {
     @Column(name = "parent_step_id")
     private UUID parentStepId;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     public RoadmapStep(Roadmap roadmap, String title, int position) {
         this.roadmap = roadmap;
         this.title = title;
         this.position = position;
     }
 
-    public RoadmapStep(Roadmap roadmap, String title, int position, UUID parentStepId) {
+    public RoadmapStep(Roadmap roadmap, String title, int position, UUID parentStepId, String description) {
         this.roadmap = roadmap;
         this.title = title;
         this.position = position;
         this.parentStepId = parentStepId;
+        this.description = description;
     }
 }

@@ -100,12 +100,23 @@ export type Roadmap = {
   predefined: boolean
 }
 
+export type StepStatus = "LEARNING" | "DONE" | "SKIPPED"
+
+export type RoadmapStepResource = {
+  id: string
+  label: string
+  url: string
+  position: number
+}
+
 export type RoadmapStep = {
   id: string
   title: string
   position: number
   parentStepId: string | null
-  completed: boolean
+  status: StepStatus | null
+  description: string | null
+  resources: RoadmapStepResource[]
 }
 
 export type RoadmapDetail = Roadmap & {

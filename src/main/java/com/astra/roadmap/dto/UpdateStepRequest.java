@@ -1,8 +1,8 @@
 package com.astra.roadmap.dto;
 
-import jakarta.validation.constraints.NotNull;
+import com.astra.roadmap.StepStatus;
 
 public record UpdateStepRequest(
-        @NotNull Boolean completed
+        StepStatus status
 ) {
 }

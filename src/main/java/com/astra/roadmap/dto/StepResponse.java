@@ -1,5 +1,7 @@
 package com.astra.roadmap.dto;
 
+import com.astra.roadmap.StepStatus;
+import java.util.List;
 import java.util.UUID;
 
 public record StepResponse(
@@ -7,6 +9,8 @@ public record StepResponse(
         String title,
         int position,
         UUID parentStepId,
-        boolean completed
+        StepStatus status,
+        String description,
+        List<ResourceResponse> resources
 ) {
 }

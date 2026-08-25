@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
 const NO_PARENT = "none"
 
@@ -25,6 +26,7 @@ export function RoadmapDetailPage() {
   const [pinsByStep, setPinsByStep] = useState<Record<string, Pin[]>>({})
   const [loading, setLoading] = useState(true)
   const [stepTitle, setStepTitle] = useState("")
+  const [stepDescription, setStepDescription] = useState("")
   const [parentStepId, setParentStepId] = useState(NO_PARENT)
 
   async function loadRoadmap() {
@@ -55,8 +57,10 @@ export function RoadmapDetailPage() {
       title: stepTitle.trim(),
       position: siblings.length + 1,
       parentStepId: parent,
+      description: stepDescription.trim() || null,
     })
     setStepTitle("")
+    setStepDescription("")
     await loadRoadmap()
   }
 
@@ -87,33 +91,43 @@ export function RoadmapDetailPage() {
         steps={roadmap.steps}
         pinsByStep={pinsByStep}
         courses={courses}
+        predefined={roadmap.predefined}
         onChanged={loadRoadmap}
       />
 
       {!roadmap.predefined && (
-        <form onSubmit={addStep} className="flex flex-wrap gap-2">
-          <Input
-            placeholder="Título da etapa"
-            value={stepTitle}
-            onChange={(e) => setStepTitle(e.target.value)}
-            className="max-w-56"
+        <form onSubmit={addStep} className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Título da etapa"
+              value={stepTitle}
+              onChange={(e) => setStepTitle(e.target.value)}
+              className="max-w-56"
+            />
+            <Select value={parentStepId} onValueChange={setParentStepId}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Onde encaixar?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PARENT}>Novo marco principal</SelectItem>
+                {mainSteps.map((step) => (
+                  <SelectItem key={step.id} value={step.id}>
+                    Subtópico de: {step.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="submit" variant="outline">
+              Adicionar
+            </Button>
+          </div>
+          <Textarea
+            placeholder="Descrição (opcional)"
+            value={stepDescription}
+            onChange={(e) => setStepDescription(e.target.value)}
+            className="max-w-md"
+            rows={2}
           />
-          <Select value={parentStepId} onValueChange={setParentStepId}>
-            <SelectTrigger className="w-52">
-              <SelectValue placeholder="Onde encaixar?" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_PARENT}>Novo marco principal</SelectItem>
-              {mainSteps.map((step) => (
-                <SelectItem key={step.id} value={step.id}>
-                  Subtópico de: {step.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="submit" variant="outline">
-            Adicionar
-          </Button>
         </form>
       )}
     </div>

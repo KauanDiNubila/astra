@@ -2,6 +2,8 @@ package com.astra.roadmap;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
@@ -31,8 +33,13 @@ public class RoadmapStepCompletion {
     @Column(name = "completed_at", nullable = false)
     private OffsetDateTime completedAt;
 
-    public RoadmapStepCompletion(UUID userId, UUID stepId) {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StepStatus status;
+
+    public RoadmapStepCompletion(UUID userId, UUID stepId, StepStatus status) {
         this.userId = userId;
         this.stepId = stepId;
+        this.status = status;
     }
 }

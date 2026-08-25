@@ -53,7 +53,7 @@ public class RoadmapController {
 
     @PatchMapping("/{id}/steps/{stepId}")
     public StepResponse updateStep(@PathVariable UUID id, @PathVariable UUID stepId,
-                                   @Valid @RequestBody UpdateStepRequest request) {
-        return roadmapService.setStepCompleted(id, stepId, request);
+                                   @RequestBody UpdateStepRequest request) {
+        return roadmapService.setStepStatus(id, stepId, request.status());
     }
 }
