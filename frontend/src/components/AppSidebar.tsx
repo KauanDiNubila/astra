@@ -15,7 +15,6 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
-import { getLastRoadmapId } from "@/lib/lastRoadmap"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { EditProfileModal } from "@/components/EditProfileModal"
@@ -62,7 +61,6 @@ export function AppSidebar() {
   const { theme, toggleTheme } = useTheme()
   const { totalUnread } = useChat()
   const { pathname } = useLocation()
-  const lastRoadmapId = getLastRoadmapId()
   const [profileOpen, setProfileOpen] = useState(false)
   const visibleLinks = user?.role === "ADMIN" ? [...links, adminLink] : links
 
@@ -83,7 +81,6 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             {visibleLinks.map((link) => {
-              const to = link.to === "/roadmaps" && lastRoadmapId ? `/roadmaps/${lastRoadmapId}` : link.to
               const active = isLinkActive(pathname, link.to, link.end)
               return (
                 <SidebarMenuItem key={link.to}>
@@ -100,7 +97,7 @@ export function AppSidebar() {
                     isActive={active}
                     className="relative z-10 data-active:bg-transparent"
                   >
-                    <NavLink to={to} end={link.end}>
+                    <NavLink to={link.to} end={link.end}>
                       <link.icon />
                       <span>{link.label}</span>
                       {link.to === "/chat" && totalUnread > 0 && (

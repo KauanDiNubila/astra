@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
-import { setLastRoadmapId } from "@/lib/lastRoadmap"
 import type { CourseSummary, Pin, RoadmapDetail } from "@/lib/types"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { RoadmapDiagram } from "@/components/RoadmapDiagram"
@@ -41,7 +40,6 @@ export function RoadmapDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    setLastRoadmapId(id)
     Promise.all([
       loadRoadmap(),
       api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data)),
