@@ -89,6 +89,12 @@ export function Particles({
       canvasRef.current.style.width = `${canvasSize.current.w}px`
       canvasRef.current.style.height = `${canvasSize.current.h}px`
       context.current.scale(dpr, dpr)
+      // Redimensionar o canvas reseta o bitmap e zera circles.current — sem
+      // isso, a animação continua rodando mas sobre um array vazio (as
+      // partículas somem e nunca voltam, já que só respawnam quando uma
+      // existente sai da tela). Acontece em qualquer resize real, incluindo
+      // o de entrar/sair da tela cheia.
+      drawParticles()
     }
 
     function circleParams(): Circle {
@@ -172,7 +178,6 @@ export function Particles({
     }
 
     resizeCanvas()
-    drawParticles()
     animate()
 
     window.addEventListener("resize", resizeCanvas)
