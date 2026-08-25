@@ -8,7 +8,6 @@ import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { FriendsPage } from "@/pages/FriendsPage"
-import { GoalsPage } from "@/pages/GoalsPage"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RankingPage } from "@/pages/RankingPage"
@@ -27,7 +26,6 @@ function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/goals" element={<GoalsPage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
           <Route path="/roadmaps" element={<RoadmapsPage />} />

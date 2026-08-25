@@ -6,7 +6,6 @@ import {
   Map,
   MessageCircle,
   ShieldCheck,
-  Target,
   Trophy,
   Users,
 } from "lucide-react"
@@ -37,7 +36,6 @@ import {
 const links = [
   { to: "/dashboard", label: "Dashboard", end: true, icon: LayoutDashboard },
   { to: "/sessions", label: "Sessões", end: false, icon: Clock },
-  { to: "/goals", label: "Metas", end: false, icon: Target },
   { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
   { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
   { to: "/friends", label: "Amigos", end: false, icon: Users },
