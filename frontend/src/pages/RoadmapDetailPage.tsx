@@ -29,23 +29,25 @@ export function RoadmapDetailPage() {
   const [stepDescription, setStepDescription] = useState("")
   const [parentStepId, setParentStepId] = useState(NO_PARENT)
 
-  async function loadRoadmap() {
-    const res = await api.get<RoadmapDetail>(`/roadmaps/${id}`)
-    setRoadmap(res.data)
-    const entries = await Promise.all(
-      res.data.steps.map((step) =>
-        api.get<Pin[]>(`/steps/${step.id}/pins`).then((r) => [step.id, r.data] as const),
-      ),
-    )
-    setPinsByStep(Object.fromEntries(entries))
+  async function loadRoadmap(signal?: AbortSignal) {
+    const [roadmapRes, pinsRes] = await Promise.all([
+      api.get<RoadmapDetail>(`/roadmaps/${id}`, { signal }),
+      api.get<Record<string, Pin[]>>(`/roadmaps/${id}/pins`, { signal }),
+    ])
+    setRoadmap(roadmapRes.data)
+    setPinsByStep(pinsRes.data)
   }
 
   useEffect(() => {
     if (!id) return
+    const controller = new AbortController()
     Promise.all([
-      loadRoadmap(),
-      api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data)),
-    ]).finally(() => setLoading(false))
+      loadRoadmap(controller.signal),
+      api.get<CourseSummary[]>("/courses", { signal: controller.signal }).then((res) => setCourses(res.data)),
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [id])
 
   async function addStep(event: FormEvent) {

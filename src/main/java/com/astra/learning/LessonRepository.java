@@ -11,8 +11,4 @@ public interface LessonRepository extends JpaRepository<Lesson, UUID> {
     List<Lesson> findByModuleIdInOrderByPosition(Collection<UUID> moduleIds);
 
     Optional<Lesson> findByIdAndModuleId(UUID id, UUID moduleId);
-
-    long countByModuleIdIn(Collection<UUID> moduleIds);
-
-    long countByModuleIdInAndCompletedTrue(Collection<UUID> moduleIds);
 }

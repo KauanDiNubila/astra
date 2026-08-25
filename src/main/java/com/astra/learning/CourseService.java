@@ -9,6 +9,7 @@ import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.NotFoundException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,14 +44,34 @@ public class CourseService {
     @Transactional(readOnly = true)
     public List<CourseResponse> list() {
         UUID userId = currentUserProvider.currentUserId();
-        return courseRepository.findByUserId(userId).stream()
+        List<Course> courses = courseRepository.findByUserId(userId);
+        List<UUID> courseIds = courses.stream().map(Course::getId).toList();
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<CourseModule> modules = moduleRepository.findByCourseIdIn(courseIds);
+        Map<UUID, UUID> courseIdByModuleId = modules.stream()
+                .collect(Collectors.toMap(CourseModule::getId, m -> m.getCourse().getId()));
+        List<UUID> moduleIds = modules.stream().map(CourseModule::getId).toList();
+        List<Lesson> lessons = moduleIds.isEmpty()
+                ? List.of()
+                : lessonRepository.findByModuleIdInOrderByPosition(moduleIds);
+
+        Map<UUID, long[]> countsByCourse = new HashMap<>();
+        for (Lesson lesson : lessons) {
+            UUID courseId = courseIdByModuleId.get(lesson.getModule().getId());
+            long[] counts = countsByCourse.computeIfAbsent(courseId, k -> new long[2]);
+            counts[0]++;
+            if (lesson.isCompleted()) {
+                counts[1]++;
+            }
+        }
+
+        return courses.stream()
                 .map(c -> {
-                    List<UUID> moduleIds = moduleRepository.findByCourseIdOrderByPosition(c.getId()).stream()
-                            .map(CourseModule::getId)
-                            .toList();
-                    long total = lessonRepository.countByModuleIdIn(moduleIds);
-                    long completed = lessonRepository.countByModuleIdInAndCompletedTrue(moduleIds);
-                    return toSummary(c, total, completed);
+                    long[] counts = countsByCourse.getOrDefault(c.getId(), new long[2]);
+                    return toSummary(c, counts[0], counts[1]);
                 })
                 .toList();
     }

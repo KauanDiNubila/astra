@@ -41,6 +41,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Validation failed", request, fieldErrors);
     }
 
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado", request, null);
+    }
+
     private ResponseEntity<ApiError> build(HttpStatus status, String message,
                                            HttpServletRequest request, List<ApiError.FieldError> fieldErrors) {
         ApiError body = new ApiError(

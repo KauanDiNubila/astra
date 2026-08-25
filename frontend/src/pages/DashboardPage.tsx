@@ -61,19 +61,26 @@ export function DashboardPage() {
   const [categoryPeriod, setCategoryPeriod] = useState<CategoryPeriodDays>(30)
   const [editGoalsOpen, setEditGoalsOpen] = useState(false)
 
-  function loadDashboard() {
-    return api.get<Dashboard>("/dashboard").then((res) => setData(res.data))
+  function loadDashboard(signal?: AbortSignal) {
+    return api.get<Dashboard>("/dashboard", { signal }).then((res) => setData(res.data))
   }
 
   useEffect(() => {
+    const controller = new AbortController()
+    const { signal } = controller
     Promise.all([
-      loadDashboard(),
-      api.get<DailyMinutes[]>("/heatmap").then((res) => setHeatmap(res.data)),
-      api.get<Session[]>("/sessions").then((res) => setSessions(res.data)),
-      api.get<Category[]>("/categories").then((res) => setCategories(res.data)),
+      loadDashboard(signal),
+      api.get<DailyMinutes[]>("/heatmap", { signal }).then((res) => setHeatmap(res.data)),
+      api.get<Session[]>("/sessions", { signal }).then((res) => setSessions(res.data)),
+      api.get<Category[]>("/categories", { signal }).then((res) => setCategories(res.data)),
     ])
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
+      .catch(() => {
+        if (!signal.aborted) setError(true)
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
   }, [])
 
   const trendData = useMemo(() => {
