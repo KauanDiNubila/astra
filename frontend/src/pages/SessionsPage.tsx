@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatDateTime, formatMinutes, formatMinutesCompact, parseMinutesCompact } from "@/lib/format"
-import type { Category, Session } from "@/lib/types"
+import type { Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
@@ -28,9 +28,8 @@ function combineDateWithNow(date: Date) {
 type RegisterMode = "pomodoro" | "manual"
 
 export function SessionsPage() {
-  const { sessionSavedAt, loadCategories: loadContextCategories } = usePomodoro()
+  const { sessionSavedAt, categories, loadCategories } = usePomodoro()
   const [sessions, setSessions] = useState<Session[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
 
@@ -49,15 +48,10 @@ export function SessionsPage() {
     return api.get<Session[]>("/sessions").then((res) => setSessions(res.data))
   }
 
-  async function loadCategories() {
-    await Promise.all([
-      api.get<Category[]>("/categories").then((res) => setCategories(res.data)),
-      loadContextCategories(),
-    ])
-  }
-
   useEffect(() => {
-    Promise.all([loadSessions(), loadCategories()]).finally(() => setLoading(false))
+    // Categorias vêm do PomodoroContext (já buscadas uma vez pra casca
+    // protegida inteira) — não refazer a busca aqui a cada visita à página.
+    loadSessions().finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {

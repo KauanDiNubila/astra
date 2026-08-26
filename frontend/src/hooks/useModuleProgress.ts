@@ -6,10 +6,15 @@ export function useModuleProgress(courseId: string, module: ModuleItem, onChange
   const [saving, setSaving] = useState(false)
 
   async function setLessonProgress(uptoPosition: number) {
+    // Só manda PATCH pra aula cujo "completed" realmente muda — um clique
+    // custava N requisições (uma por aula do módulo) mesmo quando quase
+    // todas já estavam com o valor certo.
+    const changed = module.lessons.filter((l) => l.completed !== (l.position <= uptoPosition))
+    if (changed.length === 0) return
     setSaving(true)
     try {
       await Promise.all(
-        module.lessons.map((l) =>
+        changed.map((l) =>
           api.patch(`/courses/${courseId}/modules/${module.id}/lessons/${l.id}`, {
             completed: l.position <= uptoPosition,
           }),

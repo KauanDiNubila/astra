@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react"
 import { Pencil } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
+import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { gridItem, gridStagger } from "@/lib/utils"
-import type { Category, Dashboard, DailyMinutes, Session } from "@/lib/types"
+import type { Dashboard, DailyMinutes, Session } from "@/lib/types"
 import { StatCard } from "@/components/StatCard"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { Heatmap } from "@/components/Heatmap"
@@ -51,10 +52,10 @@ function lastNDays(n: number): string[] {
 }
 
 export function DashboardPage() {
+  const { categories } = usePomodoro()
   const [data, setData] = useState<Dashboard | null>(null)
   const [heatmap, setHeatmap] = useState<DailyMinutes[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriodDays>(30)
@@ -68,11 +69,11 @@ export function DashboardPage() {
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
+    // Categorias vêm do PomodoroContext — evita refazer a mesma busca aqui.
     Promise.all([
       loadDashboard(signal),
       api.get<DailyMinutes[]>("/heatmap", { signal }).then((res) => setHeatmap(res.data)),
       api.get<Session[]>("/sessions", { signal }).then((res) => setSessions(res.data)),
-      api.get<Category[]>("/categories", { signal }).then((res) => setCategories(res.data)),
     ])
       .catch(() => {
         if (!signal.aborted) setError(true)

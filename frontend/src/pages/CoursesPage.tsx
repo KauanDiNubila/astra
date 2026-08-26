@@ -20,21 +20,17 @@ import { Stepper } from "@/components/ui/stepper"
 const MAX_INITIAL_MODULES = 30
 
 export function CoursesPage() {
-  const [courses, setCourses] = useState<CourseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState("")
   const [platform, setPlatform] = useState("")
   const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
   const { onMouseMove } = useSpotlight()
-  const { loadCourses } = usePomodoro()
-
-  function load() {
-    return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
-  }
+  const { courses, loadCourses } = usePomodoro()
 
   useEffect(() => {
-    load().finally(() => setLoading(false))
+    loadCourses().finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function onSubmit(event: FormEvent) {
@@ -52,7 +48,7 @@ export function CoursesPage() {
       setTitle("")
       setPlatform("")
       setModuleCount(0)
-      await Promise.all([load(), loadCourses()])
+      await loadCourses()
     } catch {
       toast.error("Não foi possível criar o curso.")
     } finally {

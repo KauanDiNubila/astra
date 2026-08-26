@@ -2,7 +2,8 @@ import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
-import type { CourseSummary, Pin, RoadmapDetail } from "@/lib/types"
+import { usePomodoro } from "@/context/PomodoroContext"
+import type { Pin, RoadmapDetail } from "@/lib/types"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { RoadmapDiagram } from "@/components/RoadmapDiagram"
 import { Badge } from "@/components/ui/badge"
@@ -21,8 +22,8 @@ const NO_PARENT = "none"
 
 export function RoadmapDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { courses } = usePomodoro()
   const [roadmap, setRoadmap] = useState<RoadmapDetail | null>(null)
-  const [courses, setCourses] = useState<CourseSummary[]>([])
   const [pinsByStep, setPinsByStep] = useState<Record<string, Pin[]>>({})
   const [loading, setLoading] = useState(true)
   const [stepTitle, setStepTitle] = useState("")
@@ -41,10 +42,8 @@ export function RoadmapDetailPage() {
   useEffect(() => {
     if (!id) return
     const controller = new AbortController()
-    Promise.all([
-      loadRoadmap(controller.signal),
-      api.get<CourseSummary[]>("/courses", { signal: controller.signal }).then((res) => setCourses(res.data)),
-    ])
+    // Cursos vêm do PomodoroContext — evita refazer a mesma busca aqui.
+    loadRoadmap(controller.signal)
       .catch(() => {})
       .finally(() => setLoading(false))
     return () => controller.abort()

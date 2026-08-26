@@ -127,8 +127,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public AuthInfo authInfo(UUID userId) {
-        return userRepository.findById(userId)
-                .map(user -> new AuthInfo(user.getRole(), user.isBanned()))
+        return userRepository.findAuthInfoById(userId)
+                .map(v -> new AuthInfo(v.getRole(), v.getBannedAt() != null))
                 .orElse(null);
     }
 
