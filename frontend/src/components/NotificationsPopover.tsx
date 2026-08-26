@@ -1,19 +1,31 @@
+import { useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Bell, Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
-import { api } from "@/lib/api"
 import { useFriends } from "@/context/FriendsContext"
 import { formatRelativeTime } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
+const REFRESH_COOLDOWN_MS = 15_000
+
 export function NotificationsPopover() {
-  const { incomingRequests: requests, refresh } = useFriends()
+  const { incomingRequests: requests, refresh, acceptRequest, removeFriendship } = useFriends()
+  const lastRefreshRef = useRef(0)
+
+  function handleOpenChange(next: boolean) {
+    if (!next) return
+    const now = Date.now()
+    // Evita reconsultar /friends toda vez que o sino é reaberto em sequência
+    // (clique curioso, abrir/fechar) — só busca de novo depois de um tempo.
+    if (now - lastRefreshRef.current < REFRESH_COOLDOWN_MS) return
+    lastRefreshRef.current = now
+    refresh()
+  }
 
   async function accept(id: string) {
     try {
-      await api.post(`/friends/${id}/accept`)
-      await refresh()
+      await acceptRequest(id)
       toast.success("Pedido de amizade aceito.")
     } catch {
       toast.error("Não foi possível aceitar o convite.")
@@ -22,15 +34,14 @@ export function NotificationsPopover() {
 
   async function decline(id: string) {
     try {
-      await api.delete(`/friends/${id}`)
-      await refresh()
+      await removeFriendship(id)
     } catch {
       toast.error("Não foi possível concluir a ação.")
     }
   }
 
   return (
-    <Popover onOpenChange={(next) => next && refresh()}>
+    <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="size-4.5" />

@@ -5,7 +5,7 @@ import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { gridItem, gridStagger } from "@/lib/utils"
-import type { Dashboard, DailyMinutes, Session } from "@/lib/types"
+import type { Dashboard, DailyMinutes, CategoryMinutes } from "@/lib/types"
 import { StatCard } from "@/components/StatCard"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { Heatmap } from "@/components/Heatmap"
@@ -55,7 +55,7 @@ export function DashboardPage() {
   const { categories } = usePomodoro()
   const [data, setData] = useState<Dashboard | null>(null)
   const [heatmap, setHeatmap] = useState<DailyMinutes[]>([])
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [categoryMinutes, setCategoryMinutes] = useState<CategoryMinutes[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriodDays>(30)
@@ -73,7 +73,6 @@ export function DashboardPage() {
     Promise.all([
       loadDashboard(signal),
       api.get<DailyMinutes[]>("/heatmap", { signal }).then((res) => setHeatmap(res.data)),
-      api.get<Session[]>("/sessions", { signal }).then((res) => setSessions(res.data)),
     ])
       .catch(() => {
         if (!signal.aborted) setError(true)
@@ -84,28 +83,32 @@ export function DashboardPage() {
     return () => controller.abort()
   }, [])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    api
+      .get<CategoryMinutes[]>("/dashboard/by-category", {
+        params: { days: categoryPeriod },
+        signal: controller.signal,
+      })
+      .then((res) => setCategoryMinutes(res.data))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [categoryPeriod])
+
   const trendData = useMemo(() => {
     const byDay = new Map(heatmap.map((d) => [d.day, d.minutes]))
     return lastNDays(trendPeriod).map((day) => ({ day, minutes: byDay.get(day) ?? 0 }))
   }, [heatmap, trendPeriod])
 
   const categoryData = useMemo(() => {
-    const periodStart = new Date()
-    periodStart.setDate(periodStart.getDate() - (categoryPeriod - 1))
-    periodStart.setHours(0, 0, 0, 0)
-
-    const minutesByCategory = new Map<string, number>()
-    for (const s of sessions) {
-      if (new Date(s.startedAt) < periodStart) continue
-      minutesByCategory.set(s.categoryId, (minutesByCategory.get(s.categoryId) ?? 0) + s.focusedMinutes)
-    }
+    const minutesByCategory = new Map(categoryMinutes.map((c) => [c.categoryId, c.minutes]))
     return categories.map((c) => ({
       categoryId: c.id,
       name: c.name,
       minutes: minutesByCategory.get(c.id) ?? 0,
       color: c.color,
     }))
-  }, [sessions, categories, categoryPeriod])
+  }, [categoryMinutes, categories])
 
   if (loading) {
     return <StatGridSkeleton />

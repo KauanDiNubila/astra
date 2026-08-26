@@ -17,6 +17,7 @@ export type AdminUser = {
 
 export type AuthResponse = {
   accessToken: string
+  user: User
 }
 
 export type GoalProgress = {
@@ -36,6 +37,11 @@ export type Dashboard = {
 
 export type DailyMinutes = {
   day: string
+  minutes: number
+}
+
+export type CategoryMinutes = {
+  categoryId: string
   minutes: number
 }
 

@@ -2,7 +2,6 @@ import { useState } from "react"
 import type { FormEvent } from "react"
 import { Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
-import { api } from "@/lib/api"
 import { useFriends } from "@/context/FriendsContext"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export function FriendsPage() {
-  const { friends, requests, loading, refresh } = useFriends()
+  const { friends, requests, loading, sendRequest, acceptRequest, removeFriendship } = useFriends()
   const [email, setEmail] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,9 +21,8 @@ export function FriendsPage() {
     setError(null)
     setSending(true)
     try {
-      await api.post("/friends", { email })
+      await sendRequest(email)
       setEmail("")
-      await refresh()
     } catch {
       setError("Não foi possível enviar o convite. Confira o e-mail e tente de novo.")
     } finally {
@@ -34,8 +32,7 @@ export function FriendsPage() {
 
   async function accept(id: string) {
     try {
-      await api.post(`/friends/${id}/accept`)
-      await refresh()
+      await acceptRequest(id)
     } catch {
       toast.error("Não foi possível aceitar o convite.")
     }
@@ -43,8 +40,7 @@ export function FriendsPage() {
 
   async function remove(id: string) {
     try {
-      await api.delete(`/friends/${id}`)
-      await refresh()
+      await removeFriendship(id)
     } catch {
       toast.error("Não foi possível concluir a ação.")
     }

@@ -3,7 +3,7 @@ import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
-import type { Pin, RoadmapDetail } from "@/lib/types"
+import type { Pin, RoadmapDetail, RoadmapStep } from "@/lib/types"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { RoadmapDiagram } from "@/components/RoadmapDiagram"
 import { Badge } from "@/components/ui/badge"
@@ -49,6 +49,19 @@ export function RoadmapDetailPage() {
     return () => controller.abort()
   }, [id])
 
+  // Mudança de status manda o step atualizado — só substitui aquele item,
+  // sem recarregar o roadmap inteiro. Pin/recurso continuam recarregando
+  // tudo (chamam onChanged sem argumento).
+  async function handleStepChanged(updatedStep?: RoadmapStep) {
+    if (updatedStep) {
+      setRoadmap((prev) =>
+        prev ? { ...prev, steps: prev.steps.map((s) => (s.id === updatedStep.id ? updatedStep : s)) } : prev,
+      )
+      return
+    }
+    await loadRoadmap()
+  }
+
   async function addStep(event: FormEvent) {
     event.preventDefault()
     if (!stepTitle.trim() || !roadmap) return
@@ -93,7 +106,7 @@ export function RoadmapDetailPage() {
         pinsByStep={pinsByStep}
         courses={courses}
         predefined={roadmap.predefined}
-        onChanged={loadRoadmap}
+        onChanged={handleStepChanged}
       />
 
       {!roadmap.predefined && (

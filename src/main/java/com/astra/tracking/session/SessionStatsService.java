@@ -45,4 +45,11 @@ public class SessionStatsService {
         }
         return sessionRepository.rankingSinceForUsers(start, userIds);
     }
+
+    @Transactional(readOnly = true)
+    public List<CategoryMinutes> categoryMinutesSince(UUID userId, OffsetDateTime start) {
+        return sessionRepository.categoryMinutesSince(userId, start).stream()
+                .map(v -> new CategoryMinutes(v.getCategoryId(), v.getMinutes()))
+                .toList();
+    }
 }

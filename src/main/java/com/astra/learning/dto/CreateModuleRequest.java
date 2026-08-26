@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreateModuleRequest(
         @NotBlank @Size(max = 160) String title,
-        @NotNull @PositiveOrZero Integer position
+        @NotNull @PositiveOrZero Integer position,
+        @PositiveOrZero Integer lessonCount
 ) {
 }

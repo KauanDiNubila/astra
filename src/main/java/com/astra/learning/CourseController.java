@@ -6,6 +6,7 @@ import com.astra.learning.dto.CreateCourseRequest;
 import com.astra.learning.dto.CreateLessonRequest;
 import com.astra.learning.dto.CreateModuleRequest;
 import com.astra.learning.dto.LessonResponse;
+import com.astra.learning.dto.ModuleProgressRequest;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.learning.dto.UpdateLessonRequest;
 import com.astra.learning.dto.UpdateModuleRequest;
@@ -71,5 +72,11 @@ public class CourseController {
     public ModuleResponse updateModule(@PathVariable UUID courseId, @PathVariable UUID moduleId,
                                        @Valid @RequestBody UpdateModuleRequest request) {
         return courseService.setModuleCompleted(courseId, moduleId, request.completed());
+    }
+
+    @PatchMapping("/{courseId}/modules/{moduleId}/progress")
+    public ModuleResponse updateModuleProgress(@PathVariable UUID courseId, @PathVariable UUID moduleId,
+                                               @Valid @RequestBody ModuleProgressRequest request) {
+        return courseService.setModuleProgress(courseId, moduleId, request.uptoPosition());
     }
 }

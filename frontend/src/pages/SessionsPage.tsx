@@ -77,7 +77,7 @@ export function SessionsPage() {
     setDeletingSessionId(id)
     try {
       await api.delete(`/sessions/${id}`)
-      await loadSessions()
+      setSessions((prev) => prev.filter((s) => s.id !== id))
     } catch {
       toast.error("Não foi possível remover a sessão.")
     } finally {
@@ -94,16 +94,16 @@ export function SessionsPage() {
     }
     setSaving(true)
     try {
-      await api.post("/sessions", {
+      const res = await api.post<Session>("/sessions", {
         categoryId,
         focusedMinutes: minutes,
         startedAt: combineDateWithNow(selectedDate).toISOString(),
         note: note.trim() || null,
       })
+      setSessions((prev) => [res.data, ...prev])
       setMinutes(25)
       setNote("")
       setSelectedDate(new Date())
-      await loadSessions()
     } catch {
       setError("Não foi possível registrar a sessão.")
     } finally {

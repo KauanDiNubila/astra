@@ -69,7 +69,7 @@ export function AdminPage() {
     setBusyId(id)
     try {
       await api.post(`/admin/users/${id}/ban`)
-      await loadUsers()
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, banned: true } : u)))
     } catch {
       toast.error("Não foi possível banir esse usuário.")
     } finally {
@@ -81,7 +81,7 @@ export function AdminPage() {
     setBusyId(id)
     try {
       await api.post(`/admin/users/${id}/unban`)
-      await loadUsers()
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, banned: false } : u)))
     } catch {
       toast.error("Não foi possível desbanir esse usuário.")
     } finally {

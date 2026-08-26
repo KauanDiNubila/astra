@@ -9,6 +9,7 @@ import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.NotFoundException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,14 @@ public class CourseService {
         UUID userId = currentUserProvider.currentUserId();
         Course course = new Course(userId, request.title(), request.platform(), CourseStatus.PLANNED);
         Course saved = courseRepository.save(course);
+        int moduleCount = request.moduleCount() == null ? 0 : request.moduleCount();
+        if (moduleCount > 0) {
+            List<CourseModule> modules = new ArrayList<>();
+            for (int i = 1; i <= moduleCount; i++) {
+                modules.add(new CourseModule(saved, "Módulo " + i, i));
+            }
+            moduleRepository.saveAll(modules);
+        }
         return toSummary(saved, 0, 0);
     }
 
@@ -100,7 +109,16 @@ public class CourseService {
         Course course = ownedCourse(courseId);
         CourseModule module = new CourseModule(course, request.title(), request.position());
         CourseModule saved = moduleRepository.save(module);
-        return toModuleResponse(saved, List.of());
+        int lessonCount = request.lessonCount() == null ? 0 : request.lessonCount();
+        List<Lesson> lessons = List.of();
+        if (lessonCount > 0) {
+            List<Lesson> toCreate = new ArrayList<>();
+            for (int i = 1; i <= lessonCount; i++) {
+                toCreate.add(new Lesson(saved, "Aula " + i, i));
+            }
+            lessons = lessonRepository.saveAll(toCreate);
+        }
+        return toModuleResponse(saved, lessons);
     }
 
     @Transactional
@@ -127,6 +145,26 @@ public class CourseService {
         lesson.setCompleted(completed);
         Lesson saved = lessonRepository.save(lesson);
         return toLessonResponse(saved);
+    }
+
+    @Transactional
+    public ModuleResponse setModuleProgress(UUID courseId, UUID moduleId, int uptoPosition) {
+        ownedCourse(courseId);
+        CourseModule module = moduleRepository.findByIdAndCourseId(moduleId, courseId)
+                .orElseThrow(() -> new NotFoundException("Module not found"));
+        List<Lesson> lessons = lessonRepository.findByModuleIdInOrderByPosition(List.of(moduleId));
+        List<Lesson> changed = new ArrayList<>();
+        for (Lesson lesson : lessons) {
+            boolean shouldBeCompleted = lesson.getPosition() <= uptoPosition;
+            if (lesson.isCompleted() != shouldBeCompleted) {
+                lesson.setCompleted(shouldBeCompleted);
+                changed.add(lesson);
+            }
+        }
+        if (!changed.isEmpty()) {
+            lessonRepository.saveAll(changed);
+        }
+        return toModuleResponse(module, lessons);
     }
 
     @Transactional

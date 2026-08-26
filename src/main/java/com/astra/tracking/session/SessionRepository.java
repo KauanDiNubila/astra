@@ -54,4 +54,18 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
 
         long getMinutes();
     }
+
+    @Query("""
+            select s.category.id as categoryId, sum(s.focusedMinutes) as minutes
+            from Session s
+            where s.userId = :userId and s.startedAt >= :start
+            group by s.category.id
+            """)
+    List<CategoryMinutesView> categoryMinutesSince(@Param("userId") UUID userId, @Param("start") OffsetDateTime start);
+
+    interface CategoryMinutesView {
+        UUID getCategoryId();
+
+        long getMinutes();
+    }
 }

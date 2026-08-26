@@ -25,9 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .post<AuthResponse>("/auth/refresh")
       .then((res) => {
         setAccessToken(res.data.accessToken)
-        return api.get<User>("/me")
+        setUser(res.data.user)
       })
-      .then((res) => setUser(res.data))
       .catch(() => clearAccessToken())
       .finally(() => setLoading(false))
   }, [])
@@ -35,8 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password })
     setAccessToken(res.data.accessToken)
-    const me = await api.get<User>("/me")
-    setUser(me.data)
+    setUser(res.data.user)
   }
 
   async function register(name: string, email: string, password: string) {

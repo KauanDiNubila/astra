@@ -15,16 +15,10 @@ import { Textarea } from "@/components/ui/textarea"
 export function ChatPage() {
   const { friendId } = useParams<{ friendId: string }>()
   const { user } = useAuth()
-  const { conversations, loadConversations, messagesFor, loadHistory, sendMessage, markRead, setActiveFriendId } =
+  const { conversations, conversationsLoaded, messagesFor, loadHistory, sendMessage, markRead, setActiveFriendId } =
     useChat()
-  const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState("")
   const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    loadConversations().finally(() => setLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     setActiveFriendId(friendId ?? null)
@@ -61,7 +55,7 @@ export function ChatPage() {
     }
   }
 
-  if (loading) {
+  if (!conversationsLoaded) {
     return <PageSkeleton rows={5} />
   }
 

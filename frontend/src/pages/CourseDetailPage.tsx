@@ -46,16 +46,11 @@ export function CourseDetailPage() {
     setSaving(true)
     try {
       const position = course.modules.length + 1
-      const res = await api.post<ModuleItem>(`/courses/${id}/modules`, {
+      await api.post<ModuleItem>(`/courses/${id}/modules`, {
         title: moduleTitle.trim() || `Módulo ${position}`,
         position,
+        lessonCount: lessonCount || null,
       })
-      for (let i = 1; i <= lessonCount; i++) {
-        await api.post(`/courses/${id}/modules/${res.data.id}/lessons`, {
-          title: `Aula ${i}`,
-          position: i,
-        })
-      }
       setModuleTitle("")
       setLessonCount(0)
       await refreshAll()

@@ -4,7 +4,9 @@ import com.astra.user.dto.AvatarData;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.UUID;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +50,7 @@ public class UserController {
     public ResponseEntity<byte[]> avatar(@PathVariable UUID id) {
         AvatarData avatar = userService.avatar(id);
         return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
                 .contentType(MediaType.parseMediaType(avatar.contentType()))
                 .body(avatar.bytes());
     }

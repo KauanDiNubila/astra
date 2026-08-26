@@ -38,13 +38,11 @@ export function CoursesPage() {
     if (!title.trim()) return
     setSaving(true)
     try {
-      const res = await api.post<CourseSummary>("/courses", {
+      await api.post<CourseSummary>("/courses", {
         title: title.trim(),
         platform: platform.trim() || null,
+        moduleCount: moduleCount || null,
       })
-      for (let i = 1; i <= moduleCount; i++) {
-        await api.post(`/courses/${res.data.id}/modules`, { title: `Módulo ${i}`, position: i })
-      }
       setTitle("")
       setPlatform("")
       setModuleCount(0)

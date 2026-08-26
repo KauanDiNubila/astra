@@ -66,12 +66,10 @@ export function EditGoalsModal({ open, onClose, dailyTarget, weeklyTarget, onSav
     setError(null)
     setSaving(true)
     try {
-      if (daily > 0) {
-        await api.put("/goals", { type: "DAILY", targetHours: daily })
-      }
-      if (weekly > 0) {
-        await api.put("/goals", { type: "WEEKLY", targetHours: weekly })
-      }
+      await Promise.all([
+        daily > 0 ? api.put("/goals", { type: "DAILY", targetHours: daily }) : Promise.resolve(),
+        weekly > 0 ? api.put("/goals", { type: "WEEKLY", targetHours: weekly }) : Promise.resolve(),
+      ])
       await onSaved()
       toast.success("Metas salvas.")
       onClose()

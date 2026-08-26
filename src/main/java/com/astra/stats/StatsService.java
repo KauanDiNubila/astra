@@ -5,6 +5,7 @@ import com.astra.learning.GoalType;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.stats.dto.DashboardResponse;
 import com.astra.stats.dto.GoalProgress;
+import com.astra.tracking.session.CategoryMinutes;
 import com.astra.tracking.session.DailyMinutes;
 import com.astra.tracking.session.SessionStatsService;
 import java.time.DayOfWeek;
@@ -73,6 +74,13 @@ public class StatsService {
         LocalDate today = LocalDate.now(ZONE);
         OffsetDateTime start = today.minusDays(HEATMAP_DAYS).atStartOfDay(ZONE).toOffsetDateTime();
         return sessionStatsService.dailyMinutesSince(userId, start);
+    }
+
+    public List<CategoryMinutes> categoryBreakdown(int days) {
+        UUID userId = currentUserProvider.currentUserId();
+        LocalDate today = LocalDate.now(ZONE);
+        OffsetDateTime start = today.minusDays(days - 1L).atStartOfDay(ZONE).toOffsetDateTime();
+        return sessionStatsService.categoryMinutesSince(userId, start);
     }
 
     private List<GoalProgress> goalProgress(UUID userId, long todayMinutes, long weekMinutes) {

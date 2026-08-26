@@ -7,10 +7,12 @@ import com.astra.social.dto.FriendshipResponse;
 import com.astra.social.dto.SendFriendRequest;
 import com.astra.user.User;
 import com.astra.user.UserRepository;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,13 +50,14 @@ public class FriendshipService {
             }
             // o outro já tinha te chamado — aceita direto, sem duplicar
             f.setStatus(Friendship.ACCEPTED);
-            return toDto(f, me);
+            return toDto(f, me, nameBioMap(List.of(f.otherUserId(me))));
         }
 
         Friendship created = new Friendship(me, target.getId());
         // saveAndFlush pra @CreationTimestamp popular createdAt antes do toDto
         // (mesmo gotcha já documentado em SessionService)
-        return toDto(friendshipRepository.saveAndFlush(created), me);
+        Friendship saved = friendshipRepository.saveAndFlush(created);
+        return toDto(saved, me, nameBioMap(List.of(saved.otherUserId(me))));
     }
 
     @Transactional
@@ -66,7 +69,7 @@ public class FriendshipService {
             throw new NotFoundException("Convite não encontrado");
         }
         f.setStatus(Friendship.ACCEPTED);
-        return toDto(f, me);
+        return toDto(f, me, nameBioMap(List.of(f.otherUserId(me))));
     }
 
     @Transactional
@@ -83,19 +86,29 @@ public class FriendshipService {
     @Transactional(readOnly = true)
     public List<FriendshipResponse> myFriends() {
         UUID me = currentUserProvider.currentUserId();
-        return friendshipRepository.findAcceptedForUser(me).stream()
-                .map(f -> toDto(f, me))
-                .toList();
+        List<Friendship> friendships = friendshipRepository.findAcceptedForUser(me);
+        Map<UUID, UserRepository.NameBioView> usersById = nameBioMap(otherUserIds(friendships, me));
+        return friendships.stream().map(f -> toDto(f, me, usersById)).toList();
     }
 
     @Transactional(readOnly = true)
     public List<FriendshipResponse> pendingRequests() {
         UUID me = currentUserProvider.currentUserId();
-        List<FriendshipResponse> received = friendshipRepository.findByAddresseeIdAndStatus(me, Friendship.PENDING)
-                .stream().map(f -> toDto(f, me)).toList();
-        List<FriendshipResponse> sent = friendshipRepository.findByRequesterIdAndStatus(me, Friendship.PENDING)
-                .stream().map(f -> toDto(f, me)).toList();
-        return Stream.concat(received.stream(), sent.stream()).toList();
+        List<Friendship> pending = friendshipRepository.findPendingForUser(me);
+        Map<UUID, UserRepository.NameBioView> usersById = nameBioMap(otherUserIds(pending, me));
+        return pending.stream().map(f -> toDto(f, me, usersById)).toList();
+    }
+
+    private List<UUID> otherUserIds(Collection<Friendship> friendships, UUID viewerId) {
+        return friendships.stream().map(f -> f.otherUserId(viewerId)).toList();
+    }
+
+    private Map<UUID, UserRepository.NameBioView> nameBioMap(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findNameBioByIdIn(ids).stream()
+                .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
     }
 
     @Transactional(readOnly = true)
@@ -112,11 +125,11 @@ public class FriendshipService {
                 .orElse(false);
     }
 
-    private FriendshipResponse toDto(Friendship f, UUID viewerId) {
+    private FriendshipResponse toDto(Friendship f, UUID viewerId, Map<UUID, UserRepository.NameBioView> usersById) {
         UUID otherId = f.otherUserId(viewerId);
-        Optional<User> other = userRepository.findById(otherId);
-        String otherName = other.map(User::getName).orElse("");
-        String otherBio = other.map(User::getBio).orElse(null);
+        UserRepository.NameBioView other = usersById.get(otherId);
+        String otherName = other != null ? other.getName() : "";
+        String otherBio = other != null ? other.getBio() : null;
         boolean incoming = f.getAddresseeId().equals(viewerId);
         return new FriendshipResponse(f.getId(), otherId, otherName, otherBio, f.getStatus(), incoming, f.getCreatedAt());
     }

@@ -16,14 +16,17 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
             """)
     Optional<Friendship> findBetween(@Param("a") UUID a, @Param("b") UUID b);
 
-    List<Friendship> findByAddresseeIdAndStatus(UUID addresseeId, String status);
-
-    List<Friendship> findByRequesterIdAndStatus(UUID requesterId, String status);
-
     @Query("""
             select f from Friendship f
             where f.status = 'ACCEPTED'
               and (f.requesterId = :userId or f.addresseeId = :userId)
             """)
     List<Friendship> findAcceptedForUser(@Param("userId") UUID userId);
+
+    @Query("""
+            select f from Friendship f
+            where f.status = 'PENDING'
+              and (f.requesterId = :userId or f.addresseeId = :userId)
+            """)
+    List<Friendship> findPendingForUser(@Param("userId") UUID userId);
 }

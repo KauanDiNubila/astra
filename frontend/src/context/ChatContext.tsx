@@ -11,6 +11,7 @@ type ChatContextValue = {
   activeFriendId: string | null
   setActiveFriendId: (id: string | null) => void
   conversations: ConversationSummary[]
+  conversationsLoaded: boolean
   loadConversations: () => Promise<void>
   messagesFor: (friendId: string) => Message[]
   loadHistory: (friendId: string) => Promise<void>
@@ -26,6 +27,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false)
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [conversationsLoaded, setConversationsLoaded] = useState(false)
   const [messagesByFriend, setMessagesByFriend] = useState<Record<string, Message[]>>({})
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
@@ -51,6 +53,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }
 
   async function markRead(friendId: string) {
+    // Uma mensagem nova dispara markRead a cada chegada enquanto a conversa
+    // está aberta — sem essa guarda, 5 mensagens em sequência viram 5 POSTs
+    // pro mesmo "já lido".
+    const current = conversationsRef.current.find((c) => c.friendUserId === friendId)
+    if (current && current.unreadCount === 0) return
     await api.post(`/chat/${friendId}/read`)
     setConversations((prev) => prev.map((c) => (c.friendUserId === friendId ? { ...c, unreadCount: 0 } : c)))
   }
@@ -100,7 +107,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     client.onDisconnect = () => setConnected(false)
     client.activate()
     clientRef.current = client
-    loadConversations()
+    loadConversations().finally(() => setConversationsLoaded(true))
 
     return () => {
       client.deactivate()
@@ -131,6 +138,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         activeFriendId,
         setActiveFriendId,
         conversations,
+        conversationsLoaded,
         loadConversations,
         messagesFor,
         loadHistory,

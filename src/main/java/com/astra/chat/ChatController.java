@@ -30,7 +30,7 @@ public class ChatController {
 
     @GetMapping("/{friendId}/messages")
     public List<MessageResponse> history(@PathVariable UUID friendId, @RequestParam(defaultValue = "50") int limit) {
-        return chatService.history(friendId, limit);
+        return chatService.history(friendId, Math.min(limit, 200));
     }
 
     @PostMapping("/{friendId}/read")

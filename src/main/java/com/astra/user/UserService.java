@@ -60,27 +60,36 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UUID login(LoginRequest request) {
+    public UserResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid credentials");
         }
-        return user.getId();
+        return toDto(user);
     }
 
+    // Usado por /me e por /auth/refresh (pra devolver o usuário junto do
+    // token novo, sem o front precisar de uma segunda chamada a /me).
     @Transactional(readOnly = true)
-    public UserResponse me() {
-        UUID userId = currentUserProvider.currentUserId();
-        return userRepository.findById(userId)
-                .map(this::toDto)
+    public UserResponse get(UUID userId) {
+        return userRepository.findSummaryById(userId)
+                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole()))
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
     }
 
     @Transactional(readOnly = true)
+    public UserResponse me() {
+        return get(currentUserProvider.currentUserId());
+    }
+
+    @Transactional(readOnly = true)
     public Map<UUID, String> namesByIds(Collection<UUID> ids) {
-        return userRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(User::getId, User::getName));
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findNameBioByIdIn(ids).stream()
+                .collect(Collectors.toMap(UserRepository.NameBioView::getId, UserRepository.NameBioView::getName));
     }
 
     @Transactional
@@ -134,8 +143,9 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<AdminUserResponse> listUsers() {
-        return userRepository.findAll().stream()
-                .map(this::toAdminDto)
+        return userRepository.findAllAdminSummaries().stream()
+                .map(v -> new AdminUserResponse(v.getId(), v.getName(), v.getEmail(), v.getRole(),
+                        v.getBannedAt() != null, v.getCreatedAt()))
                 .toList();
     }
 
@@ -171,10 +181,5 @@ public class UserService {
 
     private UserResponse toDto(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole());
-    }
-
-    private AdminUserResponse toAdminDto(User user) {
-        return new AdminUserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(),
-                user.isBanned(), user.getCreatedAt());
     }
 }

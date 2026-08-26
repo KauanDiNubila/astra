@@ -31,13 +31,23 @@ export function RankingPage() {
   const [loading, setLoading] = useState(true)
   const [renderKey, setRenderKey] = useState(0)
   const requestIdRef = useRef(0)
+  const cacheRef = useRef<Map<string, RankingEntry[]>>(new Map())
 
   useEffect(() => {
+    const key = `${period}:${scope}`
+    const cached = cacheRef.current.get(key)
+    if (cached) {
+      setEntries(cached)
+      setRenderKey((k) => k + 1)
+      setLoading(false)
+      return
+    }
     const requestId = ++requestIdRef.current
     api
       .get<RankingEntry[]>(`/ranking?period=${period}&scope=${scope}`)
       .then((res) => {
         if (requestIdRef.current !== requestId) return
+        cacheRef.current.set(key, res.data)
         setEntries(res.data)
         setRenderKey((k) => k + 1)
       })

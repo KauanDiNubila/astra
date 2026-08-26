@@ -10,6 +10,9 @@ type FriendsContextValue = {
   incomingRequests: Friendship[]
   loading: boolean
   refresh: () => Promise<void>
+  sendRequest: (email: string) => Promise<void>
+  acceptRequest: (id: string) => Promise<void>
+  removeFriendship: (id: string) => Promise<void>
 }
 
 const FriendsContext = createContext<FriendsContextValue | undefined>(undefined)
@@ -35,10 +38,31 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
+  // Mutação já devolve o registro atualizado — em vez de reconsultar
+  // /friends + /friends/requests, só encaixa o resultado no estado local.
+  async function sendRequest(email: string) {
+    const res = await api.post<Friendship>("/friends", { email })
+    setRequests((prev) => [...prev, res.data])
+  }
+
+  async function acceptRequest(id: string) {
+    const res = await api.post<Friendship>(`/friends/${id}/accept`)
+    setRequests((prev) => prev.filter((r) => r.id !== id))
+    setFriends((prev) => [...prev, res.data])
+  }
+
+  async function removeFriendship(id: string) {
+    await api.delete(`/friends/${id}`)
+    setRequests((prev) => prev.filter((r) => r.id !== id))
+    setFriends((prev) => prev.filter((f) => f.id !== id))
+  }
+
   const incomingRequests = requests.filter((r) => r.incoming)
 
   return (
-    <FriendsContext.Provider value={{ friends, requests, incomingRequests, loading, refresh }}>
+    <FriendsContext.Provider
+      value={{ friends, requests, incomingRequests, loading, refresh, sendRequest, acceptRequest, removeFriendship }}
+    >
       {children}
     </FriendsContext.Provider>
   )

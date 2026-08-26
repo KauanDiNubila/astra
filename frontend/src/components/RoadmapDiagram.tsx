@@ -25,20 +25,25 @@ type Props = {
   pinsByStep: Record<string, Pin[]>
   courses: CourseSummary[]
   predefined: boolean
-  onChanged: () => Promise<void>
+  // Chamado sem argumento pelas ações de pin/recurso (recarrega o roadmap
+  // inteiro). Mudança de status passa o step atualizado direto da resposta
+  // do PATCH, pra atualizar só aquele item sem recarregar tudo.
+  onChanged: (updatedStep?: RoadmapStep) => Promise<void>
 }
 
 function setStepStatus(
   roadmapId: string,
   step: RoadmapStep,
   status: StepStatus | null,
-  onChanged: () => Promise<void>,
+  onChanged: (updatedStep?: RoadmapStep) => Promise<void>,
 ) {
-  return api.patch(`/roadmaps/${roadmapId}/steps/${step.id}`, { status }).then(onChanged)
+  return api
+    .patch<RoadmapStep>(`/roadmaps/${roadmapId}/steps/${step.id}`, { status })
+    .then((res) => onChanged(res.data))
 }
 
 function unpinCourse(stepId: string, pinId: string, onChanged: () => Promise<void>) {
-  return api.delete(`/steps/${stepId}/pins/${pinId}`).then(onChanged)
+  return api.delete(`/steps/${stepId}/pins/${pinId}`).then(() => onChanged())
 }
 
 function courseTitle(courses: CourseSummary[], courseId: string) {
@@ -46,11 +51,11 @@ function courseTitle(courses: CourseSummary[], courseId: string) {
 }
 
 function addResource(stepId: string, label: string, url: string, onChanged: () => Promise<void>) {
-  return api.post(`/steps/${stepId}/resources`, { label, url }).then(onChanged)
+  return api.post(`/steps/${stepId}/resources`, { label, url }).then(() => onChanged())
 }
 
 function removeResource(stepId: string, resourceId: string, onChanged: () => Promise<void>) {
-  return api.delete(`/steps/${stepId}/resources/${resourceId}`).then(onChanged)
+  return api.delete(`/steps/${stepId}/resources/${resourceId}`).then(() => onChanged())
 }
 
 const PANEL_TRANSITION = { duration: 0.45, ease: "easeInOut" as const }

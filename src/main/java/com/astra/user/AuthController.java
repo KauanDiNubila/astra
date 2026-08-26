@@ -48,8 +48,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        UUID userId = userService.login(request);
-        return issueTokens(userId, response);
+        UserResponse user = userService.login(request);
+        return issueTokens(user.id(), user, response);
     }
 
     @PostMapping("/refresh")
@@ -59,7 +59,10 @@ public class AuthController {
             throw new UnauthorizedException("Refresh token ausente");
         }
         UUID userId = refreshTokenService.rotate(refreshToken);
-        return issueTokens(userId, response);
+        // Devolve o usuário junto do token novo — evita o front precisar de
+        // uma chamada extra a /me toda vez que a aba recarrega.
+        UserResponse user = userService.get(userId);
+        return issueTokens(userId, user, response);
     }
 
     @PostMapping("/logout")
@@ -72,11 +75,11 @@ public class AuthController {
         clearRefreshCookie(response);
     }
 
-    private AuthResponse issueTokens(UUID userId, HttpServletResponse response) {
+    private AuthResponse issueTokens(UUID userId, UserResponse user, HttpServletResponse response) {
         String accessToken = jwtService.generateToken(userId);
         String refreshToken = refreshTokenService.issue(userId);
         setRefreshCookie(response, refreshToken);
-        return new AuthResponse(accessToken);
+        return new AuthResponse(accessToken, user);
     }
 
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
