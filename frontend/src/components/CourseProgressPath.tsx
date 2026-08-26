@@ -18,6 +18,11 @@ type Props = {
 const NODE_SIZE = 16
 const SPACING_X = 22
 const PADDING = 8
+// Margem extra só pra caber o hover/pop (escala até 1.4x) sem cortar nas
+// pontas — o container tem overflow-x-auto (pro scroll horizontal quando
+// tem muita aula), então qualquer coisa que passe da borda é cortada de
+// verdade, não só escondida.
+const CLIP_MARGIN = 5
 
 function ProgressDot({
   item,
@@ -74,14 +79,14 @@ export function CourseProgressPath({ items, onSetProgress, saving }: Props) {
     onSetProgress(position === maxCompleted ? position - 1 : position)
   }
 
-  const centerY = PADDING + NODE_SIZE / 2
+  const centerY = PADDING + NODE_SIZE / 2 + CLIP_MARGIN
   const points = sorted.map((item, i) => ({
     item,
-    x: PADDING + i * SPACING_X,
+    x: PADDING + i * SPACING_X + CLIP_MARGIN,
     y: centerY,
   }))
-  const width = PADDING * 2 + (points.length - 1) * SPACING_X
-  const height = NODE_SIZE + PADDING * 2
+  const width = PADDING * 2 + (points.length - 1) * SPACING_X + CLIP_MARGIN * 2
+  const height = NODE_SIZE + PADDING * 2 + CLIP_MARGIN * 2
 
   return (
     <div className={cn("overflow-x-auto", SCROLLBAR_HIDE_CLASS)}>
