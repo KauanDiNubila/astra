@@ -11,26 +11,32 @@ import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+function SectionDivider() {
+  return <div aria-hidden className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+}
+
 const features = [
   {
     icon: Clock,
     title: "Pomodoro",
-    description: "Foque em ciclos, ou registre o tempo manualmente. Toda sessão fica salva.",
+    description: "Timer baseado na técnica Pomodoro para organizar períodos de foco e pausas.",
   },
   {
     icon: BookOpen,
-    title: "Cursos & Roadmaps",
-    description: "Organize módulos e aulas, ou siga trilhas prontas com progresso visual.",
+    title: "Cursos e Roadmaps",
+    description: "Permite organizar cursos e criar roadmaps para acompanhar conteúdos e etapas de aprendizado.",
   },
   {
     icon: LayoutDashboard,
-    title: "Dashboard & Heatmap",
-    description: "Horas de hoje, da semana, streak — tudo calculado sobre suas sessões.",
+    title: "Dashboard e Heatmap",
+    description:
+      "Mostra minutos de foco de hoje, da semana e do total, streak e progresso das metas, com um heatmap de atividade dos últimos 365 dias.",
   },
   {
     icon: Trophy,
     title: "Ranking",
-    description: "Compare seu tempo de foco com o de amigos, dia, semana ou mês.",
+    description:
+      "Compara seu tempo de foco com o de amigos — diário, semanal ou mensal — com a opção de ver o ranking global também.",
   },
 ]
 
@@ -86,7 +92,7 @@ export function LandingPage() {
             transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
             className="text-lg text-muted-foreground"
           >
-            Seu ecossistema de estudos e foco.
+            Seu ecossistema de estudos.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -105,35 +111,54 @@ export function LandingPage() {
 
         <SessionFlowScroll scrollContainerRef={scrollContainerRef} />
 
-        <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-24">
-          <h2 className="text-center text-2xl font-semibold">Funcionalidades</h2>
-          <motion.div
-            className="grid auto-rows-fr gap-4 sm:grid-cols-2"
-            variants={gridStagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            {features.map((f) => (
-              <motion.div key={f.title} variants={gridItem} className="h-full">
-                <Card
-                  className={cn("h-full", INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS)}
-                  onMouseMove={onMouseMove}
-                >
-                  <CardHeader>
-                    <f.icon className="size-5 text-primary" />
-                    <CardTitle className="min-h-10 text-base">{f.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{f.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+        <SectionDivider />
+
+        <section className="relative overflow-hidden bg-muted/10">
+          <div
+            aria-hidden
+            className="absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_75%)]"
+            style={{
+              backgroundImage: "radial-gradient(var(--color-border) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+          />
+          <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-24">
+            <h2 className="text-center text-2xl font-semibold">Funcionalidades</h2>
+            <motion.div
+              className="grid auto-rows-fr gap-4 sm:grid-cols-2"
+              variants={gridStagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+            >
+              {features.map((f) => (
+                <motion.div key={f.title} variants={gridItem} className="h-full">
+                  <Card
+                    className={cn("h-full", INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS)}
+                    onMouseMove={onMouseMove}
+                  >
+                    <CardHeader>
+                      <f.icon className="size-5 text-primary" />
+                      <CardTitle className="min-h-10 text-base">{f.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{f.description}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </section>
 
-        <section className="flex flex-col items-center gap-4 px-4 py-24 text-center">
+        <SectionDivider />
+
+        <section className="relative flex flex-col items-center gap-4 overflow-hidden px-4 py-24 text-center">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-[100px]"
+            style={{ backgroundColor: "var(--color-primary)" }}
+          />
           <p className="text-muted-foreground">Comece a acompanhar seu tempo hoje.</p>
           <Button asChild size="lg">
             <Link to="/register">Criar conta</Link>
