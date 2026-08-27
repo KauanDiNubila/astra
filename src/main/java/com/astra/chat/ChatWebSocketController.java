@@ -30,7 +30,8 @@ public class ChatWebSocketController {
         SecurityContextHolder.getContext()
                 .setAuthentication(new UsernamePasswordAuthenticationToken(me, null, List.of()));
         try {
-            MessageResponse response = chatService.send(request.recipientId(), request.content());
+            MessageResponse response =
+                    chatService.send(request.recipientId(), request.content(), request.replyToMessageId());
             messagingTemplate.convertAndSendToUser(me.toString(), "/queue/messages", response);
             messagingTemplate.convertAndSendToUser(request.recipientId().toString(), "/queue/messages", response);
         } catch (RuntimeException ex) {

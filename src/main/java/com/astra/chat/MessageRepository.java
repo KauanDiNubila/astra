@@ -1,5 +1,6 @@
 package com.astra.chat;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -70,6 +71,9 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
 
         String getContent();
 
-        OffsetDateTime getCreatedAt();
+        // Instant, não OffsetDateTime: projeção de query nativa devolve o
+        // timestamptz como Instant e o Spring não converte sozinho pra
+        // OffsetDateTime aqui (funciona em @Query JPQL, não em nativeQuery).
+        Instant getCreatedAt();
     }
 }

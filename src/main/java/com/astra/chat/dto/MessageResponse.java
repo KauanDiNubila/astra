@@ -9,5 +9,10 @@ public record MessageResponse(
         UUID recipientId,
         String content,
         OffsetDateTime createdAt,
-        boolean read) {
+        boolean read,
+        UUID attachmentId,
+        ReplyPreview replyTo) {
+
+    public record ReplyPreview(UUID id, UUID senderId, String contentPreview) {
+    }
 }

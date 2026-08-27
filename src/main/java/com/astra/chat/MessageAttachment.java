@@ -11,46 +11,34 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "message")
+@Table(name = "message_attachment")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Message {
+public class MessageAttachment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "sender_id", nullable = false)
-    private UUID senderId;
+    @Column(name = "message_id", nullable = false, unique = true)
+    private UUID messageId;
 
-    @Column(name = "recipient_id", nullable = false)
-    private UUID recipientId;
+    @Column(name = "content_type", nullable = false, length = 50)
+    private String contentType;
 
-    @Column(length = 2000)
-    private String content;
-
-    @Column(name = "reply_to_message_id")
-    private UUID replyToMessageId;
+    @Column(nullable = false)
+    private byte[] data;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "read_at")
-    private OffsetDateTime readAt;
-
-    public Message(UUID senderId, UUID recipientId, String content) {
-        this.senderId = senderId;
-        this.recipientId = recipientId;
-        this.content = content;
-    }
-
-    public boolean isRead() {
-        return readAt != null;
+    public MessageAttachment(UUID messageId, String contentType, byte[] data) {
+        this.messageId = messageId;
+        this.contentType = contentType;
+        this.data = data;
     }
 }
