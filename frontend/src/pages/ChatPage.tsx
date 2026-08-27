@@ -69,6 +69,7 @@ export function ChatPage() {
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
   const [sendingImage, setSendingImage] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
@@ -102,7 +103,19 @@ export function ChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" })
-  }, [messages.length])
+    // friendId entra na dependência de propósito: sem ele, trocar de conversa
+    // pra um amigo cujo histórico em cache já tem a mesma quantidade de
+    // mensagens da conversa anterior não disparava a rolagem (o length não
+    // mudava), deixando a tela parada no scroll de onde a conversa anterior
+    // ficou em vez de abrir no fim da nova.
+  }, [friendId, messages.length])
+
+  function jumpToMessage(id: string) {
+    const el = document.getElementById(`message-${id}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: "smooth", block: "center" })
+    setHighlight({ id, nonce: Date.now() })
+  }
 
   function submitDraft() {
     if (!friendId || !draft.trim()) return
@@ -254,6 +267,7 @@ export function ChatPage() {
                   return (
                     <motion.div
                       key={m.id}
+                      id={`message-${m.id}`}
                       initial={{ opacity: 0, scale: 0.94, y: 4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
@@ -261,37 +275,53 @@ export function ChatPage() {
                     >
                       {!mine && replyButton}
                       <div
-                        className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
+                        className={`relative max-w-[70%] overflow-hidden rounded-lg px-3 py-2 text-sm ${
                           mine ? "bg-primary text-primary-foreground" : "bg-muted"
                         }`}
                       >
-                        {m.replyTo && (
-                          <div
-                            className={`mb-1.5 rounded border-l-2 px-2 py-1 text-xs ${
-                              mine
-                                ? "border-primary-foreground/40 bg-primary-foreground/10"
-                                : "border-foreground/20 bg-foreground/5"
+                        {highlight?.id === m.id && (
+                          <motion.div
+                            key={highlight.nonce}
+                            initial={{ opacity: 0.35 }}
+                            animate={{ opacity: 0 }}
+                            transition={{ duration: 1.1, ease: "easeOut" }}
+                            onAnimationComplete={() =>
+                              setHighlight((h) => (h?.nonce === highlight.nonce ? null : h))
+                            }
+                            className="pointer-events-none absolute inset-0 bg-foreground"
+                          />
+                        )}
+                        <div className="relative z-10">
+                          {m.replyTo && (
+                            <button
+                              type="button"
+                              onClick={() => jumpToMessage(m.replyTo!.id)}
+                              className={`mb-1.5 block w-full rounded border-l-2 px-2 py-1 text-left text-xs transition-colors ${
+                                mine
+                                  ? "border-primary-foreground/40 bg-primary-foreground/10 hover:bg-primary-foreground/20"
+                                  : "border-foreground/20 bg-foreground/5 hover:bg-foreground/10"
+                              }`}
+                            >
+                              <p className="font-medium">{replyAuthorLabel(m)}</p>
+                              <p className="truncate opacity-80">{m.replyTo.contentPreview}</p>
+                            </button>
+                          )}
+                          {m.attachmentId && (
+                            <div className={m.content ? "mb-1.5" : ""}>
+                              <AttachmentImage messageId={m.id} />
+                            </div>
+                          )}
+                          {m.content && (
+                            <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
+                          )}
+                          <p
+                            className={`mt-1 text-[10px] ${
+                              mine ? "text-primary-foreground/70" : "text-muted-foreground"
                             }`}
                           >
-                            <p className="font-medium">{replyAuthorLabel(m)}</p>
-                            <p className="truncate opacity-80">{m.replyTo.contentPreview}</p>
-                          </div>
-                        )}
-                        {m.attachmentId && (
-                          <div className={m.content ? "mb-1.5" : ""}>
-                            <AttachmentImage messageId={m.id} />
-                          </div>
-                        )}
-                        {m.content && (
-                          <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
-                        )}
-                        <p
-                          className={`mt-1 text-[10px] ${
-                            mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                          }`}
-                        >
-                          {formatRelativeTime(m.createdAt)}
-                        </p>
+                            {formatRelativeTime(m.createdAt)}
+                          </p>
+                        </div>
                       </div>
                       {mine && replyButton}
                     </motion.div>
