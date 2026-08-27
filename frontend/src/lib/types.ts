@@ -154,13 +154,21 @@ export type Friendship = {
   createdAt: string
 }
 
+export type ReplyPreview = {
+  id: string
+  senderId: string
+  contentPreview: string
+}
+
 export type Message = {
   id: string
   senderId: string
   recipientId: string
-  content: string
+  content: string | null
   createdAt: string
   read: boolean
+  attachmentId: string | null
+  replyTo: ReplyPreview | null
 }
 
 export type ConversationSummary = {

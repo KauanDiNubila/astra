@@ -22,13 +22,13 @@ export function ProtectedLayout() {
 
   return (
     <PomodoroProvider>
-      <ChatProvider>
-        <FriendsProvider>
+      <FriendsProvider>
+        <ChatProvider>
           <AppLayout>
             <Outlet />
           </AppLayout>
-        </FriendsProvider>
-      </ChatProvider>
+        </ChatProvider>
+      </FriendsProvider>
     </PomodoroProvider>
   )
 }

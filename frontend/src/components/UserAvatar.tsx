@@ -11,7 +11,7 @@ function initials(name: string) {
 type Props = {
   userId: string
   name: string
-  size?: "default" | "sm" | "lg"
+  size?: "default" | "sm" | "lg" | "xl"
   className?: string
 }
 

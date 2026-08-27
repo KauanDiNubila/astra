@@ -50,6 +50,7 @@ function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...
 
   const caretX = useMotionValue(0)
   const caretY = useMotionValue(0)
+  const caretHeight = useMotionValue(16)
   const caretOpacity = useMotionValue(0)
   const prefersReducedMotion = useReducedMotion()
   const springOptions = prefersReducedMotion ? CARET_SPRING_REDUCED : CARET_SPRING
@@ -88,13 +89,24 @@ function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...
     mirror.appendChild(marker)
     mirror.appendChild(document.createTextNode(target.value.slice(caretIndex) || "​"))
 
+    // A barra do caret tem altura própria (via em do container, que não
+    // necessariamente compartilha o font-size do textarea real, ex.:
+    // md:text-sm). Sem centralizar na linha, ela nasce do topo da linha e
+    // sobra espaço só embaixo — parece "torta". Calculamos a altura a
+    // partir do font-size real do textarea e centralizamos no line-height.
+    const computed = window.getComputedStyle(target)
+    const lineHeightPx = parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.2
+    const fontSizePx = parseFloat(computed.fontSize) || 14
+    const caretHeightPx = Math.min(fontSizePx * 1.1, lineHeightPx)
+
     const x = marker.offsetLeft - target.scrollLeft
-    const y = marker.offsetTop - target.scrollTop
+    const y = marker.offsetTop + (lineHeightPx - caretHeightPx) / 2 - target.scrollTop
     const isVisible =
       x >= -1 && x <= target.clientWidth + 1 && y >= -1 && y <= target.clientHeight + 1
 
     caretX.set(x)
     caretY.set(y)
+    caretHeight.set(caretHeightPx)
 
     if (!isVisible || hasSelection) {
       caretOpacity.set(0)
@@ -170,8 +182,8 @@ function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...
       </div>
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute top-0 left-0 h-[1.1em] w-px bg-foreground"
-        style={{ x: springCaretX, y: springCaretY, opacity: caretOpacity }}
+        className="pointer-events-none absolute top-0 left-0 w-px bg-foreground"
+        style={{ x: springCaretX, y: springCaretY, height: caretHeight, opacity: caretOpacity }}
       />
     </div>
   )
