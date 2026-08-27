@@ -5,6 +5,8 @@ import com.astra.social.FriendshipService;
 import com.astra.stats.dto.RankingEntry;
 import com.astra.tracking.session.SessionStatsService;
 import com.astra.tracking.session.UserMinutes;
+import com.astra.user.User;
+import com.astra.user.UserRepository;
 import com.astra.user.UserService;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -42,13 +44,16 @@ public class RankingService {
         List<UserMinutes> rows = scope == RankingScope.FRIENDS
                 ? friendsRanking(start)
                 : sessionStatsService.rankingSince(start);
-        Map<UUID, String> names = userService.namesByIds(rows.stream().map(UserMinutes::userId).toList());
+        Map<UUID, UserRepository.NameBioView> users = userService.nameBioByIds(
+                rows.stream().map(UserMinutes::userId).toList());
 
         List<RankingEntry> entries = new ArrayList<>();
         int position = 1;
         for (UserMinutes row : rows) {
-            entries.add(new RankingEntry(position++, row.userId(),
-                    names.getOrDefault(row.userId(), ""), row.minutes()));
+            UserRepository.NameBioView user = users.get(row.userId());
+            String name = user != null ? user.getName() : "";
+            boolean admin = user != null && User.ROLE_ADMIN.equals(user.getRole());
+            entries.add(new RankingEntry(position++, row.userId(), name, row.minutes(), admin));
         }
         return entries;
     }

@@ -8,6 +8,7 @@ public record FriendshipResponse(
         UUID friendUserId,
         String friendName,
         String friendBio,
+        boolean friendAdmin,
         String status,
         boolean incoming,
         OffsetDateTime createdAt

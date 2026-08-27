@@ -130,7 +130,9 @@ public class FriendshipService {
         UserRepository.NameBioView other = usersById.get(otherId);
         String otherName = other != null ? other.getName() : "";
         String otherBio = other != null ? other.getBio() : null;
+        boolean otherAdmin = other != null && User.ROLE_ADMIN.equals(other.getRole());
         boolean incoming = f.getAddresseeId().equals(viewerId);
-        return new FriendshipResponse(f.getId(), otherId, otherName, otherBio, f.getStatus(), incoming, f.getCreatedAt());
+        return new FriendshipResponse(f.getId(), otherId, otherName, otherBio, otherAdmin, f.getStatus(), incoming,
+                f.getCreatedAt());
     }
 }

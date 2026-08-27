@@ -84,12 +84,12 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Map<UUID, String> namesByIds(Collection<UUID> ids) {
+    public Map<UUID, UserRepository.NameBioView> nameBioByIds(Collection<UUID> ids) {
         if (ids.isEmpty()) {
             return Map.of();
         }
         return userRepository.findNameBioByIdIn(ids).stream()
-                .collect(Collectors.toMap(UserRepository.NameBioView::getId, UserRepository.NameBioView::getName));
+                .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
     }
 
     @Transactional

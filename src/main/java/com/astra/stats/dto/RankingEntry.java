@@ -6,6 +6,7 @@ public record RankingEntry(
         int position,
         UUID userId,
         String name,
-        long minutes
+        long minutes,
+        boolean admin
 ) {
 }

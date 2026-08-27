@@ -26,7 +26,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<UserSummaryView> findSummaryById(@Param("id") UUID id);
 
     // Usado em lote por amigos/chat/ranking pra evitar 1 findById por pessoa.
-    @Query("select u.id as id, u.name as name, u.bio as bio from User u where u.id in :ids")
+    // Inclui role pra dar pra mostrar o selo de admin nessas listas.
+    @Query("select u.id as id, u.name as name, u.bio as bio, u.role as role from User u where u.id in :ids")
     List<NameBioView> findNameBioByIdIn(@Param("ids") Collection<UUID> ids);
 
     // Lista de administração — mesmo motivo, sem o avatar de cada usuário.
@@ -58,6 +59,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String getName();
 
         String getBio();
+
+        String getRole();
     }
 
     interface AdminSummaryView {
