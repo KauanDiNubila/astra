@@ -71,9 +71,9 @@ export function ChatPage() {
   const [sendingImage, setSendingImage] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
+  const pinUntilRef = useRef(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
 
@@ -104,36 +104,63 @@ export function ChatPage() {
 
   const messages = friendId ? messagesFor(friendId) : []
 
+  // Ao abrir/trocar de conversa, ancora no fim a cada frame por um tempo em
+  // vez de rolar uma vez só. O histórico chega por rede e, depois dele, a
+  // altura ainda muda sozinha (fonte customizada troca do fallback pra
+  // Geist, imagem de anexo substitui o placeholder, avatar carrega) — cada
+  // uma dessas empurra o conteúdo pra baixo e deixava a conversa "quase" no
+  // fim. Re-ancorar por ~1.5s cobre todas sem precisar prever qual é.
+  // Cancela na hora se a pessoa rolar pra cima pra ler o histórico.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" })
-    // friendId entra na dependência de propósito: sem ele, trocar de conversa
-    // pra um amigo cujo histórico em cache já tem a mesma quantidade de
-    // mensagens da conversa anterior não disparava a rolagem (o length não
-    // mudava), deixando a tela parada no scroll de onde a conversa anterior
-    // ficou em vez de abrir no fim da nova.
-  }, [friendId, messages.length])
+    const container = scrollContainerRef.current
+    if (!friendId || !container) return
 
-  function scrollToBottomIfNear() {
+    pinUntilRef.current = performance.now() + 1500
+    container.scrollTop = container.scrollHeight
+
+    const cancel = () => {
+      pinUntilRef.current = 0
+    }
+    container.addEventListener("wheel", cancel, { passive: true })
+    container.addEventListener("touchstart", cancel, { passive: true })
+
+    return () => {
+      pinUntilRef.current = 0
+      container.removeEventListener("wheel", cancel)
+      container.removeEventListener("touchstart", cancel)
+    }
+  }, [friendId])
+
+  useEffect(() => {
+    stickToBottom()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length])
+
+  function stickToBottom() {
     const container = scrollContainerRef.current
     if (!container) return
-    // Só reajusta se já estava perto do fim — não puxa quem rolou pra cima
-    // pra ler o histórico.
-    if (container.scrollHeight - container.scrollTop - container.clientHeight < 300) {
-      bottomRef.current?.scrollIntoView({ block: "end" })
+    // Durante a janela de abertura ancora incondicionalmente: nesse momento
+    // o histórico ainda está chegando e a distância até o fim é enorme, então
+    // a checagem de "perto do fim" recusaria a rolagem. Passada a janela,
+    // volta a só acompanhar quem já estava no fim, pra não puxar de volta
+    // quem subiu pra ler o histórico.
+    const pinning = performance.now() < pinUntilRef.current
+    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 300
+    if (pinning || nearBottom) {
+      container.scrollTop = container.scrollHeight
     }
   }
 
   useEffect(() => {
     const content = messagesContentRef.current
     if (!content) return
-    // A altura do conteúdo muda depois do primeiro scroll por vários
-    // motivos que não dá pra prever um por um: fonte customizada troca de
-    // fallback pra Geist Variable depois de carregar, imagem de anexo tem
-    // placeholder de tamanho diferente da imagem real, avatar carrega
-    // depois... Em vez de corrigir cada causa isolada, observa a altura do
-    // conteúdo inteiro e reajusta pro fim sempre que ela mudar, contanto
-    // que já estivesse perto do fim.
-    const observer = new ResizeObserver(() => scrollToBottomIfNear())
+    // ResizeObserver em vez de tratar cada carregamento tardio na mão: a
+    // altura muda sozinha quando a fonte customizada troca do fallback pra
+    // Geist, quando a imagem de anexo substitui o placeholder e quando o
+    // avatar chega. Observando a altura do conteúdo, qualquer uma delas
+    // reancora — sem depender de requestAnimationFrame, que não roda com a
+    // aba em segundo plano.
+    const observer = new ResizeObserver(() => stickToBottom())
     observer.observe(content)
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,7 +389,6 @@ export function ChatPage() {
                     </motion.div>
                   )
                 })}
-                <div ref={bottomRef} />
               </div>
             </div>
 
