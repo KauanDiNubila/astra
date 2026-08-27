@@ -4,6 +4,7 @@ import { api } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 import { formatMinutes } from "@/lib/format"
 import type { RankingEntry } from "@/lib/types"
+import { AdminBadge } from "@/components/AdminBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -183,11 +184,18 @@ export function RankingPage() {
                         <AvatarRing pct={pct} position={entry.position}>
                           <UserAvatar userId={entry.userId} name={entry.name} size="sm" />
                         </AvatarRing>
-                        <span
-                          className={`truncate ${isMe ? "font-extrabold" : "font-medium"}`}
-                          style={isMe ? { textShadow: "0 0 2px color-mix(in oklch, currentColor 25%, transparent)" } : undefined}
-                        >
-                          {entry.name}
+                        <span className="flex min-w-0 items-center gap-1">
+                          <span
+                            className={`min-w-0 truncate ${isMe ? "font-extrabold" : "font-medium"}`}
+                            style={
+                              isMe
+                                ? { textShadow: "0 0 2px color-mix(in oklch, currentColor 25%, transparent)" }
+                                : undefined
+                            }
+                          >
+                            {entry.name}
+                          </span>
+                          {entry.admin && <AdminBadge />}
                         </span>
                       </span>
                       <span className="shrink-0 text-sm text-muted-foreground">

@@ -17,6 +17,7 @@ import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { AdminBadge } from "@/components/AdminBadge"
 import { EditProfileModal } from "@/components/EditProfileModal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -132,7 +133,10 @@ export function AppSidebar() {
             <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
           </Avatar>
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm text-muted-foreground">{user?.name}</span>
+            <span className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+              {user?.name}
+              {user?.role === "ADMIN" && <AdminBadge />}
+            </span>
             {user?.bio && <span className="truncate text-xs text-muted-foreground/70">{user.bio}</span>}
           </span>
         </button>

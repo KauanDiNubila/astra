@@ -142,6 +142,7 @@ export type RankingEntry = {
   userId: string
   name: string
   minutes: number
+  admin: boolean
 }
 
 export type Friendship = {
@@ -149,6 +150,7 @@ export type Friendship = {
   friendUserId: string
   friendName: string
   friendBio: string | null
+  friendAdmin: boolean
   status: "PENDING" | "ACCEPTED"
   incoming: boolean
   createdAt: string
@@ -175,6 +177,7 @@ export type ConversationSummary = {
   friendUserId: string
   friendName: string
   friendBio: string | null
+  friendAdmin: boolean
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number

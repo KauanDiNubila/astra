@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
+import { AdminBadge } from "@/components/AdminBadge"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -225,7 +226,10 @@ export function ChatPage() {
                     <UserAvatar userId={c.friendUserId} name={c.friendName} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium">{c.friendName}</span>
+                        <span className="flex min-w-0 items-center gap-1">
+                          <span className="min-w-0 truncate font-medium">{c.friendName}</span>
+                          {c.friendAdmin && <AdminBadge />}
+                        </span>
                         {c.unreadCount > 0 && (
                           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
                             {c.unreadCount}
@@ -259,7 +263,10 @@ export function ChatPage() {
             >
               {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
               <span className="flex flex-col">
-                <span className="font-medium">{activeFriend?.friendName}</span>
+                <span className="flex items-center gap-1 font-medium">
+                  {activeFriend?.friendName}
+                  {activeFriend?.friendAdmin && <AdminBadge />}
+                </span>
                 {activeFriend?.friendBio && (
                   <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
                 )}

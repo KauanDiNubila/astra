@@ -2,6 +2,7 @@ import { useState } from "react"
 import type { FormEvent } from "react"
 import { Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
+import { AdminBadge } from "@/components/AdminBadge"
 import { useFriends } from "@/context/FriendsContext"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -97,7 +98,10 @@ export function FriendsPage() {
                 <li key={r.id} className="flex items-center justify-between py-3">
                   <span className="flex items-center gap-2">
                     <UserAvatar userId={r.friendUserId} name={r.friendName} size="sm" />
-                    <span className="font-medium">{r.friendName}</span>
+                    <span className="flex items-center gap-1 font-medium">
+                      {r.friendName}
+                      {r.friendAdmin && <AdminBadge />}
+                    </span>
                   </span>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => accept(r.id)}>
@@ -132,7 +136,10 @@ export function FriendsPage() {
                 <li key={r.id} className="flex items-center justify-between py-3">
                   <span className="flex items-center gap-2">
                     <UserAvatar userId={r.friendUserId} name={r.friendName} size="sm" />
-                    <span className="font-medium">{r.friendName}</span>
+                    <span className="flex items-center gap-1 font-medium">
+                      {r.friendName}
+                      {r.friendAdmin && <AdminBadge />}
+                    </span>
                   </span>
                   <Button
                     size="sm"
@@ -163,7 +170,10 @@ export function FriendsPage() {
                   <span className="flex items-center gap-2">
                     <UserAvatar userId={f.friendUserId} name={f.friendName} size="sm" />
                     <span className="flex flex-col">
-                      <span className="font-medium">{f.friendName}</span>
+                      <span className="flex items-center gap-1 font-medium">
+                        {f.friendName}
+                        {f.friendAdmin && <AdminBadge />}
+                      </span>
                       {f.friendBio && (
                         <span className="text-xs text-muted-foreground">{f.friendBio}</span>
                       )}

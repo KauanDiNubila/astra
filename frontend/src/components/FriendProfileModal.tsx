@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
 import { X } from "lucide-react"
+import { AdminBadge } from "@/components/AdminBadge"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
 
@@ -78,7 +79,10 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
 
           <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-8">
             <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
-            <h3 className="text-center text-lg font-bold text-foreground">{friend.friendName}</h3>
+            <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
+              {friend.friendName}
+              {friend.friendAdmin && <AdminBadge />}
+            </h3>
             {friend.friendBio && (
               <p className="text-center text-sm text-muted-foreground">{friend.friendBio}</p>
             )}

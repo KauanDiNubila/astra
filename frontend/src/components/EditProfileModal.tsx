@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
 import { Pencil, X } from "lucide-react"
+import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
 import { api, baseURL } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -208,7 +209,10 @@ export function EditProfileModal({ open, onClose }: Props) {
                         className="hidden"
                       />
                     </div>
-                    <h3 className="text-center text-lg font-bold text-foreground">{name || user.name}</h3>
+                    <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
+                      {name || user.name}
+                      {user.role === "ADMIN" && <AdminBadge />}
+                    </h3>
                     {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
                   </div>
                 </div>

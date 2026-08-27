@@ -2,6 +2,7 @@ import { useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Bell, Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
+import { AdminBadge } from "@/components/AdminBadge"
 import { useFriends } from "@/context/FriendsContext"
 import { formatRelativeTime } from "@/lib/format"
 import { Button } from "@/components/ui/button"
@@ -87,8 +88,9 @@ export function NotificationsPopover() {
                     <UserPlus className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-popover-foreground">
-                      {r.friendName}
+                    <p className="flex items-center gap-1 text-sm font-medium text-popover-foreground">
+                      <span className="min-w-0 truncate">{r.friendName}</span>
+                      {r.friendAdmin && <AdminBadge />}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       Quer ser seu amigo · {formatRelativeTime(r.createdAt)}
