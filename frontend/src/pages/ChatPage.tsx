@@ -37,12 +37,19 @@ function linkifyText(text: string) {
   })
 }
 
-function AttachmentImage({ messageId }: { messageId: string }) {
+function AttachmentImage({ messageId, onLoad }: { messageId: string; onLoad?: () => void }) {
   const url = useAttachmentUrl(messageId)
   if (!url) {
     return <div className="h-40 w-52 animate-pulse rounded-md bg-foreground/10" />
   }
-  return <img src={url} alt="Imagem enviada" className="max-h-64 max-w-full rounded-md object-cover" />
+  return (
+    <img
+      src={url}
+      alt="Imagem enviada"
+      onLoad={onLoad}
+      className="max-h-64 max-w-full rounded-md object-cover"
+    />
+  )
 }
 
 type PendingImage = {
@@ -71,6 +78,7 @@ export function ChatPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
 
@@ -109,6 +117,18 @@ export function ChatPage() {
     // mudava), deixando a tela parada no scroll de onde a conversa anterior
     // ficou em vez de abrir no fim da nova.
   }, [friendId, messages.length])
+
+  function scrollToBottomIfNear() {
+    const container = scrollContainerRef.current
+    if (!container) return
+    // Imagem de anexo carrega depois do primeiro scroll (placeholder tem
+    // altura diferente da imagem real) e empurra o conteúdo, deixando a
+    // tela "quase" no fim em vez de no fim de verdade. Só reajusta se já
+    // estava perto — não puxa quem rolou pra cima pra ler o histórico.
+    if (container.scrollHeight - container.scrollTop - container.clientHeight < 300) {
+      bottomRef.current?.scrollIntoView({ block: "end" })
+    }
+  }
 
   function jumpToMessage(id: string) {
     const el = document.getElementById(`message-${id}`)
@@ -250,7 +270,7 @@ export function ChatPage() {
               open={profileModalOpen}
               onClose={() => setProfileModalOpen(false)}
             />
-            <div className="flex-1 overflow-y-auto px-4 py-3">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
               <div className="flex flex-col gap-2">
                 {messages.map((m) => {
                   const mine = m.senderId === user?.id
@@ -308,7 +328,7 @@ export function ChatPage() {
                           )}
                           {m.attachmentId && (
                             <div className={m.content ? "mb-1.5" : ""}>
-                              <AttachmentImage messageId={m.id} />
+                              <AttachmentImage messageId={m.id} onLoad={scrollToBottomIfNear} />
                             </div>
                           )}
                           {m.content && (
