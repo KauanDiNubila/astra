@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ImagePlus, Reply, Send, X } from "lucide-react"
@@ -14,6 +14,28 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+
+const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
+const URL_PREFIX = /^(https?:\/\/|www\.)/i
+const TRAILING_PUNCTUATION = /[.,!?;:'")\]}]+$/
+
+function linkifyText(text: string) {
+  return text.split(URL_PATTERN).map((part, i) => {
+    if (!URL_PREFIX.test(part)) return part
+    const trailingMatch = part.match(TRAILING_PUNCTUATION)
+    const trailing = trailingMatch ? trailingMatch[0] : ""
+    const url = trailing ? part.slice(0, -trailing.length) : part
+    const href = url.startsWith("www.") ? `https://${url}` : url
+    return (
+      <Fragment key={i}>
+        <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+          {url}
+        </a>
+        {trailing}
+      </Fragment>
+    )
+  })
+}
 
 function AttachmentImage({ messageId }: { messageId: string }) {
   const url = useAttachmentUrl(messageId)
@@ -260,7 +282,9 @@ export function ChatPage() {
                             <AttachmentImage messageId={m.id} />
                           </div>
                         )}
-                        {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
+                        {m.content && (
+                          <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
+                        )}
                         <p
                           className={`mt-1 text-[10px] ${
                             mine ? "text-primary-foreground/70" : "text-muted-foreground"

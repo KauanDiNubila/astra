@@ -18,6 +18,7 @@ import { baseURL } from "@/lib/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { EditProfileModal } from "@/components/EditProfileModal"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import {
@@ -62,6 +63,13 @@ export function AppSidebar() {
   const { totalUnread } = useChat()
   const { pathname } = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  async function confirmLogout() {
+    setLoggingOut(true)
+    await logout()
+  }
   const visibleLinks = user?.role === "ADMIN" ? [...links, adminLink] : links
 
   return (
@@ -141,9 +149,30 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <Button variant="outline" size="sm" onClick={logout} className="group-data-[collapsible=icon]:hidden">
-          Sair
-        </Button>
+        <Popover open={logoutOpen} onOpenChange={setLogoutOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="group-data-[collapsible=icon]:hidden">
+              Sair
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="w-(--radix-popover-trigger-width)">
+            <p className="text-center text-sm text-popover-foreground">Deseja mesmo sair?</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setLogoutOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1"
+                disabled={loggingOut}
+                onClick={confirmLogout}
+              >
+                {loggingOut ? "Saindo..." : "Sair"}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
