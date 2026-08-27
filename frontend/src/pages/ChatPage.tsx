@@ -38,19 +38,12 @@ function linkifyText(text: string) {
   })
 }
 
-function AttachmentImage({ messageId, onLoad }: { messageId: string; onLoad?: () => void }) {
+function AttachmentImage({ messageId }: { messageId: string }) {
   const url = useAttachmentUrl(messageId)
   if (!url) {
     return <div className="h-40 w-52 animate-pulse rounded-md bg-foreground/10" />
   }
-  return (
-    <img
-      src={url}
-      alt="Imagem enviada"
-      onLoad={onLoad}
-      className="max-h-64 max-w-full rounded-md object-cover"
-    />
-  )
+  return <img src={url} alt="Imagem enviada" className="max-h-64 max-w-full rounded-md object-cover" />
 }
 
 type PendingImage = {
@@ -80,6 +73,7 @@ export function ChatPage() {
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const messagesContentRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
 
@@ -122,14 +116,28 @@ export function ChatPage() {
   function scrollToBottomIfNear() {
     const container = scrollContainerRef.current
     if (!container) return
-    // Imagem de anexo carrega depois do primeiro scroll (placeholder tem
-    // altura diferente da imagem real) e empurra o conteúdo, deixando a
-    // tela "quase" no fim em vez de no fim de verdade. Só reajusta se já
-    // estava perto — não puxa quem rolou pra cima pra ler o histórico.
+    // Só reajusta se já estava perto do fim — não puxa quem rolou pra cima
+    // pra ler o histórico.
     if (container.scrollHeight - container.scrollTop - container.clientHeight < 300) {
       bottomRef.current?.scrollIntoView({ block: "end" })
     }
   }
+
+  useEffect(() => {
+    const content = messagesContentRef.current
+    if (!content) return
+    // A altura do conteúdo muda depois do primeiro scroll por vários
+    // motivos que não dá pra prever um por um: fonte customizada troca de
+    // fallback pra Geist Variable depois de carregar, imagem de anexo tem
+    // placeholder de tamanho diferente da imagem real, avatar carrega
+    // depois... Em vez de corrigir cada causa isolada, observa a altura do
+    // conteúdo inteiro e reajusta pro fim sempre que ela mudar, contanto
+    // que já estivesse perto do fim.
+    const observer = new ResizeObserver(() => scrollToBottomIfNear())
+    observer.observe(content)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function jumpToMessage(id: string) {
     const el = document.getElementById(`message-${id}`)
@@ -278,7 +286,7 @@ export function ChatPage() {
               onClose={() => setProfileModalOpen(false)}
             />
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
-              <div className="flex flex-col gap-2">
+              <div ref={messagesContentRef} className="flex flex-col gap-2">
                 {messages.map((m) => {
                   const mine = m.senderId === user?.id
                   const replyButton = (
@@ -335,7 +343,7 @@ export function ChatPage() {
                           )}
                           {m.attachmentId && (
                             <div className={m.content ? "mb-1.5" : ""}>
-                              <AttachmentImage messageId={m.id} onLoad={scrollToBottomIfNear} />
+                              <AttachmentImage messageId={m.id} />
                             </div>
                           )}
                           {m.content && (
