@@ -1,6 +1,7 @@
 package com.astra.user;
 
 import com.astra.user.dto.AvatarData;
+import com.astra.user.dto.ChangePasswordRequest;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -38,6 +39,12 @@ public class UserController {
     @PutMapping("/me")
     public UserResponse updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         return userService.updateProfile(request);
+    }
+
+    @PutMapping("/me/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(request);
     }
 
     @PostMapping("/me/avatar")

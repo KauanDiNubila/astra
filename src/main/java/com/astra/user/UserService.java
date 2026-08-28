@@ -8,6 +8,7 @@ import com.astra.shared.exception.UnauthorizedException;
 import com.astra.user.dto.AdminUserResponse;
 import com.astra.user.dto.AuthInfo;
 import com.astra.user.dto.AvatarData;
+import com.astra.user.dto.ChangePasswordRequest;
 import com.astra.user.dto.LoginRequest;
 import com.astra.user.dto.RegisterRequest;
 import com.astra.user.dto.UpdateProfileRequest;
@@ -100,6 +101,20 @@ public class UserService {
         user.setName(request.name());
         user.setBio(request.bio());
         return toDto(user);
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        UUID userId = currentUserProvider.currentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new ConflictException("Senha atual incorreta");
+        }
+        if (passwordBreachChecker.isBreached(request.newPassword())) {
+            throw new ConflictException("Essa senha já apareceu em vazamentos conhecidos - escolha outra");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
     }
 
     @Transactional
