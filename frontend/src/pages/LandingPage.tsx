@@ -24,19 +24,19 @@ const features = [
   {
     icon: BookOpen,
     title: "Cursos e Roadmaps",
-    description: "Permite organizar cursos e criar roadmaps para acompanhar conteúdos e etapas de aprendizado.",
+    description: "Organize seus cursos e crie roadmaps para acompanhar seu progresso e as etapas de aprendizado.",
   },
   {
     icon: LayoutDashboard,
     title: "Dashboard e Heatmap",
     description:
-      "Mostra minutos de foco de hoje, da semana e do total, streak e progresso das metas, com um heatmap de atividade dos últimos 365 dias.",
+      "Acompanhe seus minutos de foco por dia, semana e período, além de visualizar seu streak e sua evolução por meio do heatmap dos últimos 365 dias.",
   },
   {
     icon: Trophy,
     title: "Ranking",
     description:
-      "Compara seu tempo de foco com o de amigos — diário, semanal ou mensal — com a opção de ver o ranking global também.",
+      "Compare seu tempo de foco com o de seus amigos em rankings diários, semanais ou mensais, com opção de participar do ranking global.",
   },
 ]
 
