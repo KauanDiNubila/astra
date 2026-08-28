@@ -31,7 +31,10 @@ public class Message {
     @Column(name = "recipient_id", nullable = false)
     private UUID recipientId;
 
-    @Column(length = 2000)
+    // texto cifrado (AES-256-GCM, ver ChatEncryptionService) — bem maior
+    // que o limite de 2000 caracteres do texto original por causa do
+    // base64 + IV/tag, por isso "text" em vez de um length fixo.
+    @Column(columnDefinition = "text")
     private String content;
 
     @Column(name = "reply_to_message_id")

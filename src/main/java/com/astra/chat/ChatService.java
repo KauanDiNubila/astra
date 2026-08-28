@@ -1,5 +1,6 @@
 package com.astra.chat;
 
+import com.astra.chat.crypto.ChatEncryptionService;
 import com.astra.chat.dto.AttachmentData;
 import com.astra.chat.dto.ConversationSummary;
 import com.astra.chat.dto.MessageResponse;
@@ -30,15 +31,17 @@ public class ChatService {
     private final UserRepository userRepository;
     private final FriendshipService friendshipService;
     private final CurrentUserProvider currentUserProvider;
+    private final ChatEncryptionService chatEncryptionService;
 
     public ChatService(MessageRepository messageRepository, MessageAttachmentRepository messageAttachmentRepository,
             UserRepository userRepository, FriendshipService friendshipService,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider, ChatEncryptionService chatEncryptionService) {
         this.messageRepository = messageRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
         this.userRepository = userRepository;
         this.friendshipService = friendshipService;
         this.currentUserProvider = currentUserProvider;
+        this.chatEncryptionService = chatEncryptionService;
     }
 
     @Transactional
@@ -49,7 +52,7 @@ public class ChatService {
         }
         requireFriends(me, recipientId);
         UUID validReplyTo = validatedReplyTarget(me, recipientId, replyToMessageId);
-        Message created = new Message(me, recipientId, content);
+        Message created = new Message(me, recipientId, chatEncryptionService.encrypt(content));
         created.setReplyToMessageId(validReplyTo);
         return toDto(messageRepository.saveAndFlush(created));
     }
@@ -69,13 +72,14 @@ public class ChatService {
 
         UUID validReplyTo = validatedReplyTarget(me, recipientId, replyToMessageId);
         String trimmedCaption = caption == null || caption.isBlank() ? null : caption;
-        Message created = new Message(me, recipientId, trimmedCaption);
+        Message created = new Message(me, recipientId, chatEncryptionService.encrypt(trimmedCaption));
         created.setReplyToMessageId(validReplyTo);
         Message saved = messageRepository.saveAndFlush(created);
 
         try {
+            byte[] encryptedData = chatEncryptionService.encryptBytes(file.getBytes());
             MessageAttachment attachment = messageAttachmentRepository
-                    .save(new MessageAttachment(saved.getId(), contentType, file.getBytes()));
+                    .save(new MessageAttachment(saved.getId(), contentType, encryptedData));
             return toDto(saved, attachment.getId(), replyPreviewFor(validReplyTo));
         } catch (IOException ex) {
             throw new ConflictException("Não foi possível ler o arquivo");
@@ -132,7 +136,7 @@ public class ChatService {
         }
         MessageAttachment attachment = messageAttachmentRepository.findByMessageId(messageId)
                 .orElseThrow(() -> new NotFoundException("Não encontrado"));
-        return new AttachmentData(attachment.getData(), attachment.getContentType());
+        return new AttachmentData(chatEncryptionService.decryptBytes(attachment.getData()), attachment.getContentType());
     }
 
     @Transactional(readOnly = true)
@@ -171,8 +175,9 @@ public class ChatService {
                 .toList();
     }
 
-    private static String lastMessageText(MessageRepository.LastMessageView last) {
-        return last.getContent() != null ? last.getContent() : "📷 Foto";
+    private String lastMessageText(MessageRepository.LastMessageView last) {
+        String content = chatEncryptionService.decrypt(last.getContent());
+        return content != null ? content : "📷 Foto";
     }
 
     private void requireFriends(UUID a, UUID b) {
@@ -203,7 +208,7 @@ public class ChatService {
     }
 
     private MessageResponse.ReplyPreview toReplyPreview(Message message) {
-        String content = message.getContent();
+        String content = chatEncryptionService.decrypt(message.getContent());
         String preview;
         if (content == null || content.isBlank()) {
             preview = "📷 Foto";
@@ -224,6 +229,7 @@ public class ChatService {
 
     private MessageResponse toDto(Message message, UUID attachmentId, MessageResponse.ReplyPreview replyTo) {
         return new MessageResponse(message.getId(), message.getSenderId(), message.getRecipientId(),
-                message.getContent(), message.getCreatedAt(), message.isRead(), attachmentId, replyTo);
+                chatEncryptionService.decrypt(message.getContent()), message.getCreatedAt(), message.isRead(),
+                attachmentId, replyTo);
     }
 }
