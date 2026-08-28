@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
-import { api, baseURL } from "@/lib/api"
+import { api, baseURL, getErrorMessage } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,6 +36,13 @@ export function EditProfileModal({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [rendered, setRendered] = useState(open)
 
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+
   useEffect(() => {
     if (open) {
       setRendered(true)
@@ -53,6 +60,11 @@ export function EditProfileModal({ open, onClose }: Props) {
     setAvatarPreview(null)
     setImgError(false)
     setError(null)
+    setChangingPassword(false)
+    setCurrentPassword("")
+    setNewPassword("")
+    setPasswordError(null)
+    setPasswordSuccess(false)
   }, [open, user])
 
   useEffect(() => {
@@ -107,6 +119,22 @@ export function EditProfileModal({ open, onClose }: Props) {
       setError("Não foi possível salvar as alterações.")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function submitPasswordChange() {
+    setPasswordError(null)
+    setPasswordSaving(true)
+    try {
+      await api.put("/me/password", { currentPassword, newPassword })
+      setCurrentPassword("")
+      setNewPassword("")
+      setPasswordSuccess(true)
+      setChangingPassword(false)
+    } catch (err) {
+      setPasswordError(getErrorMessage(err, "Não foi possível trocar a senha."))
+    } finally {
+      setPasswordSaving(false)
     }
   }
 
@@ -215,6 +243,69 @@ export function EditProfileModal({ open, onClose }: Props) {
                     </h3>
                     {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
                   </div>
+                </div>
+
+                <div className="border-t border-border px-6 py-4">
+                  {changingPassword ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Trocar senha</Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setChangingPassword(false)
+                            setPasswordError(null)
+                            setCurrentPassword("")
+                            setNewPassword("")
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="current-password">Senha atual</Label>
+                        <Input
+                          id="current-password"
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          autoComplete="current-password"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="new-password">Senha nova</Label>
+                        <Input
+                          id="new-password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          minLength={8}
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={passwordSaving || !currentPassword || newPassword.length < 8}
+                        onClick={submitPasswordChange}
+                      >
+                        {passwordSaving ? "Trocando..." : "Salvar senha nova"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setChangingPassword(true)}
+                        className="text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Trocar senha
+                      </button>
+                      {passwordSuccess && <p className="text-sm text-green-600 dark:text-green-500">Senha alterada.</p>}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col-reverse items-center justify-end gap-3 px-6 py-5 sm:flex-row">
