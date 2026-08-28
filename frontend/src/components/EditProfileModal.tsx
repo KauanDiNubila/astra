@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { Pencil, X } from "lucide-react"
+import { Check, ChevronDown, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -246,66 +247,90 @@ export function EditProfileModal({ open, onClose }: Props) {
                 </div>
 
                 <div className="border-t border-border px-6 py-4">
-                  {changingPassword ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Trocar senha</Label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setChangingPassword(false)
+                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setChangingPassword((v) => {
+                          if (v) {
                             setPasswordError(null)
                             setCurrentPassword("")
                             setNewPassword("")
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="current-password">Senha atual</Label>
-                        <Input
-                          id="current-password"
-                          type="password"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          autoComplete="current-password"
+                          }
+                          return !v
+                        })
+                      }
+                      aria-expanded={changingPassword}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <KeyRound size={16} className="text-muted-foreground" />
+                        Senha
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {passwordSuccess && !changingPassword && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500">
+                            <Check size={14} />
+                            Alterada
+                          </span>
+                        )}
+                        <ChevronDown
+                          size={16}
+                          className={cn(
+                            "text-muted-foreground transition-transform duration-200",
+                            changingPassword && "rotate-180",
+                          )}
                         />
+                      </span>
+                    </button>
+
+                    <div
+                      className={cn(
+                        "grid ease-out",
+                        changingPassword ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                        reducedMotion ? "duration-0" : "duration-300",
+                      )}
+                      style={{ transitionProperty: "grid-template-rows" }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="space-y-3 border-t border-border px-4 pb-4 pt-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="current-password">Senha atual</Label>
+                            <Input
+                              id="current-password"
+                              type="password"
+                              value={currentPassword}
+                              onChange={(e) => setCurrentPassword(e.target.value)}
+                              autoComplete="current-password"
+                              tabIndex={changingPassword ? 0 : -1}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="new-password">Senha nova</Label>
+                            <Input
+                              id="new-password"
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              minLength={8}
+                              autoComplete="new-password"
+                              tabIndex={changingPassword ? 0 : -1}
+                            />
+                          </div>
+                          {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={passwordSaving || !currentPassword || newPassword.length < 8}
+                            onClick={submitPasswordChange}
+                            tabIndex={changingPassword ? 0 : -1}
+                          >
+                            {passwordSaving ? "Trocando..." : "Salvar senha nova"}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="new-password">Senha nova</Label>
-                        <Input
-                          id="new-password"
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          minLength={8}
-                          autoComplete="new-password"
-                        />
-                      </div>
-                      {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={passwordSaving || !currentPassword || newPassword.length < 8}
-                        onClick={submitPasswordChange}
-                      >
-                        {passwordSaving ? "Trocando..." : "Salvar senha nova"}
-                      </Button>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setChangingPassword(true)}
-                        className="text-sm text-muted-foreground hover:text-foreground"
-                      >
-                        Trocar senha
-                      </button>
-                      {passwordSuccess && <p className="text-sm text-green-600 dark:text-green-500">Senha alterada.</p>}
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col-reverse items-center justify-end gap-3 px-6 py-5 sm:flex-row">
