@@ -4,7 +4,7 @@ import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { ModuleRow } from "@/components/ModuleRow"
-import { PomodoroRing } from "@/components/PomodoroRing"
+import { PomodoroDisplay } from "@/components/PomodoroDisplay"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -97,7 +97,7 @@ export function PomodoroTimer() {
           <SettingsIcon className="size-4" />
         </Button>
 
-        <PomodoroRing size={220} mode={mode} isLongBreak={isLongBreak} timeLeft={timeLeft} totalSeconds={totalSeconds} />
+        <PomodoroDisplay size={220} mode={mode} isLongBreak={isLongBreak} timeLeft={timeLeft} totalSeconds={totalSeconds} />
 
         <div className="flex gap-2">
           <Button type="button" onClick={handlePrimaryClick}>

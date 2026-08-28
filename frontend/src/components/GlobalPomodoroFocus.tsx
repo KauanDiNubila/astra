@@ -17,8 +17,6 @@ export function GlobalPomodoroFocus() {
     settings,
     primaryLabel,
     handlePrimaryClick,
-    categories,
-    categoryId,
     courseId,
     courseDetail,
     note,
@@ -36,7 +34,6 @@ export function GlobalPomodoroFocus() {
   const currentLesson = currentIndex >= 0 ? allLessons[currentIndex] : undefined
   const nextLesson = currentIndex >= 0 ? allLessons[currentIndex + 1] : undefined
   const currentModule = courseDetail?.modules.find((m) => !m.completed) ?? courseDetail?.modules.at(-1)
-  const categoryName = categories.find((c) => c.id === categoryId)?.name
 
   const sessionsUntilLongBreak = settings.pomodorosUntilLongBreak
   const sessionCaption = settings.disableBreaks
@@ -51,9 +48,7 @@ export function GlobalPomodoroFocus() {
         subtitle: currentLesson?.moduleTitle ?? "Curso concluído",
         progress: courseDetail.progress,
       }
-    : categoryName
-      ? { title: categoryName }
-      : null
+    : null
 
   return (
     <FocusModeOverlay
@@ -62,12 +57,15 @@ export function GlobalPomodoroFocus() {
       dailyGoal={dailyGoal}
       focusedMinutes={focusedMinutes}
       pomodoroMinutes={settings.focusMinutes}
+      completedPomodoros={completedPomodoros}
+      pomodorosUntilLongBreak={sessionsUntilLongBreak}
+      disableBreaks={settings.disableBreaks}
+      sessionCaption={sessionCaption}
     >
       <PomodoroFocusView
         ring={{ mode, isLongBreak, timeLeft, totalSeconds, sessionCaption }}
         primaryLabel={primaryLabel}
         onPrimaryClick={handlePrimaryClick}
-        focusedMinutes={focusedMinutes}
         header={header}
         bottom={{
           currentLabel: currentLesson?.title,

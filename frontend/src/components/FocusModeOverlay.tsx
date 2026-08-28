@@ -159,6 +159,10 @@ type Props = {
   dailyGoal: GoalProgress | null
   focusedMinutes: number
   pomodoroMinutes: number
+  completedPomodoros: number
+  pomodorosUntilLongBreak: number
+  disableBreaks: boolean
+  sessionCaption: string
   children: ReactNode
 }
 
@@ -208,12 +212,20 @@ function DailyGoalPanel({
   goal,
   focusedMinutes,
   pomodoroMinutes,
+  completedPomodoros,
+  pomodorosUntilLongBreak,
+  disableBreaks,
+  sessionCaption,
   reducedMotion,
 }: {
   open: boolean
   goal: GoalProgress | null
   focusedMinutes: number
   pomodoroMinutes: number
+  completedPomodoros: number
+  pomodorosUntilLongBreak: number
+  disableBreaks: boolean
+  sessionCaption: string
   reducedMotion: boolean
 }) {
   // achievedHours vem do /dashboard (sessões já salvas antes de abrir o foco);
@@ -222,6 +234,13 @@ function DailyGoalPanel({
   const achievedMinutesNow = goal ? Math.round(goal.achievedHours * 60) + focusedMinutes : 0
   const targetMinutes = goal ? Math.round(goal.targetHours * 60) : 0
   const reached = goal ? achievedMinutesNow >= targetMinutes : false
+
+  // Sem meta, a única "etapa" que faz sentido é o ciclo de pomodoros até a
+  // pausa longa — reaproveita a mesma barra segmentada, só trocando o alvo.
+  const showCycleProgress = !goal && !disableBreaks && pomodorosUntilLongBreak > 0
+  const cycleTargetMinutes = pomodorosUntilLongBreak * pomodoroMinutes
+  const cycleAchievedMinutes = Math.min(cycleTargetMinutes, focusedMinutes - completedPomodoros * pomodoroMinutes) +
+    (completedPomodoros % pomodorosUntilLongBreak) * pomodoroMinutes
 
   return (
     <motion.div
@@ -234,7 +253,7 @@ function DailyGoalPanel({
       transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
       className="fixed right-4 top-28 z-10 w-80 rounded-2xl border border-border bg-popover p-5 shadow-lg"
     >
-      <h3 className="text-sm font-medium text-popover-foreground">Meta diária</h3>
+      <h3 className="text-sm font-medium text-popover-foreground">{goal ? "Meta diária" : "Tempo de foco"}</h3>
       {goal ? (
         <div className="mt-3 flex flex-col gap-3">
           <div className="flex items-baseline justify-between">
@@ -260,7 +279,21 @@ function DailyGoalPanel({
           )}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Você ainda não definiu uma meta diária.</p>
+        <div className="mt-3 flex flex-col gap-3">
+          <p className="text-3xl font-semibold tabular-nums text-foreground">{formatMinutes(focusedMinutes)}</p>
+          {showCycleProgress ? (
+            <>
+              <GoalProgressBar
+                achievedMinutes={cycleAchievedMinutes}
+                targetMinutes={cycleTargetMinutes}
+                segmentMinutes={pomodoroMinutes}
+              />
+              <p className="text-sm text-muted-foreground">{sessionCaption}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Você ainda não definiu uma meta diária.</p>
+          )}
+        </div>
       )}
     </motion.div>
   )
@@ -353,7 +386,18 @@ function BatteryIndicator() {
   )
 }
 
-export function FocusModeOverlay({ open, onExit, dailyGoal, focusedMinutes, pomodoroMinutes, children }: Props) {
+export function FocusModeOverlay({
+  open,
+  onExit,
+  dailyGoal,
+  focusedMinutes,
+  pomodoroMinutes,
+  completedPomodoros,
+  pomodorosUntilLongBreak,
+  disableBreaks,
+  sessionCaption,
+  children,
+}: Props) {
   const reducedMotion = useReducedMotion()
   const { theme, toggleTheme } = useTheme()
   const [particlesEnabled, setParticlesEnabled] = useState(loadParticlesEnabled)
@@ -623,6 +667,10 @@ export function FocusModeOverlay({ open, onExit, dailyGoal, focusedMinutes, pomo
                   goal={dailyGoal}
                   focusedMinutes={focusedMinutes}
                   pomodoroMinutes={pomodoroMinutes}
+                  completedPomodoros={completedPomodoros}
+                  pomodorosUntilLongBreak={pomodorosUntilLongBreak}
+                  disableBreaks={disableBreaks}
+                  sessionCaption={sessionCaption}
                   reducedMotion={!!reducedMotion}
                 />
               )}
