@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,10 +69,16 @@ public class CourseController {
         return courseService.setLessonCompleted(courseId, moduleId, lessonId, request.completed());
     }
 
+    @DeleteMapping("/{courseId}/modules/{moduleId}/lessons/{lessonId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @PathVariable UUID lessonId) {
+        courseService.deleteLesson(courseId, moduleId, lessonId);
+    }
+
     @PatchMapping("/{courseId}/modules/{moduleId}")
     public ModuleResponse updateModule(@PathVariable UUID courseId, @PathVariable UUID moduleId,
                                        @Valid @RequestBody UpdateModuleRequest request) {
-        return courseService.setModuleCompleted(courseId, moduleId, request.completed());
+        return courseService.updateModule(courseId, moduleId, request);
     }
 
     @PatchMapping("/{courseId}/modules/{moduleId}/progress")

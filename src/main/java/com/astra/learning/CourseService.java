@@ -7,7 +7,9 @@ import com.astra.learning.dto.CreateLessonRequest;
 import com.astra.learning.dto.CreateModuleRequest;
 import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
+import com.astra.learning.dto.UpdateModuleRequest;
 import com.astra.shared.CurrentUserProvider;
+import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -148,6 +150,30 @@ public class CourseService {
     }
 
     @Transactional
+    public void deleteLesson(UUID courseId, UUID moduleId, UUID lessonId) {
+        ownedCourse(courseId);
+        moduleRepository.findByIdAndCourseId(moduleId, courseId)
+                .orElseThrow(() -> new NotFoundException("Module not found"));
+        Lesson lesson = lessonRepository.findByIdAndModuleId(lessonId, moduleId)
+                .orElseThrow(() -> new NotFoundException("Lesson not found"));
+        lessonRepository.delete(lesson);
+
+        List<Lesson> remaining = lessonRepository.findByModuleIdInOrderByPosition(List.of(moduleId));
+        List<Lesson> renumbered = new ArrayList<>();
+        for (int i = 0; i < remaining.size(); i++) {
+            Lesson l = remaining.get(i);
+            int expected = i + 1;
+            if (l.getPosition() != expected) {
+                l.setPosition(expected);
+                renumbered.add(l);
+            }
+        }
+        if (!renumbered.isEmpty()) {
+            lessonRepository.saveAll(renumbered);
+        }
+    }
+
+    @Transactional
     public ModuleResponse setModuleProgress(UUID courseId, UUID moduleId, int uptoPosition) {
         ownedCourse(courseId);
         CourseModule module = moduleRepository.findByIdAndCourseId(moduleId, courseId)
@@ -168,11 +194,20 @@ public class CourseService {
     }
 
     @Transactional
-    public ModuleResponse setModuleCompleted(UUID courseId, UUID moduleId, boolean completed) {
+    public ModuleResponse updateModule(UUID courseId, UUID moduleId, UpdateModuleRequest request) {
         ownedCourse(courseId);
         CourseModule module = moduleRepository.findByIdAndCourseId(moduleId, courseId)
                 .orElseThrow(() -> new NotFoundException("Module not found"));
-        module.setCompleted(completed);
+        if (request.title() != null) {
+            String trimmed = request.title().trim();
+            if (trimmed.isEmpty()) {
+                throw new ConflictException("Título do módulo não pode ficar em branco");
+            }
+            module.setTitle(trimmed);
+        }
+        if (request.completed() != null) {
+            module.setCompleted(request.completed());
+        }
         CourseModule saved = moduleRepository.save(module);
         List<Lesson> lessons = lessonRepository.findByModuleIdInOrderByPosition(List.of(moduleId));
         return toModuleResponse(saved, lessons);
