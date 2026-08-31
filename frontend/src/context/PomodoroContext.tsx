@@ -211,17 +211,40 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // O pulso de 1s mora num Web Worker — o thread principal congela em
+  // abas ocultas depois de alguns minutos em navegadores baseados em
+  // Chromium, o que travava a troca de fase e o início automático da
+  // pausa quando o usuário saía da aba. Workers não sofrem esse mesmo
+  // congelamento, então a contagem continua rodando de verdade.
+  const tickerWorkerRef = useRef<Worker | null>(null)
+
+  useEffect(() => {
+    const worker = new Worker(new URL("../workers/pomodoroTicker.worker.ts", import.meta.url), { type: "module" })
+    worker.onmessage = (event: MessageEvent<{ type: string }>) => {
+      if (event.data.type === "tick") recompute()
+    }
+    tickerWorkerRef.current = worker
+    return () => {
+      worker.terminate()
+      tickerWorkerRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    tickerWorkerRef.current?.postMessage({ type: running ? "start" : "stop" })
+  }, [running])
+
   useEffect(() => {
     if (!running) return
-    const id = setInterval(recompute, 1000)
+    // Recuperação extra pra quando o computador dorme (nem worker roda
+    // nesse caso) — assim que a aba volta a ficar visível, recalcula na
+    // hora em vez de esperar o próximo pulso do worker.
     function handleVisibility() {
       if (document.visibilityState === "visible") recompute()
     }
     document.addEventListener("visibilitychange", handleVisibility)
-    return () => {
-      clearInterval(id)
-      document.removeEventListener("visibilitychange", handleVisibility)
-    }
+    return () => document.removeEventListener("visibilitychange", handleVisibility)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running])
 
