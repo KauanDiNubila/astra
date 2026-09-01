@@ -294,7 +294,10 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     setFocusMode(false)
   }
 
-  const focusedMinutes = Math.floor(focusedSeconds / 60)
+  // round, não floor — floor sempre descarta o resto de segundos de cada
+  // sessão (transições de fase, cliques) a favor de baixo, então mesmo
+  // sessões "de 60min exatos" na prática perdiam minuto no total do dia.
+  const focusedMinutes = Math.round(focusedSeconds / 60)
   const totalSeconds = currentModeSeconds()
   const primaryLabel = running ? "Pausar" : focusMode ? "Continuar" : "Iniciar foco"
 
