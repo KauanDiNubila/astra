@@ -6,6 +6,7 @@ import {
   Map,
   MessageCircle,
   ShieldCheck,
+  Sparkle,
   Trophy,
   Users,
 } from "lucide-react"
@@ -79,9 +80,10 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip="Astra">
+            <SidebarMenuButton asChild size="default" tooltip="Astra">
               <NavLink to="/dashboard">
-                <span className="text-lg font-semibold">Astra</span>
+                <Sparkle className="fill-current" />
+                <span className="text-base font-semibold">Astra</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -127,13 +129,14 @@ export function AppSidebar() {
         <button
           type="button"
           onClick={() => setProfileOpen(true)}
-          className="flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
+          title={user?.name}
+          className="flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         >
-          <Avatar size="sm">
+          <Avatar size="sm" className="shrink-0">
             {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar?v=${avatarVersion}`} />}
             <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
           </Avatar>
-          <span className="flex min-w-0 flex-col">
+          <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="flex items-center gap-1 truncate text-sm text-muted-foreground">
               {user?.name}
               {user?.role === "ADMIN" && <AdminBadge />}
