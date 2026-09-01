@@ -5,7 +5,13 @@ import { api } from "@/lib/api"
 import { createChatClient } from "@/lib/chatSocket"
 import { useAuth } from "@/context/AuthContext"
 import { useFriends } from "@/context/FriendsContext"
-import type { ConversationSummary, Friendship, Message } from "@/lib/types"
+import type {
+  ConversationSummary,
+  Friendship,
+  GroupConversationSummary,
+  GroupMember,
+  Message,
+} from "@/lib/types"
 
 const attachmentUrlCache = new Map<string, string>()
 
@@ -47,6 +53,27 @@ type ChatContextValue = {
   sendImageMessage: (friendId: string, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
   markRead: (friendId: string) => Promise<void>
   totalUnread: number
+
+  activeGroupId: string | null
+  setActiveGroupId: (id: string | null) => void
+  groupConversations: GroupConversationSummary[]
+  groupConversationsLoaded: boolean
+  loadGroupConversations: () => Promise<void>
+  groupMembersById: Record<string, GroupMember[]>
+  loadGroupMembers: (groupId: string) => Promise<void>
+  createGroup: (name: string, memberIds: string[]) => Promise<string>
+  addGroupMember: (groupId: string, userId: string) => Promise<void>
+  groupMessagesFor: (groupId: string) => Message[]
+  loadGroupHistory: (groupId: string) => Promise<void>
+  sendGroupMessage: (groupId: string, content: string, replyToMessageId?: string) => void
+  sendGroupImageMessage: (
+    groupId: string,
+    file: File,
+    caption?: string,
+    replyToMessageId?: string,
+  ) => Promise<void>
+  markGroupRead: (groupId: string) => Promise<void>
+  totalGroupUnread: number
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
@@ -60,10 +87,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [conversationsLoaded, setConversationsLoaded] = useState(false)
   const [messagesByFriend, setMessagesByFriend] = useState<Record<string, Message[]>>({})
 
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
+  const [groupConversations, setGroupConversations] = useState<GroupConversationSummary[]>([])
+  const [groupConversationsLoaded, setGroupConversationsLoaded] = useState(false)
+  const [messagesByGroup, setMessagesByGroup] = useState<Record<string, Message[]>>({})
+  const [groupMembersById, setGroupMembersById] = useState<Record<string, GroupMember[]>>({})
+
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
   const activeFriendIdRef = useRef<string | null>(null)
   const conversationsRef = useRef<ConversationSummary[]>([])
   const friendsRef = useRef<Friendship[]>([])
+  const activeGroupIdRef = useRef<string | null>(null)
+  const groupConversationsRef = useRef<GroupConversationSummary[]>([])
 
   useEffect(() => {
     activeFriendIdRef.current = activeFriendId
@@ -76,6 +111,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     friendsRef.current = friends
   }, [friends])
+
+  useEffect(() => {
+    activeGroupIdRef.current = activeGroupId
+  }, [activeGroupId])
+
+  useEffect(() => {
+    groupConversationsRef.current = groupConversations
+  }, [groupConversations])
 
   function loadConversations() {
     return api.get<ConversationSummary[]>("/chat/conversations").then((res) => setConversations(res.data))
@@ -97,9 +140,80 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setConversations((prev) => prev.map((c) => (c.friendUserId === friendId ? { ...c, unreadCount: 0 } : c)))
   }
 
-  function handleIncoming(message: Message) {
+  function loadGroupConversations() {
+    return api.get<GroupConversationSummary[]>("/chat/groups").then((res) => setGroupConversations(res.data))
+  }
+
+  function loadGroupHistory(groupId: string) {
+    return api.get<Message[]>(`/chat/groups/${groupId}/messages`).then((res) => {
+      setMessagesByGroup((prev) => ({ ...prev, [groupId]: res.data }))
+    })
+  }
+
+  function loadGroupMembers(groupId: string) {
+    return api.get<GroupMember[]>(`/chat/groups/${groupId}/members`).then((res) => {
+      setGroupMembersById((prev) => ({ ...prev, [groupId]: res.data }))
+    })
+  }
+
+  async function createGroup(name: string, memberIds: string[]) {
+    const res = await api.post<GroupConversationSummary>("/chat/groups", { name, memberIds })
+    await loadGroupConversations()
+    return res.data.groupId
+  }
+
+  async function addGroupMember(groupId: string, userId: string) {
+    await api.post(`/chat/groups/${groupId}/members`, { userId })
+    await loadGroupMembers(groupId)
+  }
+
+  async function markGroupRead(groupId: string) {
+    const current = groupConversationsRef.current.find((c) => c.groupId === groupId)
+    if (current && current.unreadCount === 0) return
+    await api.post(`/chat/groups/${groupId}/read`)
+    setGroupConversations((prev) => prev.map((c) => (c.groupId === groupId ? { ...c, unreadCount: 0 } : c)))
+  }
+
+  function handleIncomingGroup(message: Message) {
+    const groupId = message.groupId!
     const me = user?.id
-    const otherId = message.senderId === me ? message.recipientId : message.senderId
+
+    setMessagesByGroup((prev) => {
+      const existing = prev[groupId] ?? []
+      if (existing.some((m) => m.id === message.id)) return prev
+      return { ...prev, [groupId]: [...existing, message] }
+    })
+
+    if (message.senderId === me) return
+
+    if (activeGroupIdRef.current === groupId) {
+      markGroupRead(groupId)
+      return
+    }
+
+    const found = groupConversationsRef.current.find((c) => c.groupId === groupId)
+    const groupName = found?.groupName ?? "Grupo"
+    const preview = message.content ?? "📷 Foto"
+    const updated: GroupConversationSummary = {
+      groupId,
+      groupName,
+      memberNames: found?.memberNames ?? [],
+      lastMessage: preview,
+      lastMessageAt: message.createdAt,
+      unreadCount: (found?.unreadCount ?? 0) + 1,
+    }
+    setGroupConversations((prev) => (found ? prev.map((c) => (c.groupId === groupId ? updated : c)) : [...prev, updated]))
+    toast(`${groupName}: ${preview}`)
+  }
+
+  function handleIncoming(message: Message) {
+    if (message.groupId) {
+      handleIncomingGroup(message)
+      return
+    }
+
+    const me = user?.id
+    const otherId = message.senderId === me ? message.recipientId! : message.senderId
 
     setMessagesByFriend((prev) => {
       const existing = prev[otherId] ?? []
@@ -149,6 +263,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     client.activate()
     clientRef.current = client
     loadConversations().finally(() => setConversationsLoaded(true))
+    loadGroupConversations().finally(() => setGroupConversationsLoaded(true))
 
     return () => {
       client.deactivate()
@@ -183,6 +298,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
 
+  function groupMessagesFor(groupId: string) {
+    return messagesByGroup[groupId] ?? []
+  }
+
+  function sendGroupMessage(groupId: string, content: string, replyToMessageId?: string) {
+    const client = clientRef.current
+    if (!client || !client.connected) return
+    client.publish({
+      destination: "/app/chat.sendGroup",
+      body: JSON.stringify({ groupId, content, replyToMessageId: replyToMessageId ?? null }),
+    })
+  }
+
+  async function sendGroupImageMessage(groupId: string, file: File, caption?: string, replyToMessageId?: string) {
+    const form = new FormData()
+    form.append("file", file)
+    if (caption) form.append("caption", caption)
+    if (replyToMessageId) form.append("replyToMessageId", replyToMessageId)
+    await api.post(`/chat/groups/${groupId}/messages/image`, form)
+  }
+
+  const totalGroupUnread = groupConversations.reduce((sum, c) => sum + c.unreadCount, 0)
+
   return (
     <ChatContext.Provider
       value={{
@@ -198,6 +336,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sendImageMessage,
         markRead,
         totalUnread,
+
+        activeGroupId,
+        setActiveGroupId,
+        groupConversations,
+        groupConversationsLoaded,
+        loadGroupConversations,
+        groupMembersById,
+        loadGroupMembers,
+        createGroup,
+        addGroupMember,
+        groupMessagesFor,
+        loadGroupHistory,
+        sendGroupMessage,
+        sendGroupImageMessage,
+        markGroupRead,
+        totalGroupUnread,
       }}
     >
       {children}

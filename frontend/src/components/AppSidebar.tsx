@@ -61,7 +61,8 @@ function initials(name: string) {
 export function AppSidebar() {
   const { user, logout, avatarVersion } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const { totalUnread } = useChat()
+  const { totalUnread: totalDmUnread, totalGroupUnread } = useChat()
+  const totalUnread = totalDmUnread + totalGroupUnread
   const { pathname } = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)

@@ -165,7 +165,8 @@ export type ReplyPreview = {
 export type Message = {
   id: string
   senderId: string
-  recipientId: string
+  recipientId: string | null
+  groupId: string | null
   content: string | null
   createdAt: string
   read: boolean
@@ -178,6 +179,21 @@ export type ConversationSummary = {
   friendName: string
   friendBio: string | null
   friendAdmin: boolean
+  lastMessage: string | null
+  lastMessageAt: string | null
+  unreadCount: number
+}
+
+export type GroupMember = {
+  userId: string
+  name: string
+  joinedAt: string
+}
+
+export type GroupConversationSummary = {
+  groupId: string
+  groupName: string
+  memberNames: string[]
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number

@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ImagePlus, Reply, Send, X } from "lucide-react"
+import { ImagePlus, Plus, Reply, Send, Users, X } from "lucide-react"
 import { motion, useAnimate } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
 import { AdminBadge } from "@/components/AdminBadge"
+import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
+import { GroupInfoModal } from "@/components/GroupInfoModal"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
@@ -53,7 +55,8 @@ type PendingImage = {
 }
 
 export function ChatPage() {
-  const { friendId } = useParams<{ friendId: string }>()
+  const { friendId, groupId } = useParams<{ friendId?: string; groupId?: string }>()
+  const isGroup = !!groupId
   const { user } = useAuth()
   const {
     conversations,
@@ -64,12 +67,23 @@ export function ChatPage() {
     sendImageMessage,
     markRead,
     setActiveFriendId,
+    groupConversations,
+    groupConversationsLoaded,
+    groupMessagesFor,
+    loadGroupHistory,
+    loadGroupMembers,
+    sendGroupMessage,
+    sendGroupImageMessage,
+    markGroupRead,
+    setActiveGroupId,
+    groupMembersById,
   } = useChat()
   const [draft, setDraft] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
   const [sendingImage, setSendingImage] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
@@ -78,13 +92,20 @@ export function ChatPage() {
   const [conversationScope, animateConversation] = useAnimate()
 
   useEffect(() => {
-    setActiveFriendId(friendId ?? null)
+    setActiveFriendId(isGroup ? null : (friendId ?? null))
+    setActiveGroupId(isGroup ? (groupId ?? null) : null)
     setDraft("")
     setReplyingTo(null)
     setPendingImage(null)
-    if (friendId) {
+    if (isGroup && groupId) {
+      loadGroupHistory(groupId)
+      loadGroupMembers(groupId)
+      markGroupRead(groupId)
+    } else if (friendId) {
       loadHistory(friendId)
       markRead(friendId)
+    }
+    if (friendId || groupId) {
       // Disparado via useAnimate em vez de key={friendId} + initial/animate:
       // um motion.div remontado a cada troca de conversa reanima direitinho,
       // mas em dev o StrictMode monta/desmonta/remonta de propósito uma vez
@@ -98,11 +119,14 @@ export function ChatPage() {
         { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
       )
     }
-    return () => setActiveFriendId(null)
+    return () => {
+      setActiveFriendId(null)
+      setActiveGroupId(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [friendId])
+  }, [friendId, groupId])
 
-  const messages = friendId ? messagesFor(friendId) : []
+  const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
 
   // Ao abrir/trocar de conversa, ancora no fim a cada frame por um tempo em
   // vez de rolar uma vez só. O histórico chega por rede e, depois dele, a
@@ -174,8 +198,14 @@ export function ChatPage() {
   }
 
   function submitDraft() {
-    if (!friendId || !draft.trim()) return
-    sendMessage(friendId, draft.trim(), replyingTo?.id)
+    if (!draft.trim()) return
+    if (isGroup && groupId) {
+      sendGroupMessage(groupId, draft.trim(), replyingTo?.id)
+    } else if (friendId) {
+      sendMessage(friendId, draft.trim(), replyingTo?.id)
+    } else {
+      return
+    }
     setDraft("")
     setReplyingTo(null)
   }
@@ -215,10 +245,14 @@ export function ChatPage() {
   }
 
   async function submitImage() {
-    if (!friendId || !pendingImage) return
+    if (!pendingImage) return
     setSendingImage(true)
     try {
-      await sendImageMessage(friendId, pendingImage.file, pendingImage.caption.trim() || undefined, replyingTo?.id)
+      if (isGroup && groupId) {
+        await sendGroupImageMessage(groupId, pendingImage.file, pendingImage.caption.trim() || undefined, replyingTo?.id)
+      } else if (friendId) {
+        await sendImageMessage(friendId, pendingImage.file, pendingImage.caption.trim() || undefined, replyingTo?.id)
+      }
       URL.revokeObjectURL(pendingImage.previewUrl)
       setPendingImage(null)
       setReplyingTo(null)
@@ -227,14 +261,21 @@ export function ChatPage() {
     }
   }
 
-  if (!conversationsLoaded) {
+  if (!conversationsLoaded || !groupConversationsLoaded) {
     return <PageSkeleton rows={5} />
   }
 
   const activeFriend = conversations.find((c) => c.friendUserId === friendId)
+  const activeGroup = groupConversations.find((c) => c.groupId === groupId)
+  const activeGroupMembers = groupId ? (groupMembersById[groupId] ?? []) : []
+
+  function memberName(userId: string) {
+    return activeGroupMembers.find((m) => m.userId === userId)?.name ?? ""
+  }
 
   function replyAuthorLabel(m: Message) {
-    return m.replyTo?.senderId === user?.id ? "Você" : (activeFriend?.friendName ?? "")
+    if (m.replyTo?.senderId === user?.id) return "Você"
+    return isGroup ? memberName(m.replyTo?.senderId ?? "") : (activeFriend?.friendName ?? "")
   }
 
   return (
@@ -281,37 +322,120 @@ export function ChatPage() {
             ))}
           </ul>
         )}
+
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Grupos</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title="Criar grupo"
+            className="size-6"
+            onClick={() => setCreateGroupModalOpen(true)}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+        </div>
+        {groupConversations.length > 0 && (
+          <ul className="divide-y">
+            {groupConversations.map((c) => (
+              <li key={c.groupId} className="relative">
+                {c.groupId === groupId && (
+                  <motion.div
+                    layoutId="chat-conversation-pill"
+                    className="absolute inset-0 bg-muted"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <Link
+                  to={`/chat/g/${c.groupId}`}
+                  className="relative z-10 flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <Users className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate font-medium">{c.groupName}</span>
+                        {c.unreadCount > 0 && (
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {c.lastMessage ?? "Nenhuma mensagem ainda"}
+                      </span>
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
+      <CreateGroupModal open={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
+
       <Card className="flex flex-1 flex-col p-0">
-        {!friendId ? (
+        {!friendId && !groupId ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
             Selecione uma conversa.
           </div>
         ) : (
           <div ref={conversationScope} className="flex flex-1 flex-col overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setProfileModalOpen(true)}
-              disabled={!activeFriend}
-              className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
-            >
-              {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
-              <span className="flex flex-col">
-                <span className="flex items-center gap-1 font-medium">
-                  {activeFriend?.friendName}
-                  {activeFriend?.friendAdmin && <AdminBadge />}
+            {isGroup ? (
+              <button
+                type="button"
+                onClick={() => setProfileModalOpen(true)}
+                disabled={!activeGroup}
+                className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <Users className="size-4" />
                 </span>
-                {activeFriend?.friendBio && (
-                  <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
-                )}
-              </span>
-            </button>
-            <FriendProfileModal
-              friend={activeFriend ?? null}
-              open={profileModalOpen}
-              onClose={() => setProfileModalOpen(false)}
-            />
+                <span className="flex flex-col">
+                  <span className="font-medium">{activeGroup?.groupName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {activeGroupMembers.length > 0
+                      ? `${activeGroupMembers.length} membros`
+                      : activeGroup?.memberNames.join(", ")}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setProfileModalOpen(true)}
+                disabled={!activeFriend}
+                className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+              >
+                {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
+                <span className="flex flex-col">
+                  <span className="flex items-center gap-1 font-medium">
+                    {activeFriend?.friendName}
+                    {activeFriend?.friendAdmin && <AdminBadge />}
+                  </span>
+                  {activeFriend?.friendBio && (
+                    <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
+                  )}
+                </span>
+              </button>
+            )}
+            {isGroup ? (
+              <GroupInfoModal
+                group={activeGroup ?? null}
+                open={profileModalOpen}
+                onClose={() => setProfileModalOpen(false)}
+              />
+            ) : (
+              <FriendProfileModal
+                friend={activeFriend ?? null}
+                open={profileModalOpen}
+                onClose={() => setProfileModalOpen(false)}
+              />
+            )}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
               <div ref={messagesContentRef} className="flex flex-col gap-2">
                 {messages.map((m) => {
@@ -354,6 +478,11 @@ export function ChatPage() {
                           />
                         )}
                         <div className="relative z-10">
+                          {isGroup && !mine && (
+                            <p className="mb-0.5 text-xs font-medium text-muted-foreground">
+                              {memberName(m.senderId)}
+                            </p>
+                          )}
                           {m.replyTo && (
                             <button
                               type="button"
@@ -396,7 +525,12 @@ export function ChatPage() {
               <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Respondendo a {replyingTo.senderId === user?.id ? "você mesmo" : activeFriend?.friendName}
+                    Respondendo a{" "}
+                    {replyingTo.senderId === user?.id
+                      ? "você mesmo"
+                      : isGroup
+                        ? memberName(replyingTo.senderId)
+                        : activeFriend?.friendName}
                   </p>
                   <p className="truncate text-sm">{replyingTo.content ?? "📷 Foto"}</p>
                 </div>

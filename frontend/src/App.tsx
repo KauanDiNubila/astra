@@ -32,6 +32,7 @@ function App() {
           <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/g/:groupId" element={<ChatPage />} />
           <Route path="/chat/:friendId" element={<ChatPage />} />
           <Route path="/ranking" element={<RankingPage />} />
           <Route element={<AdminRoute />}>
