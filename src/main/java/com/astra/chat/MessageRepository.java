@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MessageRepository extends JpaRepository<Message, UUID> {
+
+    List<Message> findByGroupIdOrderByCreatedAtDesc(UUID groupId, Pageable pageable);
+
+    Optional<Message> findFirstByGroupIdOrderByCreatedAtDesc(UUID groupId);
 
     // least/greatest casam com o índice idx_message_conversation — escrito
     // como "OR de igualdades" antes, o que Postgres não conseguia associar

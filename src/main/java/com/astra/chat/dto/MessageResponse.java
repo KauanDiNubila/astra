@@ -7,6 +7,7 @@ public record MessageResponse(
         UUID id,
         UUID senderId,
         UUID recipientId,
+        UUID groupId,
         String content,
         OffsetDateTime createdAt,
         boolean read,

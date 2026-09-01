@@ -28,8 +28,14 @@ public class Message {
     @Column(name = "sender_id", nullable = false)
     private UUID senderId;
 
-    @Column(name = "recipient_id", nullable = false)
+    // Exatamente um de recipientId/groupId é preenchido (ver constraint
+    // chk_message_target) — mensagem de grupo reaproveita esta mesma
+    // tabela em vez de duplicar anexo/reply/criptografia numa paralela.
+    @Column(name = "recipient_id")
     private UUID recipientId;
+
+    @Column(name = "group_id")
+    private UUID groupId;
 
     // texto cifrado (AES-256-GCM, ver ChatEncryptionService) — bem maior
     // que o limite de 2000 caracteres do texto original por causa do
@@ -51,6 +57,14 @@ public class Message {
         this.senderId = senderId;
         this.recipientId = recipientId;
         this.content = content;
+    }
+
+    public static Message forGroup(UUID senderId, UUID groupId, String content) {
+        Message message = new Message();
+        message.senderId = senderId;
+        message.groupId = groupId;
+        message.content = content;
+        return message;
     }
 
     public boolean isRead() {

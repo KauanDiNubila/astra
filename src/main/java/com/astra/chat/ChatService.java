@@ -32,16 +32,19 @@ public class ChatService {
     private final FriendshipService friendshipService;
     private final CurrentUserProvider currentUserProvider;
     private final ChatEncryptionService chatEncryptionService;
+    private final ChatGroupMemberRepository chatGroupMemberRepository;
 
     public ChatService(MessageRepository messageRepository, MessageAttachmentRepository messageAttachmentRepository,
             UserRepository userRepository, FriendshipService friendshipService,
-            CurrentUserProvider currentUserProvider, ChatEncryptionService chatEncryptionService) {
+            CurrentUserProvider currentUserProvider, ChatEncryptionService chatEncryptionService,
+            ChatGroupMemberRepository chatGroupMemberRepository) {
         this.messageRepository = messageRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
         this.userRepository = userRepository;
         this.friendshipService = friendshipService;
         this.currentUserProvider = currentUserProvider;
         this.chatEncryptionService = chatEncryptionService;
+        this.chatGroupMemberRepository = chatGroupMemberRepository;
     }
 
     @Transactional
@@ -86,12 +89,92 @@ public class ChatService {
         }
     }
 
+    @Transactional
+    public MessageResponse sendGroupMessage(UUID groupId, String content, UUID replyToMessageId) {
+        UUID me = currentUserProvider.currentUserId();
+        if (content == null || content.isBlank()) {
+            throw new ConflictException("Mensagem precisa ter texto");
+        }
+        requireMember(groupId, me);
+        UUID validReplyTo = validatedGroupReplyTarget(groupId, replyToMessageId);
+        Message created = Message.forGroup(me, groupId, chatEncryptionService.encrypt(content));
+        created.setReplyToMessageId(validReplyTo);
+        return toDto(messageRepository.saveAndFlush(created));
+    }
+
+    @Transactional
+    public MessageResponse sendGroupImage(UUID groupId, String caption, UUID replyToMessageId, MultipartFile file) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new ConflictException("Arquivo precisa ser uma imagem");
+        }
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new ConflictException("Imagem precisa ter até 2MB");
+        }
+
+        UUID validReplyTo = validatedGroupReplyTarget(groupId, replyToMessageId);
+        String trimmedCaption = caption == null || caption.isBlank() ? null : caption;
+        Message created = Message.forGroup(me, groupId, chatEncryptionService.encrypt(trimmedCaption));
+        created.setReplyToMessageId(validReplyTo);
+        Message saved = messageRepository.saveAndFlush(created);
+
+        try {
+            byte[] encryptedData = chatEncryptionService.encryptBytes(file.getBytes());
+            MessageAttachment attachment = messageAttachmentRepository
+                    .save(new MessageAttachment(saved.getId(), contentType, encryptedData));
+            return toDto(saved, attachment.getId(), replyPreviewFor(validReplyTo));
+        } catch (IOException ex) {
+            throw new ConflictException("Não foi possível ler o arquivo");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> historyForGroup(UUID groupId, int limit) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+        List<Message> messages = messageRepository.findByGroupIdOrderByCreatedAtDesc(groupId, PageRequest.of(0, limit));
+        return toDtos(messages);
+    }
+
+    @Transactional
+    public void markReadGroup(UUID groupId) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+        chatGroupMemberRepository.markRead(groupId, me, OffsetDateTime.now());
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCountGroups() {
+        UUID me = currentUserProvider.currentUserId();
+        List<UUID> groupIds = chatGroupMemberRepository.findByUserId(me).stream()
+                .map(ChatGroupMember::getGroupId)
+                .toList();
+        if (groupIds.isEmpty()) {
+            return 0;
+        }
+        return chatGroupMemberRepository.unreadCountsFor(me, groupIds).stream()
+                .mapToLong(ChatGroupMemberRepository.UnreadByGroup::getUnread)
+                .sum();
+    }
+
+    void requireMember(UUID groupId, UUID userId) {
+        if (!chatGroupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new NotFoundException("Grupo não encontrado");
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<MessageResponse> history(UUID friendId, int limit) {
         UUID me = currentUserProvider.currentUserId();
         requireFriends(me, friendId);
         List<Message> messages = messageRepository.findConversation(me, friendId, PageRequest.of(0, limit));
+        return toDtos(messages);
+    }
 
+    private List<MessageResponse> toDtos(List<Message> messages) {
         List<UUID> messageIds = messages.stream().map(Message::getId).toList();
         Map<UUID, UUID> attachmentByMessage = messageAttachmentRepository.findByMessageIdIn(messageIds).stream()
                 .collect(Collectors.toMap(MessageAttachment::getMessageId, MessageAttachment::getId));
@@ -131,7 +214,10 @@ public class ChatService {
         UUID me = currentUserProvider.currentUserId();
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new NotFoundException("Não encontrado"));
-        if (!message.getSenderId().equals(me) && !message.getRecipientId().equals(me)) {
+        boolean isDmParty = me.equals(message.getSenderId()) || me.equals(message.getRecipientId());
+        boolean isGroupMember = message.getGroupId() != null
+                && chatGroupMemberRepository.existsByGroupIdAndUserId(message.getGroupId(), me);
+        if (!isDmParty && !isGroupMember) {
             throw new NotFoundException("Não encontrado");
         }
         MessageAttachment attachment = messageAttachmentRepository.findByMessageId(messageId)
@@ -200,6 +286,18 @@ public class ChatService {
         return replyToMessageId;
     }
 
+    private UUID validatedGroupReplyTarget(UUID groupId, UUID replyToMessageId) {
+        if (replyToMessageId == null) {
+            return null;
+        }
+        Message target = messageRepository.findById(replyToMessageId)
+                .orElseThrow(() -> new NotFoundException("Mensagem original não encontrada"));
+        if (!groupId.equals(target.getGroupId())) {
+            throw new ConflictException("Mensagem não pertence a esta conversa");
+        }
+        return replyToMessageId;
+    }
+
     private MessageResponse.ReplyPreview replyPreviewFor(UUID replyToMessageId) {
         if (replyToMessageId == null) {
             return null;
@@ -229,7 +327,7 @@ public class ChatService {
 
     private MessageResponse toDto(Message message, UUID attachmentId, MessageResponse.ReplyPreview replyTo) {
         return new MessageResponse(message.getId(), message.getSenderId(), message.getRecipientId(),
-                chatEncryptionService.decrypt(message.getContent()), message.getCreatedAt(), message.isRead(),
-                attachmentId, replyTo);
+                message.getGroupId(), chatEncryptionService.decrypt(message.getContent()), message.getCreatedAt(),
+                message.isRead(), attachmentId, replyTo);
     }
 }
