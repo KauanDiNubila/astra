@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { api } from "@/lib/api"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
+import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
 import { playChime } from "@/lib/sound"
 import type { PomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, CourseDetail, CourseSummary, Dashboard, GoalProgress } from "@/lib/types"
@@ -59,20 +60,30 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     savePomodoroSettings(settings)
   }, [settings])
 
-  const [mode, setMode] = useState<Mode>("focus")
-  const [isLongBreak, setIsLongBreak] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(settings.focusMinutes * 60)
-  const [running, setRunning] = useState(false)
-  const [focusedSeconds, setFocusedSeconds] = useState(0)
-  const [completedPomodoros, setCompletedPomodoros] = useState(0)
-  const completedRef = useRef(0)
-  const startedAtRef = useRef<string | null>(null)
+  // Lido uma única vez (useState com inicializador) — sobrevive a um F5:
+  // se a fase ainda não tinha terminado no momento do reload, o timer
+  // volta rodando de onde parou em vez de resetar pro valor padrão.
+  const [persisted] = useState(() => loadPomodoroSession())
+  const persistedStillRunning =
+    !!persisted?.running && persisted.phaseEndAt !== null && persisted.phaseEndAt > Date.now()
+
+  const [mode, setMode] = useState<Mode>(persisted?.mode ?? "focus")
+  const [isLongBreak, setIsLongBreak] = useState(persisted?.isLongBreak ?? false)
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (persistedStillRunning) return Math.round((persisted!.phaseEndAt! - Date.now()) / 1000)
+    return persisted?.timeLeft ?? settings.focusMinutes * 60
+  })
+  const [running, setRunning] = useState(persistedStillRunning)
+  const [focusedSeconds, setFocusedSeconds] = useState(persisted?.focusedSeconds ?? 0)
+  const [completedPomodoros, setCompletedPomodoros] = useState(persisted?.completedPomodoros ?? 0)
+  const completedRef = useRef(persisted?.completedPomodoros ?? 0)
+  const startedAtRef = useRef<string | null>(persisted?.startedAt ?? null)
 
   // Ancoragem por relógio real, não por contagem de ticks — sobrevive a
   // throttling de setInterval quando a aba do navegador fica em segundo
   // plano. phaseEndAtRef é null enquanto pausado; enquanto rodando, é o
   // epoch ms em que a fase atual (foco/pausa) termina.
-  const phaseEndAtRef = useRef<number | null>(null)
+  const phaseEndAtRef = useRef<number | null>(persistedStillRunning ? persisted!.phaseEndAt : null)
   const lastTickAtRef = useRef<number>(Date.now())
 
   const modeRef = useRef(mode)
@@ -90,15 +101,15 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     settingsRef.current = settings
   }, [settings])
 
-  const [categoryId, setCategoryId] = useState("")
-  const [courseId, setCourseId] = useState("")
+  const [categoryId, setCategoryId] = useState(persisted?.categoryId ?? "")
+  const [courseId, setCourseId] = useState(persisted?.courseId ?? "")
   const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null)
-  const [note, setNote] = useState("")
+  const [note, setNote] = useState(persisted?.note ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sessionSavedAt, setSessionSavedAt] = useState<number | null>(null)
 
-  const [focusMode, setFocusMode] = useState(false)
+  const [focusMode, setFocusMode] = useState(persisted?.focusMode ?? false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
   const [dailyGoal, setDailyGoal] = useState<GoalProgress | null>(null)
@@ -248,12 +259,38 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running])
 
+  const prevSettingsRef = useRef(settings)
   useEffect(() => {
+    // Só reage quando settings de fato muda (referência nova, via
+    // setSettings) — comparar por valor em vez de "primeira execução"
+    // porque o StrictMode do React invoca efeitos de montagem duas vezes,
+    // e uma flag de "já rodei uma vez" seria pulada só na primeira,
+    // deixando a segunda sobrescrever o timeLeft recuperado do
+    // sessionStorage assim que a página carrega.
+    if (prevSettingsRef.current === settings) return
+    prevSettingsRef.current = settings
     if (!running) {
       setTimeLeft(currentModeSeconds())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])
+
+  useEffect(() => {
+    savePomodoroSession({
+      mode,
+      isLongBreak,
+      running,
+      phaseEndAt: phaseEndAtRef.current,
+      timeLeft,
+      focusedSeconds,
+      completedPomodoros,
+      startedAt: startedAtRef.current,
+      categoryId,
+      courseId,
+      note,
+      focusMode,
+    })
+  }, [mode, isLongBreak, running, timeLeft, focusedSeconds, completedPomodoros, categoryId, courseId, note, focusMode])
 
   function toggleRunning() {
     if (running) {

@@ -281,8 +281,11 @@ export function ChatPage() {
   return (
     <div className="flex h-[calc(100vh-9rem)] gap-4">
       <Card className="w-64 shrink-0 overflow-y-auto p-0">
+        <div className="px-4 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Conversas</span>
+        </div>
         {conversations.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>
+          <p className="px-4 pb-3 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>
         ) : (
           <ul className="divide-y">
             {conversations.map((c) => (
