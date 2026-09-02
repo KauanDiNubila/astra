@@ -2,15 +2,17 @@ import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ImagePlus, Plus, Reply, Send, Users, X } from "lucide-react"
-import { motion, useAnimate } from "motion/react"
+import { motion, useAnimate, useReducedMotion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
+import { cn } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
 import { GroupInfoModal } from "@/components/GroupInfoModal"
+import { ImageLightbox } from "@/components/ImageLightbox"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
@@ -39,12 +41,16 @@ function linkifyText(text: string) {
   })
 }
 
-function AttachmentImage({ messageId }: { messageId: string }) {
+function AttachmentImage({ messageId, onOpen }: { messageId: string; onOpen: () => void }) {
   const url = useAttachmentUrl(messageId)
   if (!url) {
     return <div className="h-40 w-52 animate-pulse rounded-md bg-foreground/10" />
   }
-  return <img src={url} alt="Imagem enviada" className="max-h-64 max-w-full rounded-md object-cover" />
+  return (
+    <button type="button" onClick={onOpen} className="block cursor-zoom-in">
+      <img src={url} alt="Imagem enviada" className="max-h-64 max-w-full rounded-md object-cover" />
+    </button>
+  )
 }
 
 type PendingImage = {
@@ -78,8 +84,13 @@ export function ChatPage() {
   } = useChat()
   const [draft, setDraft] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [displayedReplyingTo, setDisplayedReplyingTo] = useState<Message | null>(null)
+  useEffect(() => {
+    if (replyingTo) setDisplayedReplyingTo(replyingTo)
+  }, [replyingTo])
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
   const [sendingImage, setSendingImage] = useState(false)
+  const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
@@ -88,6 +99,7 @@ export function ChatPage() {
   const pinUntilRef = useRef(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     setActiveFriendId(isGroup ? null : (friendId ?? null))
@@ -466,7 +478,6 @@ export function ChatPage() {
                       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                       className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}
                     >
-                      {!mine && replyButton}
                       <div
                         className={`relative max-w-[70%] overflow-hidden rounded-lg px-3 py-2 text-sm ${
                           mine ? "bg-primary text-primary-foreground" : "bg-muted"
@@ -506,7 +517,7 @@ export function ChatPage() {
                           )}
                           {m.attachmentId && (
                             <div className={m.content ? "mb-1.5" : ""}>
-                              <AttachmentImage messageId={m.id} />
+                              <AttachmentImage messageId={m.id} onOpen={() => setLightboxMessageId(m.id)} />
                             </div>
                           )}
                           {m.content && (
@@ -521,31 +532,46 @@ export function ChatPage() {
                           </p>
                         </div>
                       </div>
-                      {mine && replyButton}
+                      {replyButton}
                     </motion.div>
                   )
                 })}
               </div>
             </div>
 
-            {replyingTo && (
-              <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Respondendo a{" "}
-                    {replyingTo.senderId === user?.id
-                      ? "você mesmo"
-                      : isGroup
-                        ? memberName(replyingTo.senderId)
-                        : activeFriend?.friendName}
-                  </p>
-                  <p className="truncate text-sm">{replyingTo.content ?? "📷 Foto"}</p>
+            <div
+              className={cn(
+                "grid ease-out",
+                replyingTo ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                reducedMotion ? "duration-0" : "duration-200",
+              )}
+              style={{ transitionProperty: "grid-template-rows" }}
+            >
+              <div className="overflow-hidden">
+                <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Respondendo a{" "}
+                      {displayedReplyingTo?.senderId === user?.id
+                        ? "você mesmo"
+                        : isGroup
+                          ? memberName(displayedReplyingTo?.senderId ?? "")
+                          : activeFriend?.friendName}
+                    </p>
+                    <p className="truncate text-sm">{displayedReplyingTo?.content ?? "📷 Foto"}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    tabIndex={replyingTo ? 0 : -1}
+                    onClick={() => setReplyingTo(null)}
+                  >
+                    <X className="size-4" />
+                  </Button>
                 </div>
-                <Button type="button" variant="ghost" size="icon" onClick={() => setReplyingTo(null)}>
-                  <X className="size-4" />
-                </Button>
               </div>
-            )}
+            </div>
 
             {pendingImage && (
               <div className="border-t bg-muted/40 px-4 py-2">
@@ -602,6 +628,8 @@ export function ChatPage() {
           </div>
         )}
       </Card>
+
+      <ImageLightbox messageId={lightboxMessageId} onClose={() => setLightboxMessageId(null)} />
     </div>
   )
 }
