@@ -41,14 +41,30 @@ function linkifyText(text: string) {
   })
 }
 
-function AttachmentImage({ messageId, onOpen }: { messageId: string; onOpen: () => void }) {
+function AttachmentImage({
+  messageId,
+  onOpen,
+  onLoaded,
+}: {
+  messageId: string
+  onOpen: () => void
+  onLoaded: () => void
+}) {
   const url = useAttachmentUrl(messageId)
   if (!url) {
     return <div className="h-40 w-52 animate-pulse rounded-md bg-foreground/10" />
   }
   return (
     <button type="button" onClick={onOpen} className="block cursor-zoom-in">
-      <img src={url} alt="Imagem enviada" className="max-h-64 max-w-full rounded-md object-cover" />
+      {/* onLoad avisa a conversa pra reancorar: é o único momento em que dá
+          pra ter certeza de que a imagem já tem altura final, sem depender
+          do ResizeObserver nem de acertar uma janela de tempo. */}
+      <img
+        src={url}
+        alt="Imagem enviada"
+        onLoad={onLoaded}
+        className="max-h-64 max-w-full rounded-md object-cover"
+      />
     </button>
   )
 }
@@ -150,6 +166,14 @@ export function ChatPage() {
 
   const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
 
+  // Em grupo, cada bolha de outra pessoa ganha o nome de quem mandou acima do
+  // conteúdo — e esse nome só existe depois que loadGroupMembers responde, ou
+  // seja, TODAS as bolhas crescem um pouco depois que o histórico já
+  // renderizou. É por isso que o grupo continuava abrindo fora do fim mesmo
+  // depois de consertar o caso da conversa 1:1: nada reancorava nesse
+  // segundo crescimento.
+  const activeGroupMemberCount = groupId ? (groupMembersById[groupId]?.length ?? 0) : 0
+
   // "Grudado no fim" é uma intenção (o usuário rolou pra cima ou não), não
   // uma distância fixa — a versão antiga desistia de acompanhar se um único
   // evento de resize (várias imagens decodificando juntas, por exemplo)
@@ -194,7 +218,7 @@ export function ChatPage() {
   useEffect(() => {
     settleScroll(2000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, ready])
+  }, [messages.length, ready, activeGroupMemberCount])
 
   function stickToBottom() {
     const container = scrollContainerRef.current
@@ -568,7 +592,11 @@ export function ChatPage() {
                           )}
                           {m.attachmentId && (
                             <div className={m.content ? "mb-1.5" : ""}>
-                              <AttachmentImage messageId={m.id} onOpen={() => setLightboxMessageId(m.id)} />
+                              <AttachmentImage
+                                messageId={m.id}
+                                onOpen={() => setLightboxMessageId(m.id)}
+                                onLoaded={() => settleScroll(400)}
+                              />
                             </div>
                           )}
                           {m.content && (

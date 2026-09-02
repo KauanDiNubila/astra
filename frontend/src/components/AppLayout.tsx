@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 import { motion } from "motion/react"
 import { useLocation } from "react-router-dom"
+import { useChat } from "@/context/ChatContext"
+import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
 import { AppSidebar } from "@/components/AppSidebar"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
@@ -16,6 +18,8 @@ function getInitialSidebarOpen() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
+  const { totalUnread, totalGroupUnread } = useChat()
+  useUnreadTabIndicator(totalUnread + totalGroupUnread)
 
   return (
     <TooltipProvider>
