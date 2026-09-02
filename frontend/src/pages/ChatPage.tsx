@@ -591,7 +591,7 @@ export function ChatPage() {
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}
                   onPaste={handlePaste}
-                  placeholder={pendingImage ? "Legenda (opcional)..." : "Escreva uma mensagem..."}
+                  placeholder="Escreva uma mensagem..."
                   className="max-h-40 min-h-10 w-full resize-none"
                 />
               </div>
