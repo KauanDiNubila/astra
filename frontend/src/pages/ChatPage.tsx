@@ -15,7 +15,6 @@ import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
@@ -51,7 +50,6 @@ function AttachmentImage({ messageId }: { messageId: string }) {
 type PendingImage = {
   file: File
   previewUrl: string
-  caption: string
 }
 
 export function ChatPage() {
@@ -198,6 +196,10 @@ export function ChatPage() {
   }
 
   function submitDraft() {
+    if (pendingImage) {
+      if (!sendingImage) submitImage()
+      return
+    }
     if (!draft.trim()) return
     if (isGroup && groupId) {
       sendGroupMessage(groupId, draft.trim(), replyingTo?.id)
@@ -225,7 +227,7 @@ export function ChatPage() {
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (file) {
-      setPendingImage({ file, previewUrl: URL.createObjectURL(file), caption: "" })
+      setPendingImage({ file, previewUrl: URL.createObjectURL(file) })
     }
     event.target.value = ""
   }
@@ -236,7 +238,7 @@ export function ChatPage() {
     const file = item.getAsFile()
     if (!file) return
     event.preventDefault()
-    setPendingImage({ file, previewUrl: URL.createObjectURL(file), caption: "" })
+    setPendingImage({ file, previewUrl: URL.createObjectURL(file) })
   }
 
   function cancelImage() {
@@ -248,13 +250,15 @@ export function ChatPage() {
     if (!pendingImage) return
     setSendingImage(true)
     try {
+      const caption = draft.trim() || undefined
       if (isGroup && groupId) {
-        await sendGroupImageMessage(groupId, pendingImage.file, pendingImage.caption.trim() || undefined, replyingTo?.id)
+        await sendGroupImageMessage(groupId, pendingImage.file, caption, replyingTo?.id)
       } else if (friendId) {
-        await sendImageMessage(friendId, pendingImage.file, pendingImage.caption.trim() || undefined, replyingTo?.id)
+        await sendImageMessage(friendId, pendingImage.file, caption, replyingTo?.id)
       }
       URL.revokeObjectURL(pendingImage.previewUrl)
       setPendingImage(null)
+      setDraft("")
       setReplyingTo(null)
     } finally {
       setSendingImage(false)
@@ -544,24 +548,23 @@ export function ChatPage() {
             )}
 
             {pendingImage && (
-              <div className="flex items-center gap-3 border-t bg-muted/40 px-4 py-2">
-                <img
-                  src={pendingImage.previewUrl}
-                  alt="Pré-visualização"
-                  className="size-14 shrink-0 rounded-md object-cover"
-                />
-                <Input
-                  value={pendingImage.caption}
-                  onChange={(e) => setPendingImage((p) => (p ? { ...p, caption: e.target.value } : p))}
-                  placeholder="Legenda (opcional)"
-                  className="flex-1"
-                />
-                <Button type="button" size="icon" onClick={submitImage} disabled={sendingImage}>
-                  <Send className="size-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" onClick={cancelImage} disabled={sendingImage}>
-                  <X className="size-4" />
-                </Button>
+              <div className="border-t bg-muted/40 px-4 py-2">
+                <div className="relative inline-block">
+                  <img
+                    src={pendingImage.previewUrl}
+                    alt="Pré-visualização"
+                    className="size-16 rounded-md object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={cancelImage}
+                    disabled={sendingImage}
+                    title="Remover anexo"
+                    className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-background text-muted-foreground shadow ring-1 ring-border hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -588,11 +591,11 @@ export function ChatPage() {
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}
                   onPaste={handlePaste}
-                  placeholder="Escreva uma mensagem..."
+                  placeholder={pendingImage ? "Legenda (opcional)..." : "Escreva uma mensagem..."}
                   className="max-h-40 min-h-10 w-full resize-none"
                 />
               </div>
-              <Button type="submit" size="icon" disabled={!draft.trim()}>
+              <Button type="submit" size="icon" disabled={pendingImage ? sendingImage : !draft.trim()}>
                 <Send className="size-4" />
               </Button>
             </form>
