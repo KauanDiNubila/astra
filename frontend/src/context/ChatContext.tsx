@@ -3,6 +3,8 @@ import type { ReactNode } from "react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { createChatClient } from "@/lib/chatSocket"
+import { loadChatSoundEnabled, saveChatSoundEnabled } from "@/lib/chatSoundPreference"
+import { playMessagePing } from "@/lib/sound"
 import { useAuth } from "@/context/AuthContext"
 import { useFriends } from "@/context/FriendsContext"
 import type {
@@ -74,6 +76,9 @@ type ChatContextValue = {
   ) => Promise<void>
   markGroupRead: (groupId: string) => Promise<void>
   totalGroupUnread: number
+
+  chatSoundEnabled: boolean
+  setChatSoundEnabled: (enabled: boolean) => void
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
@@ -99,6 +104,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const friendsRef = useRef<Friendship[]>([])
   const activeGroupIdRef = useRef<string | null>(null)
   const groupConversationsRef = useRef<GroupConversationSummary[]>([])
+
+  const [chatSoundEnabled, setChatSoundEnabledState] = useState(loadChatSoundEnabled)
+  // Espelhado em ref porque quem lê é o handler do WebSocket, que vive num
+  // closure de longa duração (mesmo motivo dos outros refs aqui).
+  const chatSoundEnabledRef = useRef(chatSoundEnabled)
+
+  function setChatSoundEnabled(enabled: boolean) {
+    chatSoundEnabledRef.current = enabled
+    setChatSoundEnabledState(enabled)
+    saveChatSoundEnabled(enabled)
+  }
 
   useEffect(() => {
     activeFriendIdRef.current = activeFriendId
@@ -174,6 +190,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setGroupConversations((prev) => prev.map((c) => (c.groupId === groupId ? { ...c, unreadCount: 0 } : c)))
   }
 
+  // Toca quando chega mensagem de outra pessoa e ela não está à vista: ou a
+  // conversa aberta é outra, ou a aba está em segundo plano. Sem isso, o
+  // ping tocaria em cima de uma conversa que a pessoa já está lendo.
+  function pingIfUnseen(isActiveConversation: boolean) {
+    if (!chatSoundEnabledRef.current) return
+    if (isActiveConversation && !document.hidden) return
+    playMessagePing()
+  }
+
   function handleIncomingGroup(message: Message) {
     const groupId = message.groupId!
     const me = user?.id
@@ -185,6 +210,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     })
 
     if (message.senderId === me) return
+
+    pingIfUnseen(activeGroupIdRef.current === groupId)
 
     if (activeGroupIdRef.current === groupId) {
       markGroupRead(groupId)
@@ -222,6 +249,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     })
 
     if (message.senderId === me) return
+
+    pingIfUnseen(activeFriendIdRef.current === otherId)
 
     if (activeFriendIdRef.current === otherId) {
       markRead(otherId)
@@ -352,6 +381,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sendGroupImageMessage,
         markGroupRead,
         totalGroupUnread,
+        chatSoundEnabled,
+        setChatSoundEnabled,
       }}
     >
       {children}

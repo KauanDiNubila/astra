@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ImagePlus, Plus, Reply, Send, Users, X } from "lucide-react"
+import { ImagePlus, Plus, Reply, Send, Users, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useReducedMotion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
@@ -97,6 +97,8 @@ export function ChatPage() {
     markGroupRead,
     setActiveGroupId,
     groupMembersById,
+    chatSoundEnabled,
+    setChatSoundEnabled,
   } = useChat()
   const ready = conversationsLoaded && groupConversationsLoaded
   const [draft, setDraft] = useState("")
@@ -371,8 +373,18 @@ export function ChatPage() {
   return (
     <div className="flex h-[calc(100vh-9rem)] gap-4">
       <Card className="w-64 shrink-0 overflow-y-auto p-0">
-        <div className="px-4 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <span className="text-xs font-medium text-muted-foreground">Conversas</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title={chatSoundEnabled ? "Silenciar som de mensagem" : "Ativar som de mensagem"}
+            className="size-6"
+            onClick={() => setChatSoundEnabled(!chatSoundEnabled)}
+          >
+            {chatSoundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
+          </Button>
         </div>
         {conversations.length === 0 ? (
           <p className="px-4 pb-3 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>

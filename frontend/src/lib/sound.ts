@@ -17,13 +17,13 @@ function getAudioContext(): AudioContext | null {
   return audioCtx
 }
 
-function tone(ctx: AudioContext, freq: number, startTime: number, duration: number) {
+function tone(ctx: AudioContext, freq: number, startTime: number, duration: number, peak = 0.25) {
   const osc = ctx.createOscillator()
   const gain = ctx.createGain()
   osc.type = "sine"
   osc.frequency.value = freq
   gain.gain.setValueAtTime(0, startTime)
-  gain.gain.linearRampToValueAtTime(0.25, startTime + 0.02)
+  gain.gain.linearRampToValueAtTime(peak, startTime + 0.02)
   gain.gain.linearRampToValueAtTime(0, startTime + duration)
   osc.connect(gain)
   gain.connect(ctx.destination)
@@ -51,4 +51,15 @@ export function playChime(id: ChimeId) {
   if (!ctx) return
   const play = CHIMES[id] ?? CHIMES.sino
   play(ctx, ctx.currentTime)
+}
+
+// Ping curto e mais baixo que os chimes do Pomodoro de propósito: aqueles
+// marcam fim de ciclo e podem ser insistentes, esse aqui toca no meio de
+// qualquer coisa que a pessoa esteja fazendo.
+export function playMessagePing() {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  const now = ctx.currentTime
+  tone(ctx, 880, now, 0.09, 0.12)
+  tone(ctx, 1174, now + 0.07, 0.13, 0.1)
 }
