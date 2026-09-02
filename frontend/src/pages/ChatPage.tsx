@@ -82,6 +82,7 @@ export function ChatPage() {
     setActiveGroupId,
     groupMembersById,
   } = useChat()
+  const ready = conversationsLoaded && groupConversationsLoaded
   const [draft, setDraft] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [displayedReplyingTo, setDisplayedReplyingTo] = useState<Message | null>(null)
@@ -96,10 +97,21 @@ export function ChatPage() {
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
-  const pinUntilRef = useRef(0)
+  const pinnedRef = useRef(true)
+  const programmaticScrollRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
   const reducedMotion = useReducedMotion()
+
+  // formatRelativeTime só recalcula quando o componente re-renderiza — sem
+  // isso, uma mensagem mandada "agora" continua mostrando "agora" pra
+  // sempre se a conversa ficar aberta sem novas mensagens chegando. Esse
+  // tick força um re-render periódico só pra atualizar os textos de tempo.
+  const [, forceTimeTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => forceTimeTick((t) => t + 1), 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     setActiveFriendId(isGroup ? null : (friendId ?? null))
@@ -138,67 +150,105 @@ export function ChatPage() {
 
   const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
 
-  // Ao abrir/trocar de conversa, ancora no fim a cada frame por um tempo em
-  // vez de rolar uma vez só. O histórico chega por rede e, depois dele, a
-  // altura ainda muda sozinha (fonte customizada troca do fallback pra
-  // Geist, imagem de anexo substitui o placeholder, avatar carrega) — cada
-  // uma dessas empurra o conteúdo pra baixo e deixava a conversa "quase" no
-  // fim. Re-ancorar por ~1.5s cobre todas sem precisar prever qual é.
-  // Cancela na hora se a pessoa rolar pra cima pra ler o histórico.
+  // "Grudado no fim" é uma intenção (o usuário rolou pra cima ou não), não
+  // uma distância fixa — a versão antiga desistia de acompanhar se um único
+  // evento de resize (várias imagens decodificando juntas, por exemplo)
+  // empurrasse o conteúdo mais de 300px de uma vez, e depois disso nada
+  // mais reancorava, deixando a conversa parada bem em cima de uma imagem.
+  // Aqui, enquanto pinnedRef for true, TODA mudança de altura reancora
+  // incondicionalmente; só um scroll de verdade que pousa longe do fim
+  // desarma, e voltar a rolar até o fim rearma.
+  //
+  // programmaticScrollRef existe porque a própria correção (stickToBottom
+  // setando scrollTop) dispara um evento "scroll" nativo — sem filtrar
+  // isso, o handler abaixo lia esse eco como se fosse o usuário rolando
+  // pra longe (a nova mensagem ainda "assentando" no layout faz o
+  // scrollHeight mudar de novo bem depois do assign, sobrando uma
+  // distância de dezenas de pixels no instante do evento) e desgrudava
+  // sozinho bem depois de cada mensagem nova — o bug ficava só visível
+  // com uma mensagem chegando enquanto a conversa já estava aberta.
   useEffect(() => {
     const container = scrollContainerRef.current
-    if (!friendId || !container) return
+    if (!container) return
+    pinnedRef.current = true
+    stickToBottom()
+    settleScroll(2000)
 
-    pinUntilRef.current = performance.now() + 1500
-    container.scrollTop = container.scrollHeight
-
-    const cancel = () => {
-      pinUntilRef.current = 0
+    function handleScroll() {
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false
+        return
+      }
+      if (!container) return
+      const distance = container.scrollHeight - container.scrollTop - container.clientHeight
+      pinnedRef.current = distance < 40
     }
-    container.addEventListener("wheel", cancel, { passive: true })
-    container.addEventListener("touchstart", cancel, { passive: true })
-
-    return () => {
-      pinUntilRef.current = 0
-      container.removeEventListener("wheel", cancel)
-      container.removeEventListener("touchstart", cancel)
-    }
-  }, [friendId])
+    container.addEventListener("scroll", handleScroll, { passive: true })
+    return () => container.removeEventListener("scroll", handleScroll)
+    // ready entra nas deps por causa da tela de carregamento (ver comentário
+    // do ResizeObserver logo abaixo) — reanexa assim que o container de
+    // verdade existe, não só quando troca de conversa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friendId, groupId, ready])
 
   useEffect(() => {
-    stickToBottom()
+    settleScroll(2000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length])
+  }, [messages.length, ready])
 
   function stickToBottom() {
     const container = scrollContainerRef.current
-    if (!container) return
-    // Durante a janela de abertura ancora incondicionalmente: nesse momento
-    // o histórico ainda está chegando e a distância até o fim é enorme, então
-    // a checagem de "perto do fim" recusaria a rolagem. Passada a janela,
-    // volta a só acompanhar quem já estava no fim, pra não puxar de volta
-    // quem subiu pra ler o histórico.
-    const pinning = performance.now() < pinUntilRef.current
-    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 300
-    if (pinning || nearBottom) {
-      container.scrollTop = container.scrollHeight
-    }
+    if (!container || !pinnedRef.current) return
+    programmaticScrollRef.current = true
+    container.scrollTop = container.scrollHeight
   }
+
+  const settleFrameRef = useRef<number | null>(null)
+
+  // Reforça por ~2s via requestAnimationFrame em vez de confiar só no
+  // ResizeObserver abaixo: em teste, o ResizeObserver simplesmente não
+  // disparou nem uma vez pra um crescimento manual e óbvio do conteúdo
+  // (confirmado isolando o teste fora do React) — pode ser algo específico
+  // deste navegador automatizado, mas como não dá pra garantir 100% em
+  // todo navegador/aba em segundo plano, esse polling curto garante a
+  // ancoragem de qualquer jeito, sem depender de nenhum sinal de resize.
+  function settleScroll(durationMs: number) {
+    if (settleFrameRef.current !== null) cancelAnimationFrame(settleFrameRef.current)
+    const deadline = performance.now() + durationMs
+    function frame() {
+      stickToBottom()
+      settleFrameRef.current = performance.now() < deadline ? requestAnimationFrame(frame) : null
+    }
+    settleFrameRef.current = requestAnimationFrame(frame)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (settleFrameRef.current !== null) cancelAnimationFrame(settleFrameRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const content = messagesContentRef.current
     if (!content) return
-    // ResizeObserver em vez de tratar cada carregamento tardio na mão: a
-    // altura muda sozinha quando a fonte customizada troca do fallback pra
-    // Geist, quando a imagem de anexo substitui o placeholder e quando o
-    // avatar chega. Observando a altura do conteúdo, qualquer uma delas
-    // reancora — sem depender de requestAnimationFrame, que não roda com a
-    // aba em segundo plano.
+    // ResizeObserver como reação imediata em navegadores onde funciona (não
+    // depende de rAF, que não roda com a aba em segundo plano) — o polling
+    // de settleScroll acima é quem garante a ancoragem de fato.
+    // Precisa reanexar a cada troca de conversa E a cada mudança de "ready"
+    // (deps friendId/groupId/ready, não []): messagesContentRef só existe
+    // depois que a tela de carregamento (conversationsLoaded/
+    // groupConversationsLoaded) libera o conteúdo de verdade. Se o
+    // histórico da conversa chegasse ANTES disso — uma corrida bem real,
+    // já que são duas requisições independentes — o efeito rodava com
+    // content nulo, desistia, e como friendId/groupId não mudam quando a
+    // tela de carregamento sai do ar, nada tentava de novo depois: a
+    // conversa carregava parada no topo pro resto da sessão, sem nenhum
+    // erro visível.
     const observer = new ResizeObserver(() => stickToBottom())
     observer.observe(content)
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [friendId, groupId, ready])
 
   function jumpToMessage(id: string) {
     const el = document.getElementById(`message-${id}`)
@@ -277,7 +327,7 @@ export function ChatPage() {
     }
   }
 
-  if (!conversationsLoaded || !groupConversationsLoaded) {
+  if (!ready) {
     return <PageSkeleton rows={5} />
   }
 
@@ -478,6 +528,7 @@ export function ChatPage() {
                       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                       className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}
                     >
+                      {mine && replyButton}
                       <div
                         className={`relative max-w-[70%] overflow-hidden rounded-lg px-3 py-2 text-sm ${
                           mine ? "bg-primary text-primary-foreground" : "bg-muted"
@@ -532,7 +583,7 @@ export function ChatPage() {
                           </p>
                         </div>
                       </div>
-                      {replyButton}
+                      {!mine && replyButton}
                     </motion.div>
                   )
                 })}
