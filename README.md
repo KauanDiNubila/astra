@@ -8,7 +8,7 @@ todo tempo focado vira uma sessão registrada e tudo o mais — ranking, heatmap
 streak, estatísticas e progresso — é **calculado por agregação sobre as sessões**,
 nunca armazenado como tabela.
 
-**🔗 No ar:** [astra-eight-sigma.vercel.app](https://astra-eight-sigma.vercel.app)
+**🔗 No ar:** [astra-app.dev](https://astra-app.dev)
 
 > Projeto de portfólio. Interface em português, código em inglês.
 
