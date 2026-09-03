@@ -13,6 +13,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
+    boolean existsByNameAndTag(String name, String tag);
+
+    Optional<User> findByNameAndTag(String name, String tag);
+
     // As projeções abaixo existem porque User.avatar é um byte[] eager (até
     // 2MB) sem @Basic(fetch = LAZY) — carregar a entidade inteira em qualquer
     // um desses casos traria o avatar (e o hash da senha) à toa.
@@ -22,7 +26,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<AuthInfoView> findAuthInfoById(@Param("id") UUID id);
 
     // Usado por /auth/refresh, /me e o construtor de UserResponse em geral.
-    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role from User u where u.id = :id")
+    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role, u.tag as tag from User u where u.id = :id")
     Optional<UserSummaryView> findSummaryById(@Param("id") UUID id);
 
     // Usado em lote por amigos/chat/ranking pra evitar 1 findById por pessoa.
@@ -51,6 +55,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String getBio();
 
         String getRole();
+
+        String getTag();
     }
 
     interface NameBioView {

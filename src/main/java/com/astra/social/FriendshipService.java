@@ -33,7 +33,10 @@ public class FriendshipService {
     @Transactional
     public FriendshipResponse sendRequest(SendFriendRequest request) {
         UUID me = currentUserProvider.currentUserId();
-        User target = userRepository.findByEmail(request.email())
+        int sep = request.handle().lastIndexOf('#');
+        String name = request.handle().substring(0, sep);
+        String tag = request.handle().substring(sep + 1);
+        User target = userRepository.findByNameAndTag(name, tag)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
         if (target.getId().equals(me)) {
             throw new ConflictException("Não é possível adicionar você mesmo");

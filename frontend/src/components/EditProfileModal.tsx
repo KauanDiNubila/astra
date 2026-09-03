@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { Check, ChevronDown, KeyRound, Pencil, X } from "lucide-react"
+import { Check, ChevronDown, Copy, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
@@ -36,6 +36,18 @@ export function EditProfileModal({ open, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rendered, setRendered] = useState(open)
+  const [copied, setCopied] = useState(false)
+
+  async function copyHandle() {
+    if (!user) return
+    try {
+      await navigator.clipboard.writeText(`${user.name}#${user.tag}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // permissão de clipboard negada pelo navegador — sem feedback, mas não quebra a tela
+    }
+  }
 
   const [changingPassword, setChangingPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
@@ -184,6 +196,8 @@ export function EditProfileModal({ open, onClose }: Props) {
                         id="profile-name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        pattern="[^#]*"
+                        title="Nome não pode conter '#'"
                         required
                         maxLength={120}
                       />
@@ -192,6 +206,22 @@ export function EditProfileModal({ open, onClose }: Props) {
                     <div className="space-y-1.5">
                       <Label htmlFor="profile-email">E-mail</Label>
                       <Input id="profile-email" value={user.email} disabled />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="profile-handle">Seu identificador</Label>
+                      <div className="flex items-center gap-2">
+                        <Input id="profile-handle" value={`${user.name}#${user.tag}`} disabled />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={copyHandle}
+                          title="Copiar"
+                        >
+                          {copied ? <Check size={16} /> : <Copy size={16} />}
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">

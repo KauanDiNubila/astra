@@ -4,6 +4,7 @@ export type User = {
   email: string
   bio: string | null
   role: "USER" | "ADMIN"
+  tag: string
 }
 
 export type AdminUser = {

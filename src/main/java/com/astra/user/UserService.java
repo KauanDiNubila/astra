@@ -34,16 +34,19 @@ public class UserService {
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordBreachChecker passwordBreachChecker;
+    private final UserTagGenerator userTagGenerator;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        CurrentUserProvider currentUserProvider,
                        ApplicationEventPublisher eventPublisher,
-                       PasswordBreachChecker passwordBreachChecker) {
+                       PasswordBreachChecker passwordBreachChecker,
+                       UserTagGenerator userTagGenerator) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUserProvider = currentUserProvider;
         this.eventPublisher = eventPublisher;
         this.passwordBreachChecker = passwordBreachChecker;
+        this.userTagGenerator = userTagGenerator;
     }
 
     @Transactional
@@ -54,7 +57,8 @@ public class UserService {
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new ConflictException("Email already registered");
         }
-        User user = new User(request.name(), request.email(), passwordEncoder.encode(request.password()));
+        String tag = userTagGenerator.generate(request.name());
+        User user = new User(request.name(), request.email(), passwordEncoder.encode(request.password()), tag);
         User saved = userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId()));
         return toDto(saved);
@@ -75,7 +79,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse get(UUID userId) {
         return userRepository.findSummaryById(userId)
-                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole()))
+                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole(), v.getTag()))
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
     }
 
@@ -98,7 +102,11 @@ public class UserService {
         UUID userId = currentUserProvider.currentUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-        user.setName(request.name());
+        String newName = request.name();
+        if (!newName.equals(user.getName())) {
+            user.setTag(userTagGenerator.generateOrKeep(newName, user.getTag()));
+        }
+        user.setName(newName);
         user.setBio(request.bio());
         return toDto(user);
     }
@@ -195,6 +203,7 @@ public class UserService {
     }
 
     private UserResponse toDto(User user) {
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole());
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole(),
+                user.getTag());
     }
 }

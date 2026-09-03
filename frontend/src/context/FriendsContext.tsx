@@ -10,7 +10,7 @@ type FriendsContextValue = {
   incomingRequests: Friendship[]
   loading: boolean
   refresh: () => Promise<void>
-  sendRequest: (email: string) => Promise<void>
+  sendRequest: (handle: string) => Promise<void>
   acceptRequest: (id: string) => Promise<void>
   removeFriendship: (id: string) => Promise<void>
 }
@@ -40,8 +40,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   // Mutação já devolve o registro atualizado — em vez de reconsultar
   // /friends + /friends/requests, só encaixa o resultado no estado local.
-  async function sendRequest(email: string) {
-    const res = await api.post<Friendship>("/friends", { email })
+  async function sendRequest(handle: string) {
+    const res = await api.post<Friendship>("/friends", { handle })
     setRequests((prev) => [...prev, res.data])
   }
 

@@ -55,10 +55,14 @@ public class User {
     @Column(name = "banned_at")
     private OffsetDateTime bannedAt;
 
-    public User(String name, String email, String passwordHash) {
+    @Column(nullable = false, length = 4)
+    private String tag;
+
+    public User(String name, String email, String passwordHash, String tag) {
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.tag = tag;
     }
 
     public boolean isBanned() {

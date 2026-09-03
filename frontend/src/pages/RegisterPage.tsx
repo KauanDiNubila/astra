@@ -59,6 +59,8 @@ export function RegisterPage() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  pattern="[^#]*"
+                  title="Nome não pode conter '#'"
                   required
                 />
               </div>

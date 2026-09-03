@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 
 export function FriendsPage() {
   const { friends, requests, loading, sendRequest, acceptRequest, removeFriendship } = useFriends()
-  const [email, setEmail] = useState("")
+  const [handle, setHandle] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,10 +22,10 @@ export function FriendsPage() {
     setError(null)
     setSending(true)
     try {
-      await sendRequest(email)
-      setEmail("")
+      await sendRequest(handle)
+      setHandle("")
     } catch {
-      setError("Não foi possível enviar o convite. Confira o e-mail e tente de novo.")
+      setError("Não foi possível enviar o convite. Confira o identificador (nome#0000) e tente de novo.")
     } finally {
       setSending(false)
     }
@@ -65,16 +65,16 @@ export function FriendsPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="flex items-end gap-2">
             <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="friend-email">E-mail</Label>
+              <Label htmlFor="friend-handle">Identificador (nome#0000)</Label>
               <Input
-                id="friend-email"
+                id="friend-handle"
                 type="text"
-                inputMode="email"
-                autoComplete="email"
-                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                title="Digite um e-mail válido"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
+                pattern="^.{1,120}#\d{4}$"
+                title="Use o formato nome#0000"
+                placeholder="nick#0000"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
                 required
               />
             </div>
