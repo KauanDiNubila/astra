@@ -54,9 +54,7 @@ export function ImageLightbox({ messageId, onClose }: Props) {
       <div onClick={onClose} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
 
       {url && (
-        <motion.img
-          src={url}
-          alt="Imagem em tamanho grande"
+        <motion.div
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
           animate={
             reducedMotion
@@ -64,8 +62,18 @@ export function ImageLightbox({ messageId, onClose }: Props) {
               : { opacity: open ? 1 : 0, scale: open ? 1 : 0.96 }
           }
           transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
-          className="relative z-10 max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-lg"
-        />
+          className="relative z-10 flex h-[90vh] w-[90vw] items-center justify-center"
+        >
+          {/* h-full/w-full força a caixa a ocupar o espaço reservado; sem
+              isso, uma imagem menor que 90vh/90vw ficava no tamanho original
+              (minúscula) em vez de ampliada — object-contain escala o
+              conteúdo (pra cima ou pra baixo) preservando a proporção. */}
+          <img
+            src={url}
+            alt="Imagem em tamanho grande"
+            className="h-full w-full rounded-lg object-contain shadow-lg"
+          />
+        </motion.div>
       )}
 
       <button

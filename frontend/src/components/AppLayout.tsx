@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { useLocation } from "react-router-dom"
 import { useChat } from "@/context/ChatContext"
 import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
+import { cn } from "@/lib/utils"
 import { AppSidebar } from "@/components/AppSidebar"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
@@ -20,6 +21,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { totalUnread, totalGroupUnread } = useChat()
   useUnreadTabIndicator(totalUnread + totalGroupUnread)
+  // Chat se beneficia de ocupar a largura toda, igual apps de mensagem
+  // dedicados — as outras páginas (texto/formulário) ficam melhor contidas.
+  const isChatRoute = pathname.startsWith("/chat")
+  // Trocar de amigo/grupo muda o pathname (/chat/:friendId), mas não é uma
+  // "página" nova — sem isso, o key={pathname} do motion.div desmonta e
+  // remonta o layout inteiro (incluindo o card do chat) a cada troca de
+  // conversa, com a transição de entrada da página por cima.
+  const pageKey = isChatRoute ? "/chat" : pathname
 
   return (
     <TooltipProvider>
@@ -34,11 +43,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </header>
           <motion.div
-            key={pathname}
+            key={pageKey}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="mx-auto w-full max-w-5xl px-6 py-8"
+            className={cn("mx-auto w-full px-6 py-8", !isChatRoute && "max-w-5xl")}
           >
             {children}
           </motion.div>

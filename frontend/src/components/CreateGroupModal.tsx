@@ -2,9 +2,10 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { X } from "lucide-react"
+import { Check, X } from "lucide-react"
 import { useFriends } from "@/context/FriendsContext"
 import { useChat } from "@/context/ChatContext"
+import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -118,21 +119,33 @@ export function CreateGroupModal({ open, onClose }: Props) {
                 <p className="text-sm text-muted-foreground">Você ainda não tem amigos pra adicionar.</p>
               ) : (
                 <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-border p-1">
-                  {accepted.map((f) => (
-                    <label
-                      key={f.friendUserId}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(f.friendUserId)}
-                        onChange={() => toggle(f.friendUserId)}
-                        className="size-4 rounded border-border"
-                      />
-                      <UserAvatar userId={f.friendUserId} name={f.friendName} size="sm" />
-                      <span className="text-sm">{f.friendName}</span>
-                    </label>
-                  ))}
+                  {accepted.map((f) => {
+                    const isSelected = selected.includes(f.friendUserId)
+                    return (
+                      <button
+                        key={f.friendUserId}
+                        type="button"
+                        onClick={() => toggle(f.friendUserId)}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                          isSelected ? "bg-primary/10" : "hover:bg-muted/50",
+                        )}
+                      >
+                        <UserAvatar userId={f.friendUserId} name={f.friendName} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-sm">{f.friendName}</span>
+                        <span
+                          className={cn(
+                            "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border",
+                          )}
+                        >
+                          {isSelected && <Check className="size-3" />}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

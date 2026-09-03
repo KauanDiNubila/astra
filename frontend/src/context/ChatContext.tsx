@@ -203,11 +203,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const groupId = message.groupId!
     const me = user?.id
 
+    // Reconexão do WebSocket pode reentregar o mesmo frame — sem essa
+    // guarda, uma mensagem já exibida tocaria o som/toast de novo.
+    let alreadySeen = false
     setMessagesByGroup((prev) => {
       const existing = prev[groupId] ?? []
-      if (existing.some((m) => m.id === message.id)) return prev
+      if (existing.some((m) => m.id === message.id)) {
+        alreadySeen = true
+        return prev
+      }
       return { ...prev, [groupId]: [...existing, message] }
     })
+    if (alreadySeen) return
 
     if (message.senderId === me) return
 
@@ -242,11 +249,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const me = user?.id
     const otherId = message.senderId === me ? message.recipientId! : message.senderId
 
+    let alreadySeen = false
     setMessagesByFriend((prev) => {
       const existing = prev[otherId] ?? []
-      if (existing.some((m) => m.id === message.id)) return prev
+      if (existing.some((m) => m.id === message.id)) {
+        alreadySeen = true
+        return prev
+      }
       return { ...prev, [otherId]: [...existing, message] }
     })
+    if (alreadySeen) return
 
     if (message.senderId === me) return
 

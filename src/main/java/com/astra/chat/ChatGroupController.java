@@ -5,10 +5,15 @@ import com.astra.chat.dto.CreateGroupRequest;
 import com.astra.chat.dto.GroupConversationSummary;
 import com.astra.chat.dto.GroupMemberResponse;
 import com.astra.chat.dto.MessageResponse;
+import com.astra.user.dto.AvatarData;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,6 +65,21 @@ public class ChatGroupController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void addMember(@PathVariable UUID groupId, @Valid @RequestBody AddGroupMemberRequest request) {
         chatGroupService.addMember(groupId, request.userId());
+    }
+
+    @PostMapping("/{groupId}/avatar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateAvatar(@PathVariable UUID groupId, @RequestParam("file") MultipartFile file) {
+        chatGroupService.updateAvatar(groupId, file);
+    }
+
+    @GetMapping("/{groupId}/avatar")
+    public ResponseEntity<byte[]> avatar(@PathVariable UUID groupId) {
+        AvatarData avatar = chatGroupService.avatar(groupId);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
+                .contentType(MediaType.parseMediaType(avatar.contentType()))
+                .body(avatar.bytes());
     }
 
     @GetMapping("/{groupId}/messages")

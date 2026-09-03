@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { ChangeEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { UserPlus, X } from "lucide-react"
+import { Pencil, UserPlus, X } from "lucide-react"
+import { api, getErrorMessage } from "@/lib/api"
 import { useFriends } from "@/context/FriendsContext"
 import { useChat } from "@/context/ChatContext"
 import type { GroupConversationSummary } from "@/lib/types"
+import { GroupAvatar, invalidateGroupAvatarCache } from "@/components/GroupAvatar"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 
@@ -20,6 +23,10 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
   const { groupMembersById, loadGroupMembers, addGroupMember } = useChat()
   const [rendered, setRendered] = useState(open)
   const [addingId, setAddingId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [avatarVersion, setAvatarVersion] = useState(0)
 
   useEffect(() => {
     if (open) {
@@ -59,6 +66,25 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
   const memberIds = new Set(members.map((m) => m.userId))
   const addableFriends = friends.filter((f) => f.status === "ACCEPTED" && !memberIds.has(f.friendUserId))
 
+  async function onPickAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file || !group) return
+    setUploadError(null)
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      await api.post(`/chat/groups/${group.groupId}/avatar`, formData)
+      invalidateGroupAvatarCache(group.groupId)
+      setAvatarVersion((v) => v + 1)
+    } catch (err) {
+      setUploadError(getErrorMessage(err, "Não foi possível atualizar a foto do grupo."))
+    } finally {
+      setUploading(false)
+      event.target.value = ""
+    }
+  }
+
   async function handleAdd(friendId: string) {
     if (!group) return
     setAddingId(friendId)
@@ -89,8 +115,27 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
           transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
           className="pointer-events-auto w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-lg"
         >
-          <div className="flex items-center justify-between px-6 py-4">
-            <h2 className="text-lg font-semibold text-popover-foreground">{group.groupName}</h2>
+          <div className="flex items-center gap-3 px-6 py-4">
+            <div className="relative shrink-0">
+              <GroupAvatar groupId={group.groupId} size="lg" key={avatarVersion} />
+              <button
+                type="button"
+                title="Trocar foto do grupo"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute -right-1 -bottom-1 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-md transition-colors hover:text-foreground"
+              >
+                <Pencil size={12} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPickAvatar}
+                className="hidden"
+              />
+            </div>
+            <h2 className="flex-1 text-lg font-semibold text-popover-foreground">{group.groupName}</h2>
             <button
               type="button"
               title="Fechar"
@@ -100,6 +145,7 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
               <X size={20} />
             </button>
           </div>
+          {uploadError && <p className="px-6 pb-2 text-sm text-destructive">{uploadError}</p>}
 
           <div className="flex flex-col gap-4 px-6 pb-6">
             <div className="space-y-1.5">

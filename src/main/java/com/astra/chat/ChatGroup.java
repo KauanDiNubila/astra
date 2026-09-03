@@ -37,6 +37,11 @@ public class ChatGroup {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    private byte[] avatar;
+
+    @Column(name = "avatar_content_type", length = 50)
+    private String avatarContentType;
+
     public ChatGroup(String name, UUID createdBy) {
         this.name = name;
         this.createdBy = createdBy;

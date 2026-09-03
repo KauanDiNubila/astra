@@ -9,6 +9,8 @@ import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.social.FriendshipService;
 import com.astra.user.UserRepository;
+import com.astra.user.dto.AvatarData;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 // Criar grupo, adicionar membro, listar membros/conversas de grupo — fica
 // separado de ChatService de propósito: mensagem (criptografia, anexo,
@@ -79,6 +82,43 @@ public class ChatGroupService {
             throw new ConflictException("Usuário já está no grupo");
         }
         chatGroupMemberRepository.save(new ChatGroupMember(groupId, userId));
+    }
+
+    @Transactional
+    public void updateAvatar(UUID groupId, MultipartFile file) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+        ChatGroup group = chatGroupRepository.findById(groupId)
+                .orElseThrow(() -> new NotFoundException("Grupo não encontrado"));
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new ConflictException("Arquivo precisa ser uma imagem");
+        }
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new ConflictException("Imagem precisa ter até 2MB");
+        }
+        try {
+            group.setAvatar(file.getBytes());
+            group.setAvatarContentType(contentType);
+        } catch (IOException ex) {
+            throw new ConflictException("Não foi possível ler o arquivo");
+        }
+    }
+
+    // GET também passa por requireMember (diferente de UserService.avatar,
+    // que é público entre autenticados) — o resto do grupo já esconde a
+    // existência de quem não é membro, a foto segue a mesma regra.
+    @Transactional(readOnly = true)
+    public AvatarData avatar(UUID groupId) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+        ChatGroup group = chatGroupRepository.findById(groupId)
+                .orElseThrow(() -> new NotFoundException("Grupo não encontrado"));
+        if (group.getAvatar() == null) {
+            throw new NotFoundException("Grupo não encontrado");
+        }
+        return new AvatarData(group.getAvatar(), group.getAvatarContentType());
     }
 
     @Transactional(readOnly = true)

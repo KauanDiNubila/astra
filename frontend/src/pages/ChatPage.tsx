@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ImagePlus, Plus, Reply, Send, Users, Volume2, VolumeX, X } from "lucide-react"
+import { ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useReducedMotion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
+import { GroupAvatar } from "@/components/GroupAvatar"
 import { GroupInfoModal } from "@/components/GroupInfoModal"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { PageSkeleton } from "@/components/PageSkeleton"
@@ -120,6 +121,7 @@ export function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
   const reducedMotion = useReducedMotion()
+  const hadConversationRef = useRef(false)
 
   // formatRelativeTime só recalcula quando o componente re-renderiza — sem
   // isso, uma mensagem mandada "agora" continua mostrando "agora" pra
@@ -146,18 +148,22 @@ export function ChatPage() {
       markRead(friendId)
     }
     if (friendId || groupId) {
-      // Disparado via useAnimate em vez de key={friendId} + initial/animate:
-      // um motion.div remontado a cada troca de conversa reanima direitinho,
-      // mas em dev o StrictMode monta/desmonta/remonta de propósito uma vez
-      // a mais, e a animação de entrada tocava duas vezes seguidas (efeito
-      // "fantasma"). Sem remount, só um efeito disparando animate(), o
-      // pior caso do StrictMode é reiniciar a mesma transição no meio —
-      // imperceptível, não repete do zero.
-      animateConversation(
-        conversationScope.current,
-        { opacity: [0, 1], y: [6, 0] },
-        { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-      )
+      // Só anima a entrada ao sair de "nenhuma conversa selecionada" pra uma
+      // conversa — trocar entre conversas já abertas não deve reanimar o
+      // painel inteiro de novo (fica um "flash" repetindo por cima da
+      // transição anterior se ela ainda não tiver acabado). Também evita o
+      // duplo-disparo do StrictMode no primeiro mount, já que o ref não é
+      // resetado entre o mount/cleanup/remount sintético dele.
+      if (!hadConversationRef.current) {
+        animateConversation(
+          conversationScope.current,
+          reducedMotion ? { opacity: [0, 1] } : { opacity: [0, 1], y: [6, 0] },
+          { duration: reducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] },
+        )
+      }
+      hadConversationRef.current = true
+    } else {
+      hadConversationRef.current = false
     }
     return () => {
       setActiveFriendId(null)
@@ -371,8 +377,9 @@ export function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] gap-4">
-      <Card className="w-64 shrink-0 overflow-y-auto p-0">
+    <div className="h-[calc(100vh-9rem)]">
+      <Card className="flex h-full flex-row gap-0 overflow-hidden p-0">
+      <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-r">
         <div className="flex items-center justify-between px-4 py-2">
           <span className="text-xs font-medium text-muted-foreground">Conversas</span>
           <Button
@@ -389,36 +396,43 @@ export function ChatPage() {
         {conversations.length === 0 ? (
           <p className="px-4 pb-3 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="flex flex-col gap-0.5 p-2">
             {conversations.map((c) => (
               <li key={c.friendUserId} className="relative">
                 {c.friendUserId === friendId && (
                   <motion.div
-                    layoutId="chat-conversation-pill"
-                    className="absolute inset-0 bg-muted"
+                    layoutId="chat-conversation-pill-friend"
+                    className="absolute inset-0 rounded-lg bg-muted"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <Link
                   to={`/chat/${c.friendUserId}`}
-                  className="relative z-10 flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/50"
+                  className="relative z-10 flex flex-col gap-1 rounded-lg px-3 py-2.5 hover:bg-muted/50"
                 >
-                  <span className="flex items-center gap-2">
-                    <UserAvatar userId={c.friendUserId} name={c.friendName} size="sm" />
+                  <span className="flex items-center gap-2.5">
+                    <UserAvatar userId={c.friendUserId} name={c.friendName} size="default" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="flex min-w-0 items-center gap-1">
                           <span className="min-w-0 truncate font-medium">{c.friendName}</span>
                           {c.friendAdmin && <AdminBadge />}
                         </span>
+                        {c.lastMessageAt && (
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {formatRelativeTime(c.lastMessageAt)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+                          {c.lastMessage ?? "Nenhuma mensagem ainda"}
+                        </span>
                         {c.unreadCount > 0 && (
                           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
                             {c.unreadCount}
                           </span>
                         )}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {c.lastMessage ?? "Nenhuma mensagem ainda"}
                       </span>
                     </span>
                   </span>
@@ -428,7 +442,7 @@ export function ChatPage() {
           </ul>
         )}
 
-        <div className="flex items-center justify-between border-t px-4 py-2">
+        <div className="mt-2 flex items-center justify-between border-t px-4 py-2">
           <span className="text-xs font-medium text-muted-foreground">Grupos</span>
           <Button
             type="button"
@@ -442,35 +456,40 @@ export function ChatPage() {
           </Button>
         </div>
         {groupConversations.length > 0 && (
-          <ul className="divide-y">
+          <ul className="flex flex-col gap-0.5 p-2">
             {groupConversations.map((c) => (
               <li key={c.groupId} className="relative">
                 {c.groupId === groupId && (
                   <motion.div
-                    layoutId="chat-conversation-pill"
-                    className="absolute inset-0 bg-muted"
+                    layoutId="chat-conversation-pill-group"
+                    className="absolute inset-0 rounded-lg bg-muted"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <Link
                   to={`/chat/g/${c.groupId}`}
-                  className="relative z-10 flex flex-col gap-0.5 px-4 py-3 hover:bg-muted/50"
+                  className="relative z-10 flex flex-col gap-1 rounded-lg px-3 py-2.5 hover:bg-muted/50"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <Users className="size-4" />
-                    </span>
+                  <span className="flex items-center gap-2.5">
+                    <GroupAvatar groupId={c.groupId} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="min-w-0 truncate font-medium">{c.groupName}</span>
+                        {c.lastMessageAt && (
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {formatRelativeTime(c.lastMessageAt)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+                          {c.lastMessage ?? "Nenhuma mensagem ainda"}
+                        </span>
                         {c.unreadCount > 0 && (
                           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
                             {c.unreadCount}
                           </span>
                         )}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {c.lastMessage ?? "Nenhuma mensagem ainda"}
                       </span>
                     </span>
                   </span>
@@ -479,11 +498,9 @@ export function ChatPage() {
             ))}
           </ul>
         )}
-      </Card>
+      </div>
 
-      <CreateGroupModal open={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
-
-      <Card className="flex flex-1 flex-col p-0">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {!friendId && !groupId ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
             Selecione uma conversa.
@@ -497,9 +514,7 @@ export function ChatPage() {
                 disabled={!activeGroup}
                 className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Users className="size-4" />
-                </span>
+                <GroupAvatar groupId={groupId ?? ""} />
                 <span className="flex flex-col">
                   <span className="font-medium">{activeGroup?.groupName}</span>
                   <span className="text-xs text-muted-foreground">
@@ -542,9 +557,20 @@ export function ChatPage() {
               />
             )}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
-              <div ref={messagesContentRef} className="flex flex-col gap-2">
-                {messages.map((m) => {
+              <div ref={messagesContentRef} className="flex flex-col">
+                {messages.map((m, i) => {
                   const mine = m.senderId === user?.id
+                  const prev = messages[i - 1]
+                  const next = messages[i + 1]
+                  const GROUP_WINDOW_MS = 5 * 60 * 1000
+                  const groupedWithPrev =
+                    !!prev &&
+                    prev.senderId === m.senderId &&
+                    new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < GROUP_WINDOW_MS
+                  const groupedWithNext =
+                    !!next &&
+                    next.senderId === m.senderId &&
+                    new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() < GROUP_WINDOW_MS
                   const replyButton = (
                     <button
                       type="button"
@@ -562,13 +588,19 @@ export function ChatPage() {
                       initial={{ opacity: 0, scale: 0.94, y: 4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                      className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}
+                      className={cn(
+                        "group flex items-center gap-1",
+                        mine ? "justify-end" : "justify-start",
+                        groupedWithPrev ? "mt-0.5" : "mt-3 first:mt-0",
+                      )}
                     >
                       {mine && replyButton}
                       <div
-                        className={`relative max-w-[70%] overflow-hidden rounded-lg px-3 py-2 text-sm ${
-                          mine ? "bg-primary text-primary-foreground" : "bg-muted"
-                        }`}
+                        className={cn(
+                          "relative max-w-[70%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                          mine ? "bg-primary text-primary-foreground" : "bg-muted",
+                          !groupedWithNext && (mine ? "rounded-br-md" : "rounded-bl-md"),
+                        )}
                       >
                         {highlight?.id === m.id && (
                           <motion.div
@@ -583,7 +615,7 @@ export function ChatPage() {
                           />
                         )}
                         <div className="relative z-10">
-                          {isGroup && !mine && (
+                          {isGroup && !mine && !groupedWithPrev && (
                             <p className="mb-0.5 text-xs font-medium text-muted-foreground">
                               {memberName(m.senderId)}
                             </p>
@@ -718,8 +750,10 @@ export function ChatPage() {
             </form>
           </div>
         )}
+      </div>
       </Card>
 
+      <CreateGroupModal open={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
       <ImageLightbox messageId={lightboxMessageId} onClose={() => setLightboxMessageId(null)} />
     </div>
   )
