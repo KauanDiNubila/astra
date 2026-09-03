@@ -115,27 +115,8 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
           transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
           className="pointer-events-auto w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-lg"
         >
-          <div className="flex items-center gap-3 px-6 py-4">
-            <div className="relative shrink-0">
-              <GroupAvatar groupId={group.groupId} size="lg" key={avatarVersion} />
-              <button
-                type="button"
-                title="Trocar foto do grupo"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="absolute -right-1 -bottom-1 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-md transition-colors hover:text-foreground"
-              >
-                <Pencil size={12} />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={onPickAvatar}
-                className="hidden"
-              />
-            </div>
-            <h2 className="flex-1 text-lg font-semibold text-popover-foreground">{group.groupName}</h2>
+          <div className="flex items-center justify-between px-6 py-4">
+            <h2 className="text-lg font-semibold text-popover-foreground">Grupo</h2>
             <button
               type="button"
               title="Fechar"
@@ -145,9 +126,32 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
               <X size={20} />
             </button>
           </div>
-          {uploadError && <p className="px-6 pb-2 text-sm text-destructive">{uploadError}</p>}
 
-          <div className="flex flex-col gap-4 px-6 pb-6">
+          <div className="flex flex-col items-center gap-3 border-b border-border bg-card px-6 py-8">
+            <div className="relative shrink-0">
+              <GroupAvatar groupId={group.groupId} size="xl" key={avatarVersion} />
+              <button
+                type="button"
+                title="Trocar foto do grupo"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute -right-1 -bottom-1 rounded-full border border-border bg-card p-1.5 text-muted-foreground shadow-md transition-colors hover:text-foreground"
+              >
+                <Pencil size={14} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPickAvatar}
+                className="hidden"
+              />
+            </div>
+            <h3 className="text-center text-lg font-bold text-foreground">{group.groupName}</h3>
+            {uploadError && <p className="text-center text-sm text-destructive">{uploadError}</p>}
+          </div>
+
+          <div className="flex flex-col gap-4 px-6 py-6">
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
                 {members.length} {members.length === 1 ? "membro" : "membros"}
