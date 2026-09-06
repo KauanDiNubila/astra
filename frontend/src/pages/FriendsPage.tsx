@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { AdminBadge } from "@/components/AdminBadge"
+import { FounderBadge } from "@/components/FounderBadge"
 import { useFriends } from "@/context/FriendsContext"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -101,6 +102,7 @@ export function FriendsPage() {
                     <span className="flex items-center gap-1 font-medium">
                       {r.friendName}
                       {r.friendAdmin && <AdminBadge />}
+                      {r.friendFounder && <FounderBadge />}
                     </span>
                   </span>
                   <div className="flex gap-2">
@@ -139,6 +141,7 @@ export function FriendsPage() {
                     <span className="flex items-center gap-1 font-medium">
                       {r.friendName}
                       {r.friendAdmin && <AdminBadge />}
+                      {r.friendFounder && <FounderBadge />}
                     </span>
                   </span>
                   <Button
@@ -173,6 +176,7 @@ export function FriendsPage() {
                       <span className="flex items-center gap-1 font-medium">
                         {f.friendName}
                         {f.friendAdmin && <AdminBadge />}
+                        {f.friendFounder && <FounderBadge />}
                       </span>
                       {f.friendBio && (
                         <span className="text-xs text-muted-foreground">{f.friendBio}</span>

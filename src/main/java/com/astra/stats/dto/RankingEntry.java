@@ -7,6 +7,7 @@ public record RankingEntry(
         UUID userId,
         String name,
         long minutes,
-        boolean admin
+        boolean admin,
+        boolean founder
 ) {
 }

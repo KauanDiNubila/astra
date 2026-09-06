@@ -277,6 +277,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const friendTag = found?.friendTag ?? ""
     const friendBio = found?.friendBio ?? friend?.friendBio ?? null
     const friendAdmin = found?.friendAdmin ?? friend?.friendAdmin ?? false
+    const friendFounder = found?.friendFounder ?? friend?.friendFounder ?? false
     const friendGithubLogin = found?.friendGithubLogin ?? null
     const preview = message.content ?? "📷 Foto"
     const updated: ConversationSummary = {
@@ -285,6 +286,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       friendTag,
       friendBio,
       friendAdmin,
+      friendFounder,
       friendGithubLogin,
       lastMessage: preview,
       lastMessageAt: message.createdAt,

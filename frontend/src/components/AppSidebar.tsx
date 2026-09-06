@@ -20,6 +20,7 @@ import { baseURL } from "@/lib/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { AdminBadge } from "@/components/AdminBadge"
+import { FOUNDER_EMAIL, FounderBadge } from "@/components/FounderBadge"
 import { EditProfileModal } from "@/components/EditProfileModal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -143,6 +144,7 @@ export function AppSidebar() {
             <span className="flex items-center gap-1 truncate text-sm text-muted-foreground">
               {user?.name}
               {isStaff && <AdminBadge />}
+              {user?.email === FOUNDER_EMAIL && <FounderBadge />}
             </span>
             {user?.bio && <span className="truncate text-xs text-muted-foreground/70">{user.bio}</span>}
           </span>

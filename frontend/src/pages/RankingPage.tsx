@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { formatMinutes } from "@/lib/format"
 import type { RankingEntry } from "@/lib/types"
 import { AdminBadge } from "@/components/AdminBadge"
+import { FounderBadge } from "@/components/FounderBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -196,6 +197,7 @@ export function RankingPage() {
                             {entry.name}
                           </span>
                           {entry.admin && <AdminBadge />}
+                          {entry.founder && <FounderBadge />}
                         </span>
                       </span>
                       <span className="shrink-0 text-sm text-muted-foreground">

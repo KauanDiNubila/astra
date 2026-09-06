@@ -258,15 +258,16 @@ public class ChatService {
                     String friendBio = user != null ? user.getBio() : null;
                     boolean friendAdmin = user != null
                             && (User.ROLE_ADMIN.equals(user.getRole()) || User.ROLE_OWNER.equals(user.getRole()));
+                    boolean friendFounder = user != null && User.isFounderEmail(user.getEmail());
                     String friendGithubLogin = githubLoginByFriend.get(friendId);
                     long unread = unreadByFriend.getOrDefault(friendId, 0L);
                     MessageRepository.LastMessageView last = lastByFriend.get(friendId);
                     return last != null
                             ? new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
-                                    friendGithubLogin, lastMessageText(last),
+                                    friendFounder, friendGithubLogin, lastMessageText(last),
                                     last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
                             : new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
-                                    friendGithubLogin, null, null, unread);
+                                    friendFounder, friendGithubLogin, null, null, unread);
                 })
                 .sorted(Comparator.comparing(ConversationSummary::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
