@@ -174,32 +174,75 @@ public class UserService {
 
     @Transactional
     public void ban(UUID targetId) {
-        UUID me = currentUserProvider.currentUserId();
-        if (targetId.equals(me)) {
+        User actor = loadActor();
+        if (targetId.equals(actor.getId())) {
             throw new ConflictException("Não é possível banir a própria conta");
         }
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        requireStrictlyHigherRank(actor, target, "banir");
         target.setBannedAt(OffsetDateTime.now());
     }
 
     @Transactional
     public void unban(UUID targetId) {
+        User actor = loadActor();
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        requireStrictlyHigherRank(actor, target, "desbanir");
         target.setBannedAt(null);
     }
 
     @Transactional
     public void delete(UUID targetId) {
-        UUID me = currentUserProvider.currentUserId();
-        if (targetId.equals(me)) {
+        User actor = loadActor();
+        if (targetId.equals(actor.getId())) {
             throw new ConflictException("Não é possível excluir a própria conta");
         }
-        if (!userRepository.existsById(targetId)) {
-            throw new NotFoundException("Usuário não encontrado");
-        }
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        requireStrictlyHigherRank(actor, target, "excluir");
         userRepository.deleteById(targetId);
+    }
+
+    @Transactional
+    public void promote(UUID targetId) {
+        User actor = loadActor();
+        if (!User.ROLE_OWNER.equals(actor.getRole())) {
+            throw new ConflictException("Apenas o owner pode promover usuários a admin");
+        }
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        if (!User.ROLE_USER.equals(target.getRole())) {
+            throw new ConflictException("Só é possível promover usuários comuns a admin");
+        }
+        target.setRole(User.ROLE_ADMIN);
+    }
+
+    @Transactional
+    public void demote(UUID targetId) {
+        User actor = loadActor();
+        if (!User.ROLE_OWNER.equals(actor.getRole())) {
+            throw new ConflictException("Apenas o owner pode remover admins");
+        }
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+        if (!User.ROLE_ADMIN.equals(target.getRole())) {
+            throw new ConflictException("Só é possível remover privilégios de administradores");
+        }
+        target.setRole(User.ROLE_USER);
+    }
+
+    private User loadActor() {
+        UUID me = currentUserProvider.currentUserId();
+        return userRepository.findById(me)
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+    }
+
+    private void requireStrictlyHigherRank(User actor, User target, String action) {
+        if (User.rankOf(actor.getRole()) <= User.rankOf(target.getRole())) {
+            throw new ConflictException("Você não tem permissão para " + action + " esse usuário");
+        }
     }
 
     private UserResponse toDto(User user) {

@@ -270,7 +270,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                     </div>
                     <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
                       {name || user.name}
-                      {user.role === "ADMIN" && <AdminBadge />}
+                      {(user.role === "ADMIN" || user.role === "OWNER") && <AdminBadge />}
                     </h3>
                     {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
                   </div>

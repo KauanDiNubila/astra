@@ -39,6 +39,18 @@ public class AdminUserController {
         userService.unban(id);
     }
 
+    @PostMapping("/{id}/promote")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void promote(@PathVariable UUID id) {
+        userService.promote(id);
+    }
+
+    @PostMapping("/{id}/demote")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void demote(@PathVariable UUID id) {
+        userService.demote(id);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {

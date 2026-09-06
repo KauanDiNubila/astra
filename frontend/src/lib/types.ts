@@ -3,7 +3,7 @@ export type User = {
   name: string
   email: string
   bio: string | null
-  role: "USER" | "ADMIN"
+  role: "USER" | "ADMIN" | "OWNER"
   tag: string
 }
 
@@ -11,7 +11,7 @@ export type AdminUser = {
   id: string
   name: string
   email: string
-  role: "USER" | "ADMIN"
+  role: "USER" | "ADMIN" | "OWNER"
   banned: boolean
   createdAt: string
 }

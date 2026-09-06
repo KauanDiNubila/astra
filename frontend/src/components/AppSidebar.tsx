@@ -73,7 +73,8 @@ export function AppSidebar() {
     setLoggingOut(true)
     await logout()
   }
-  const visibleLinks = user?.role === "ADMIN" ? [...links, adminLink] : links
+  const isStaff = user?.role === "ADMIN" || user?.role === "OWNER"
+  const visibleLinks = isStaff ? [...links, adminLink] : links
 
   return (
     <Sidebar collapsible="icon">
@@ -139,7 +140,7 @@ export function AppSidebar() {
           <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="flex items-center gap-1 truncate text-sm text-muted-foreground">
               {user?.name}
-              {user?.role === "ADMIN" && <AdminBadge />}
+              {isStaff && <AdminBadge />}
             </span>
             {user?.bio && <span className="truncate text-xs text-muted-foreground/70">{user.bio}</span>}
           </span>

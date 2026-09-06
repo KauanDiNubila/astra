@@ -23,6 +23,15 @@ public class User {
 
     public static final String ROLE_USER = "USER";
     public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_OWNER = "OWNER";
+
+    public static int rankOf(String role) {
+        return switch (role) {
+            case ROLE_OWNER -> 2;
+            case ROLE_ADMIN -> 1;
+            default -> 0;
+        };
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -1,5 +1,6 @@
 package com.astra.shared.security;
 
+import com.astra.user.User;
 import com.astra.user.UserService;
 import com.astra.user.dto.AuthInfo;
 import jakarta.servlet.FilterChain;
@@ -35,8 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UUID userId = jwtService.extractUserId(header.substring(7));
                 AuthInfo authInfo = userService.authInfo(userId);
                 if (authInfo != null && !authInfo.banned()) {
-                    List<SimpleGrantedAuthority> authorities =
-                            List.of(new SimpleGrantedAuthority("ROLE_" + authInfo.role()));
+                    List<SimpleGrantedAuthority> authorities = authoritiesFor(authInfo.role());
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userId, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -48,5 +48,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    // OWNER precisa carregar ROLE_ADMIN também (senão o gate hasRole("ADMIN")
+    // em /admin/** bloquearia o próprio dono) — expandir aqui em vez de usar
+    // um RoleHierarchy do Spring, que exigiria conectar manualmente num
+    // WebExpressionAuthorizationManager pra valer dentro de authorizeHttpRequests.
+    private static List<SimpleGrantedAuthority> authoritiesFor(String role) {
+        List<String> roles = switch (role) {
+            case User.ROLE_OWNER -> List.of(User.ROLE_OWNER, User.ROLE_ADMIN, User.ROLE_USER);
+            case User.ROLE_ADMIN -> List.of(User.ROLE_ADMIN, User.ROLE_USER);
+            default -> List.of(User.ROLE_USER);
+        };
+        return roles.stream().map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toList();
     }
 }

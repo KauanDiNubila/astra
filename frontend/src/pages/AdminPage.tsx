@@ -26,6 +26,8 @@ const filters = [
 
 type FilterKey = (typeof filters)[number]["key"]
 
+const ROLE_RANK: Record<AdminUser["role"], number> = { USER: 0, ADMIN: 1, OWNER: 2 }
+
 export function AdminPage() {
   const { user } = useAuth()
 
@@ -89,6 +91,30 @@ export function AdminPage() {
     }
   }
 
+  async function promote(id: string) {
+    setBusyId(id)
+    try {
+      await api.post(`/admin/users/${id}/promote`)
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: "ADMIN" } : u)))
+    } catch {
+      toast.error("Não foi possível promover esse usuário.")
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function demote(id: string) {
+    setBusyId(id)
+    try {
+      await api.post(`/admin/users/${id}/demote`)
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: "USER" } : u)))
+    } catch {
+      toast.error("Não foi possível remover admin desse usuário.")
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   if (loading) {
     return <PageSkeleton rows={5} />
   }
@@ -102,7 +128,7 @@ export function AdminPage() {
     .filter((u) => {
       if (filter === "ACTIVE") return !u.banned
       if (filter === "BANNED") return u.banned
-      if (filter === "ADMIN") return u.role === "ADMIN"
+      if (filter === "ADMIN") return u.role === "ADMIN" || u.role === "OWNER"
       return true
     })
     .filter((u) => !query || u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
@@ -161,6 +187,9 @@ export function AdminPage() {
               <ul className="flex flex-col divide-y">
                 {filteredUsers.map((u) => {
                   const isMe = u.id === user?.id
+                  const myRank = ROLE_RANK[user?.role ?? "USER"]
+                  const canAct = myRank > ROLE_RANK[u.role]
+                  const canPromoteOrDemote = user?.role === "OWNER" && u.role !== "OWNER"
                   return (
                     <li
                       key={u.id}
@@ -172,6 +201,7 @@ export function AdminPage() {
                           <span className="flex flex-wrap items-center gap-2 font-medium">
                             {u.name}
                             {u.role === "ADMIN" && <Badge variant="secondary">Admin</Badge>}
+                            {u.role === "OWNER" && <Badge variant="secondary">Owner</Badge>}
                             {u.banned && <Badge variant="destructive">Banido</Badge>}
                           </span>
                           <span className="truncate text-sm text-muted-foreground">
@@ -180,8 +210,19 @@ export function AdminPage() {
                         </span>
                       </span>
 
-                      {!isMe && (
+                      {!isMe && canAct && (
                         <div className="flex shrink-0 items-center gap-2">
+                          {canPromoteOrDemote && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={busyId === u.id}
+                              onClick={() => (u.role === "ADMIN" ? demote(u.id) : promote(u.id))}
+                            >
+                              {u.role === "ADMIN" ? "Remover admin" : "Tornar admin"}
+                            </Button>
+                          )}
                           {u.banned ? (
                             <Button
                               type="button"
