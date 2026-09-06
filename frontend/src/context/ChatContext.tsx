@@ -274,12 +274,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const friendName = found?.friendName ?? friend?.friendName ?? "Contato"
     const friendBio = found?.friendBio ?? friend?.friendBio ?? null
     const friendAdmin = found?.friendAdmin ?? friend?.friendAdmin ?? false
+    const friendAccentColor = found?.friendAccentColor ?? null
+    const friendProfileEffect = found?.friendProfileEffect ?? null
     const preview = message.content ?? "📷 Foto"
     const updated: ConversationSummary = {
       friendUserId: otherId,
       friendName,
       friendBio,
       friendAdmin,
+      friendAccentColor,
+      friendProfileEffect,
       lastMessage: preview,
       lastMessageAt: message.createdAt,
       unreadCount: (found?.unreadCount ?? 0) + 1,

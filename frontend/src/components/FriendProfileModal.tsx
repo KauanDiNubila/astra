@@ -5,6 +5,8 @@ import { X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
+import { ProfileBanner } from "@/components/ProfileBanner"
+import { baseURL } from "@/lib/api"
 
 type Props = {
   friend: ConversationSummary | null
@@ -77,8 +79,18 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-8">
-            <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
+          <div className="flex flex-col items-center gap-3 overflow-hidden rounded-xl border border-border bg-card pb-8">
+            <ProfileBanner
+              bannerUrl={`${baseURL}/users/${friend.friendUserId}/banner`}
+              accentColor={friend.friendAccentColor}
+              effect={friend.friendProfileEffect}
+            />
+            <UserAvatar
+              userId={friend.friendUserId}
+              name={friend.friendName}
+              size="xl"
+              className="-mt-12 ring-4 ring-card"
+            />
             <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
               {friend.friendName}
               {friend.friendAdmin && <AdminBadge />}

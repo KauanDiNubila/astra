@@ -10,6 +10,10 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ProfileBanner } from "@/components/ProfileBanner"
+import { PROFILE_EFFECT_OPTIONS } from "@/components/ProfileEffect"
+import type { ProfileEffect } from "@/lib/types"
 
 type Props = {
   open: boolean
@@ -28,11 +32,17 @@ export function EditProfileModal({ open, onClose }: Props) {
   const reducedMotion = useReducedMotion()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+
   const [name, setName] = useState("")
   const [bio, setBio] = useState("")
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [accentColor, setAccentColor] = useState<string | null>(null)
+  const [profileEffect, setProfileEffect] = useState<ProfileEffect | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rendered, setRendered] = useState(open)
@@ -72,6 +82,10 @@ export function EditProfileModal({ open, onClose }: Props) {
     setAvatarFile(null)
     setAvatarPreview(null)
     setImgError(false)
+    setBannerFile(null)
+    setBannerPreview(null)
+    setAccentColor(user.accentColor)
+    setProfileEffect(user.profileEffect)
     setError(null)
     setChangingPassword(false)
     setCurrentPassword("")
@@ -85,6 +99,12 @@ export function EditProfileModal({ open, onClose }: Props) {
       if (avatarPreview) URL.revokeObjectURL(avatarPreview)
     }
   }, [avatarPreview])
+
+  useEffect(() => {
+    return () => {
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+    }
+  }, [bannerPreview])
 
   useEffect(() => {
     if (!rendered) return
@@ -115,16 +135,29 @@ export function EditProfileModal({ open, onClose }: Props) {
     setImgError(false)
   }
 
+  function onPickBanner(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+    setBannerFile(file)
+    setBannerPreview(URL.createObjectURL(file))
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     setSaving(true)
     try {
-      await api.put("/me", { name, bio: bio.trim() || null })
+      await api.put("/me", { name, bio: bio.trim() || null, accentColor, profileEffect })
       if (avatarFile) {
         const formData = new FormData()
         formData.append("file", avatarFile)
         await api.post("/me/avatar", formData)
+      }
+      if (bannerFile) {
+        const formData = new FormData()
+        formData.append("file", bannerFile)
+        await api.post("/me/banner", formData)
       }
       await refreshUser()
       onClose()
@@ -154,6 +187,7 @@ export function EditProfileModal({ open, onClose }: Props) {
   const existingAvatarUrl = user ? `${baseURL}/users/${user.id}/avatar` : null
   const avatarSrc = avatarPreview ?? existingAvatarUrl
   const showImg = avatarSrc && !imgError
+  const bannerSrc = bannerPreview ?? (user ? `${baseURL}/users/${user.id}/banner` : null)
 
   return createPortal(
     <motion.div
@@ -233,22 +267,81 @@ export function EditProfileModal({ open, onClose }: Props) {
                         maxLength={80}
                       />
                     </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="profile-accent-color">Cor de destaque</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="profile-accent-color"
+                          type="color"
+                          value={accentColor ?? "#8b5cf6"}
+                          onChange={(e) => setAccentColor(e.target.value)}
+                          className="size-9 cursor-pointer rounded-md border border-input bg-transparent p-1"
+                        />
+                        {accentColor && (
+                          <button
+                            type="button"
+                            onClick={() => setAccentColor(null)}
+                            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                          >
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="profile-effect">Efeito de perfil</Label>
+                      <Select
+                        value={profileEffect ?? "NONE"}
+                        onValueChange={(v) => setProfileEffect(v === "NONE" ? null : (v as ProfileEffect))}
+                      >
+                        <SelectTrigger id="profile-effect" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NONE">Nenhum</SelectItem>
+                          {PROFILE_EFFECT_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="w-full border-t border-dashed border-border md:w-px md:border-t-0 md:border-l" />
 
-                  <div className="flex flex-1 flex-col items-center justify-center p-6">
-                    <span className="mb-4 text-sm font-medium text-muted-foreground">Preview</span>
-                    <div className="relative mb-4">
+                  <div className="flex flex-1 flex-col items-center">
+                    <ProfileBanner bannerUrl={bannerSrc} accentColor={accentColor} effect={profileEffect} className="w-full">
+                      <button
+                        type="button"
+                        title="Trocar capa"
+                        onClick={() => bannerInputRef.current?.click()}
+                        className="absolute right-2 top-2 rounded-full border border-border bg-card/90 p-1.5 text-muted-foreground shadow-md backdrop-blur transition-colors hover:text-foreground"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </ProfileBanner>
+                    <input
+                      ref={bannerInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={onPickBanner}
+                      className="hidden"
+                    />
+
+                    <div className="relative -mt-12 mb-4">
                       {showImg ? (
                         <img
                           src={avatarSrc}
                           alt="Avatar"
                           onError={() => setImgError(true)}
-                          className="size-32 rounded-full object-cover ring-1 ring-border"
+                          className="size-32 rounded-full object-cover ring-4 ring-card"
                         />
                       ) : (
-                        <div className="flex size-32 items-center justify-center rounded-full bg-muted text-3xl text-muted-foreground ring-1 ring-border">
+                        <div className="flex size-32 items-center justify-center rounded-full bg-muted text-3xl text-muted-foreground ring-4 ring-card">
                           {initials(name || user.name)}
                         </div>
                       )}
@@ -268,11 +361,13 @@ export function EditProfileModal({ open, onClose }: Props) {
                         className="hidden"
                       />
                     </div>
-                    <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
-                      {name || user.name}
-                      {(user.role === "ADMIN" || user.role === "OWNER") && <AdminBadge />}
-                    </h3>
-                    {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
+                    <div className="flex flex-col items-center gap-1 px-6 pb-6">
+                      <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
+                        {name || user.name}
+                        {(user.role === "ADMIN" || user.role === "OWNER") && <AdminBadge />}
+                      </h3>
+                      {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
+                    </div>
                   </div>
                 </div>
 

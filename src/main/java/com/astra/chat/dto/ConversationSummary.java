@@ -8,6 +8,8 @@ public record ConversationSummary(
         String friendName,
         String friendBio,
         boolean friendAdmin,
+        String friendAccentColor,
+        String friendProfileEffect,
         String lastMessage,
         OffsetDateTime lastMessageAt,
         long unreadCount) {
