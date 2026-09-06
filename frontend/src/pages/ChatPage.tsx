@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from "react"
-import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
+import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
-import { motion, useAnimate, useReducedMotion } from "motion/react"
+import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
@@ -70,6 +70,43 @@ function AttachmentImage({
   )
 }
 
+const IS_TOUCH_DEVICE = typeof window !== "undefined" && "ontouchstart" in window
+const SWIPE_REPLY_TRIGGER_PX = 40
+const SWIPE_REPLY_MAX_PX = 56
+
+// Swipe-to-reply (estilo WhatsApp) só faz sentido em touch — no mouse já
+// existe o duplo-clique e o ícone de hover, arrastar com mouse atrapalharia
+// seleção de texto.
+function SwipeableMessage({ onReply, children }: { onReply: () => void; children: ReactNode }) {
+  const x = useMotionValue(0)
+  const iconOpacity = useTransform(x, [0, SWIPE_REPLY_TRIGGER_PX], [0, 1])
+
+  if (!IS_TOUCH_DEVICE) return <>{children}</>
+
+  return (
+    <div className="relative">
+      <motion.div
+        style={{ opacity: iconOpacity }}
+        className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-1 text-muted-foreground"
+      >
+        <Reply className="size-4" />
+      </motion.div>
+      <motion.div
+        drag="x"
+        style={{ x }}
+        dragConstraints={{ left: 0, right: SWIPE_REPLY_MAX_PX }}
+        dragElastic={0.15}
+        dragSnapToOrigin
+        onDragEnd={(_, info) => {
+          if (info.offset.x > SWIPE_REPLY_TRIGGER_PX) onReply()
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  )
+}
+
 type PendingImage = {
   file: File
   previewUrl: string
@@ -105,8 +142,12 @@ export function ChatPage() {
   const [draft, setDraft] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [displayedReplyingTo, setDisplayedReplyingTo] = useState<Message | null>(null)
+  const draftTextareaRef = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
-    if (replyingTo) setDisplayedReplyingTo(replyingTo)
+    if (replyingTo) {
+      setDisplayedReplyingTo(replyingTo)
+      draftTextareaRef.current?.focus()
+    }
   }, [replyingTo])
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
   const [sendingImage, setSendingImage] = useState(false)
@@ -593,9 +634,18 @@ export function ChatPage() {
                         mine ? "justify-end" : "justify-start",
                         groupedWithPrev ? "mt-0.5" : "mt-3 first:mt-0",
                       )}
+                      onDoubleClick={(e) => {
+                        // só conta clique fora da bolha (do lado/na mesma linha) —
+                        // duplo-clique no texto continua selecionando normalmente.
+                        if ((e.target as HTMLElement).closest("[data-message-bubble]")) return
+                        window.getSelection()?.removeAllRanges()
+                        setReplyingTo(m)
+                      }}
                     >
                       {mine && replyButton}
+                      <SwipeableMessage onReply={() => setReplyingTo(m)}>
                       <div
+                        data-message-bubble
                         className={cn(
                           "relative max-w-[70%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                           mine ? "bg-primary text-primary-foreground" : "bg-muted",
@@ -655,6 +705,7 @@ export function ChatPage() {
                           </p>
                         </div>
                       </div>
+                      </SwipeableMessage>
                       {!mine && replyButton}
                     </motion.div>
                   )
@@ -736,6 +787,7 @@ export function ChatPage() {
               </Button>
               <div className="flex-1">
                 <Textarea
+                  ref={draftTextareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}

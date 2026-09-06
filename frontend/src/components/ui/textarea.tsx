@@ -38,7 +38,10 @@ const MIRRORED_STYLE_PROPS = [
 const TEXTAREA_CLASS =
   "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
 
-function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...props }: React.ComponentProps<"textarea">) {
+const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(function Textarea(
+  { className, style, value, defaultValue, onChange, onBlur, ...props },
+  forwardedRef,
+) {
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? "")
   const isControlled = value !== undefined
   const textValue = isControlled ? value : internalValue
@@ -158,7 +161,11 @@ function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...
     <div ref={containerRef} className="relative grid grid-cols-1" style={{ caretColor: "transparent" }}>
       <textarea
         {...props}
-        ref={textareaRef}
+        ref={(node) => {
+          textareaRef.current = node
+          if (typeof forwardedRef === "function") forwardedRef(node)
+          else if (forwardedRef) forwardedRef.current = node
+        }}
         data-slot="textarea"
         className={cn(TEXTAREA_CLASS, "col-start-1 col-end-2 row-start-1 row-end-2", className)}
         style={style}
@@ -187,6 +194,6 @@ function Textarea({ className, style, value, defaultValue, onChange, onBlur, ...
       />
     </div>
   )
-}
+})
 
 export { Textarea }
