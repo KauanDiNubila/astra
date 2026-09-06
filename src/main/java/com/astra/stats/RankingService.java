@@ -53,7 +53,8 @@ public class RankingService {
             UserRepository.NameBioView user = users.get(row.userId());
             String name = user != null ? user.getName() : "";
             boolean admin = user != null && User.ROLE_ADMIN.equals(user.getRole());
-            entries.add(new RankingEntry(position++, row.userId(), name, row.minutes(), admin));
+            boolean founder = user != null && User.isFounderEmail(user.getEmail());
+            entries.add(new RankingEntry(position++, row.userId(), name, row.minutes(), admin, founder));
         }
         return entries;
     }

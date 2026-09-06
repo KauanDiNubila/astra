@@ -249,12 +249,14 @@ public class ChatService {
                     String friendName = user != null ? user.getName() : "";
                     String friendBio = user != null ? user.getBio() : null;
                     boolean friendAdmin = user != null && User.ROLE_ADMIN.equals(user.getRole());
+                    boolean friendFounder = user != null && User.isFounderEmail(user.getEmail());
                     long unread = unreadByFriend.getOrDefault(friendId, 0L);
                     MessageRepository.LastMessageView last = lastByFriend.get(friendId);
                     return last != null
-                            ? new ConversationSummary(friendId, friendName, friendBio, friendAdmin, lastMessageText(last),
-                                    last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
-                            : new ConversationSummary(friendId, friendName, friendBio, friendAdmin, null, null, unread);
+                            ? new ConversationSummary(friendId, friendName, friendBio, friendAdmin, friendFounder,
+                                    lastMessageText(last), last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
+                            : new ConversationSummary(friendId, friendName, friendBio, friendAdmin, friendFounder, null, null,
+                                    unread);
                 })
                 .sorted(Comparator.comparing(ConversationSummary::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))

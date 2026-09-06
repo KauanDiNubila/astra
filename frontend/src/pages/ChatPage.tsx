@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
+import { FounderBadge } from "@/components/FounderBadge"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
 import { GroupAvatar } from "@/components/GroupAvatar"
@@ -417,6 +418,7 @@ export function ChatPage() {
                         <span className="flex min-w-0 items-center gap-1">
                           <span className="min-w-0 truncate font-medium">{c.friendName}</span>
                           {c.friendAdmin && <AdminBadge />}
+                          {c.friendFounder && <FounderBadge />}
                         </span>
                         {c.lastMessageAt && (
                           <span className="shrink-0 text-[11px] text-muted-foreground">
@@ -536,6 +538,7 @@ export function ChatPage() {
                   <span className="flex items-center gap-1 font-medium">
                     {activeFriend?.friendName}
                     {activeFriend?.friendAdmin && <AdminBadge />}
+                    {activeFriend?.friendFounder && <FounderBadge />}
                   </span>
                   {activeFriend?.friendBio && (
                     <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
