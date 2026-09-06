@@ -58,6 +58,17 @@ public class User {
     @Column(name = "avatar_content_type", length = 50)
     private String avatarContentType;
 
+    private byte[] banner;
+
+    @Column(name = "banner_content_type", length = 50)
+    private String bannerContentType;
+
+    @Column(name = "accent_color", length = 7)
+    private String accentColor;
+
+    @Column(name = "profile_effect", length = 20)
+    private String profileEffect;
+
     @Column(nullable = false, length = 20)
     private String role = ROLE_USER;
 

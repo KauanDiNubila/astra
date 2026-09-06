@@ -102,7 +102,8 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse get(UUID userId) {
         return userRepository.findSummaryById(userId)
-                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole(), v.getTag()))
+                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole(), v.getTag(),
+                        v.getAccentColor(), v.getProfileEffect()))
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
     }
 
@@ -131,6 +132,8 @@ public class UserService {
         }
         user.setName(newName);
         user.setBio(request.bio());
+        user.setAccentColor(request.accentColor());
+        user.setProfileEffect(request.profileEffect());
         return toDto(user);
     }
 
@@ -181,6 +184,38 @@ public class UserService {
             throw new NotFoundException("Não encontrado");
         }
         return new AvatarData(user.getAvatar(), user.getAvatarContentType());
+    }
+
+    @Transactional
+    public void updateBanner(MultipartFile file) {
+        UUID userId = currentUserProvider.currentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new ConflictException("Arquivo precisa ser uma imagem");
+        }
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new ConflictException("Imagem precisa ter até 2MB");
+        }
+
+        try {
+            user.setBanner(file.getBytes());
+            user.setBannerContentType(contentType);
+        } catch (IOException ex) {
+            throw new ConflictException("Não foi possível ler o arquivo");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public AvatarData banner(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Não encontrado"));
+        if (user.getBanner() == null) {
+            throw new NotFoundException("Não encontrado");
+        }
+        return new AvatarData(user.getBanner(), user.getBannerContentType());
     }
 
     @Transactional(readOnly = true)
@@ -273,6 +308,6 @@ public class UserService {
 
     private UserResponse toDto(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole(),
-                user.getTag());
+                user.getTag(), user.getAccentColor(), user.getProfileEffect());
     }
 }
