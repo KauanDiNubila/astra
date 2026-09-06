@@ -47,7 +47,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className={cn("mx-auto w-full px-6 py-8", !isChatRoute && "max-w-5xl")}
+            className={cn("mx-auto w-full py-8", isChatRoute ? "px-0 sm:px-6" : "max-w-5xl px-6")}
           >
             {children}
           </motion.div>

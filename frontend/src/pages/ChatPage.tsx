@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
+import { ChevronLeft, ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useReducedMotion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
@@ -378,8 +378,13 @@ export function ChatPage() {
 
   return (
     <div className="h-[calc(100vh-9rem)]">
-      <Card className="flex h-full flex-row gap-0 overflow-hidden p-0">
-      <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-r">
+      <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-xl">
+      <div
+        className={cn(
+          "flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-64",
+          (friendId || groupId) && "hidden sm:flex",
+        )}
+      >
         <div className="flex items-center justify-between px-4 py-2">
           <span className="text-xs font-medium text-muted-foreground">Conversas</span>
           <Button
@@ -500,49 +505,54 @@ export function ChatPage() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className={cn("flex flex-1 flex-col overflow-hidden", !(friendId || groupId) && "hidden sm:flex")}>
         {!friendId && !groupId ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
             Selecione uma conversa.
           </div>
         ) : (
           <div ref={conversationScope} className="flex flex-1 flex-col overflow-hidden">
-            {isGroup ? (
-              <button
-                type="button"
-                onClick={() => setProfileModalOpen(true)}
-                disabled={!activeGroup}
-                className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
-              >
-                <GroupAvatar groupId={groupId ?? ""} />
-                <span className="flex flex-col">
-                  <span className="font-medium">{activeGroup?.groupName}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {activeGroupMembers.length > 0
-                      ? `${activeGroupMembers.length} membros`
-                      : activeGroup?.memberNames.join(", ")}
+            <div className="flex items-center border-b">
+              <Link to="/chat" aria-label="Voltar" className="p-3 text-muted-foreground hover:text-foreground sm:hidden">
+                <ChevronLeft className="size-5" />
+              </Link>
+              {isGroup ? (
+                <button
+                  type="button"
+                  onClick={() => setProfileModalOpen(true)}
+                  disabled={!activeGroup}
+                  className="flex flex-1 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent sm:pl-4"
+                >
+                  <GroupAvatar groupId={groupId ?? ""} />
+                  <span className="flex flex-col">
+                    <span className="font-medium">{activeGroup?.groupName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {activeGroupMembers.length > 0
+                        ? `${activeGroupMembers.length} membros`
+                        : activeGroup?.memberNames.join(", ")}
+                    </span>
                   </span>
-                </span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setProfileModalOpen(true)}
-                disabled={!activeFriend}
-                className="flex items-center gap-2 border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
-              >
-                {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
-                <span className="flex flex-col">
-                  <span className="flex items-center gap-1 font-medium">
-                    {activeFriend?.friendName}
-                    {activeFriend?.friendAdmin && <AdminBadge />}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setProfileModalOpen(true)}
+                  disabled={!activeFriend}
+                  className="flex flex-1 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent sm:pl-4"
+                >
+                  {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
+                  <span className="flex flex-col">
+                    <span className="flex items-center gap-1 font-medium">
+                      {activeFriend?.friendName}
+                      {activeFriend?.friendAdmin && <AdminBadge />}
+                    </span>
+                    {activeFriend?.friendBio && (
+                      <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
+                    )}
                   </span>
-                  {activeFriend?.friendBio && (
-                    <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
-                  )}
-                </span>
-              </button>
-            )}
+                </button>
+              )}
+            </div>
             {isGroup ? (
               <GroupInfoModal
                 group={activeGroup ?? null}
