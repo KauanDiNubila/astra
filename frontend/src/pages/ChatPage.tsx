@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from "react"
-import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from "react"
+import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ChevronLeft, ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
-import { motion, useAnimate, useReducedMotion } from "motion/react"
+import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
@@ -67,6 +67,43 @@ function AttachmentImage({
         className="max-h-64 max-w-full rounded-md object-cover"
       />
     </button>
+  )
+}
+
+const IS_TOUCH_DEVICE = typeof window !== "undefined" && "ontouchstart" in window
+const SWIPE_REPLY_TRIGGER_PX = 40
+const SWIPE_REPLY_MAX_PX = 56
+
+// Swipe-to-reply (estilo WhatsApp) só faz sentido em touch — no mouse já
+// existe o duplo-clique e o ícone de hover, arrastar com mouse atrapalharia
+// seleção de texto.
+function SwipeableMessage({ onReply, children }: { onReply: () => void; children: ReactNode }) {
+  const x = useMotionValue(0)
+  const iconOpacity = useTransform(x, [0, SWIPE_REPLY_TRIGGER_PX], [0, 1])
+
+  if (!IS_TOUCH_DEVICE) return <>{children}</>
+
+  return (
+    <div className="relative">
+      <motion.div
+        style={{ opacity: iconOpacity }}
+        className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-1 text-muted-foreground"
+      >
+        <Reply className="size-4" />
+      </motion.div>
+      <motion.div
+        drag="x"
+        style={{ x }}
+        dragConstraints={{ left: 0, right: SWIPE_REPLY_MAX_PX }}
+        dragElastic={0.15}
+        dragSnapToOrigin
+        onDragEnd={(_, info) => {
+          if (info.offset.x > SWIPE_REPLY_TRIGGER_PX) onReply()
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
   )
 }
 
@@ -282,6 +319,11 @@ export function ChatPage() {
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friendId, groupId, ready])
+
+  function startReply(message: Message) {
+    setReplyingTo(message)
+    textareaRef.current?.focus()
+  }
 
   function jumpToMessage(id: string) {
     const el = document.getElementById(`message-${id}`)
@@ -586,10 +628,7 @@ export function ChatPage() {
                     <button
                       type="button"
                       title="Responder"
-                      onClick={() => {
-                        setReplyingTo(m)
-                        textareaRef.current?.focus()
-                      }}
+                      onClick={() => startReply(m)}
                       className="shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
                     >
                       <Reply className="size-3.5" />
@@ -602,6 +641,14 @@ export function ChatPage() {
                       initial={{ opacity: 0, scale: 0.94, y: 4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                      onDoubleClick={(e) => {
+                        // duplo-clique na bolha continua selecionando o texto
+                        // normalmente — só fora dela (do lado/na mesma linha)
+                        // dispara a resposta.
+                        if ((e.target as HTMLElement).closest("[data-message-bubble]")) return
+                        window.getSelection()?.removeAllRanges()
+                        startReply(m)
+                      }}
                       className={cn(
                         "group flex items-center gap-1",
                         mine ? "justify-end" : "justify-start",
@@ -609,7 +656,9 @@ export function ChatPage() {
                       )}
                     >
                       {mine && replyButton}
+                      <SwipeableMessage onReply={() => startReply(m)}>
                       <div
+                        data-message-bubble
                         className={cn(
                           "relative max-w-[70%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                           mine ? "bg-primary text-primary-foreground" : "bg-muted",
@@ -669,6 +718,7 @@ export function ChatPage() {
                           </p>
                         </div>
                       </div>
+                      </SwipeableMessage>
                       {!mine && replyButton}
                     </motion.div>
                   )
