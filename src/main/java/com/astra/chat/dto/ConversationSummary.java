@@ -6,6 +6,7 @@ import java.util.UUID;
 public record ConversationSummary(
         UUID friendUserId,
         String friendName,
+        String friendTag,
         String friendBio,
         boolean friendAdmin,
         String lastMessage,

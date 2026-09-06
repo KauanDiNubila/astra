@@ -216,15 +216,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     })
     if (alreadySeen) return
 
-    if (message.senderId === me) return
-
-    pingIfUnseen(activeGroupIdRef.current === groupId)
-
-    if (activeGroupIdRef.current === groupId) {
-      markGroupRead(groupId)
-      return
-    }
-
+    // Prévia da lista lateral: precisa atualizar sempre — mensagem própria
+    // ou a conversa já estar aberta não pode pular isso, senão a prévia
+    // fica presa na última mensagem antes da conversa "ficar em foco".
+    const isOpen = activeGroupIdRef.current === groupId
+    const bumpUnread = message.senderId !== me && !isOpen
     const found = groupConversationsRef.current.find((c) => c.groupId === groupId)
     const groupName = found?.groupName ?? "Grupo"
     const preview = message.content ?? "📷 Foto"
@@ -234,9 +230,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       memberNames: found?.memberNames ?? [],
       lastMessage: preview,
       lastMessageAt: message.createdAt,
-      unreadCount: (found?.unreadCount ?? 0) + 1,
+      unreadCount: bumpUnread ? (found?.unreadCount ?? 0) + 1 : (found?.unreadCount ?? 0),
     }
     setGroupConversations((prev) => (found ? prev.map((c) => (c.groupId === groupId ? updated : c)) : [...prev, updated]))
+
+    if (message.senderId === me) return
+
+    pingIfUnseen(isOpen)
+
+    if (isOpen) {
+      markGroupRead(groupId)
+      return
+    }
+
     toast(`${groupName}: ${preview}`)
   }
 
@@ -260,33 +266,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     })
     if (alreadySeen) return
 
-    if (message.senderId === me) return
-
-    pingIfUnseen(activeFriendIdRef.current === otherId)
-
-    if (activeFriendIdRef.current === otherId) {
-      markRead(otherId)
-      return
-    }
-
+    // Prévia da lista lateral: precisa atualizar sempre — mensagem própria
+    // ou a conversa já estar aberta não pode pular isso, senão a prévia
+    // fica presa na última mensagem antes da conversa "ficar em foco".
+    const isOpen = activeFriendIdRef.current === otherId
+    const bumpUnread = message.senderId !== me && !isOpen
     const found = conversationsRef.current.find((c) => c.friendUserId === otherId)
     const friend = friendsRef.current.find((f) => f.friendUserId === otherId)
     const friendName = found?.friendName ?? friend?.friendName ?? "Contato"
+    const friendTag = found?.friendTag ?? ""
     const friendBio = found?.friendBio ?? friend?.friendBio ?? null
     const friendAdmin = found?.friendAdmin ?? friend?.friendAdmin ?? false
     const preview = message.content ?? "📷 Foto"
     const updated: ConversationSummary = {
       friendUserId: otherId,
       friendName,
+      friendTag,
       friendBio,
       friendAdmin,
       lastMessage: preview,
       lastMessageAt: message.createdAt,
-      unreadCount: (found?.unreadCount ?? 0) + 1,
+      unreadCount: bumpUnread ? (found?.unreadCount ?? 0) + 1 : (found?.unreadCount ?? 0),
     }
     setConversations((prev) =>
       found ? prev.map((c) => (c.friendUserId === otherId ? updated : c)) : [...prev, updated],
     )
+
+    if (message.senderId === me) return
+
+    pingIfUnseen(isOpen)
+
+    if (isOpen) {
+      markRead(otherId)
+      return
+    }
+
     toast(`${friendName}: ${preview}`)
   }
 

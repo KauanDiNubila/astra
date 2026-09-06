@@ -247,14 +247,16 @@ public class ChatService {
                 .map(friendId -> {
                     UserRepository.NameBioView user = usersById.get(friendId);
                     String friendName = user != null ? user.getName() : "";
+                    String friendTag = user != null ? user.getTag() : "";
                     String friendBio = user != null ? user.getBio() : null;
                     boolean friendAdmin = user != null && User.ROLE_ADMIN.equals(user.getRole());
                     long unread = unreadByFriend.getOrDefault(friendId, 0L);
                     MessageRepository.LastMessageView last = lastByFriend.get(friendId);
                     return last != null
-                            ? new ConversationSummary(friendId, friendName, friendBio, friendAdmin, lastMessageText(last),
-                                    last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
-                            : new ConversationSummary(friendId, friendName, friendBio, friendAdmin, null, null, unread);
+                            ? new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
+                                    lastMessageText(last), last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
+                            : new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin, null,
+                                    null, unread);
                 })
                 .sorted(Comparator.comparing(ConversationSummary::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))

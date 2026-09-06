@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { X } from "lucide-react"
+import { Check, Copy, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -15,6 +15,18 @@ type Props = {
 export function FriendProfileModal({ friend, open, onClose }: Props) {
   const reducedMotion = useReducedMotion()
   const [rendered, setRendered] = useState(open)
+  const [copied, setCopied] = useState(false)
+
+  async function copyHandle() {
+    if (!friend) return
+    try {
+      await navigator.clipboard.writeText(`${friend.friendName}#${friend.friendTag}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // permissão de clipboard negada pelo navegador — sem feedback, mas não quebra a tela
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -77,15 +89,30 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-8">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-6 py-8">
             <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
-            <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
+            <h3 className="mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground">
               {friend.friendName}
               {friend.friendAdmin && <AdminBadge />}
             </h3>
             {friend.friendBio && (
-              <p className="text-center text-sm text-muted-foreground">{friend.friendBio}</p>
+              <p className="mt-1 text-center text-sm text-muted-foreground">{friend.friendBio}</p>
             )}
+            <button
+              type="button"
+              onClick={copyHandle}
+              title="Copiar identificador"
+              className="mt-3 group flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-mono text-xs text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+            >
+              <span>
+                {friend.friendName}#{friend.friendTag}
+              </span>
+              {copied ? (
+                <Check size={12} className="shrink-0" />
+              ) : (
+                <Copy size={12} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+              )}
+            </button>
           </div>
         </motion.div>
       </div>

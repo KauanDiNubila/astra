@@ -178,6 +178,7 @@ export type Message = {
 export type ConversationSummary = {
   friendUserId: string
   friendName: string
+  friendTag: string
   friendBio: string | null
   friendAdmin: boolean
   lastMessage: string | null

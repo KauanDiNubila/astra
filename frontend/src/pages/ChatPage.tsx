@@ -119,6 +119,7 @@ export function ChatPage() {
   const pinnedRef = useRef(true)
   const programmaticScrollRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
   const reducedMotion = useReducedMotion()
   const hadConversationRef = useRef(false)
@@ -575,7 +576,10 @@ export function ChatPage() {
                     <button
                       type="button"
                       title="Responder"
-                      onClick={() => setReplyingTo(m)}
+                      onClick={() => {
+                        setReplyingTo(m)
+                        textareaRef.current?.focus()
+                      }}
                       className="shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
                     >
                       <Reply className="size-3.5" />
@@ -736,6 +740,7 @@ export function ChatPage() {
               </Button>
               <div className="flex-1">
                 <Textarea
+                  ref={textareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}
