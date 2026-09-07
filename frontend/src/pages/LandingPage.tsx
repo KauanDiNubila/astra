@@ -8,7 +8,6 @@ import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SCROLLBAR_HIDE_CLASS
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { SessionFlowScroll } from "@/components/SessionFlowScroll"
 import { HeroPreview } from "@/components/HeroPreview"
-import { Spotlight } from "@/components/Spotlight"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import { Button } from "@/components/ui/button"
@@ -99,56 +98,52 @@ export function LandingPage() {
       </header>
 
       <main className="flex flex-1 flex-col">
-        <div className="relative overflow-hidden">
-          <Spotlight />
+        <section className="flex flex-col items-center gap-7 px-4 pb-16 pt-24 text-center sm:pt-32">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium"
+          >
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+            </span>
+            <span style={shimmerStyle}>Agora com integração ao GitHub</span>
+          </motion.span>
 
-          <section className="relative flex flex-col items-center gap-7 px-4 pb-16 pt-24 text-center sm:pt-32">
-            <motion.span
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium backdrop-blur-sm"
-            >
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-              </span>
-              <span style={shimmerStyle}>Agora com integração ao GitHub</span>
-            </motion.span>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+            className="text-6xl font-bold tracking-tighter sm:text-8xl"
+          >
+            Astra
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="text-lg text-muted-foreground"
+          >
+            Seu ecossistema de estudos.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="flex gap-3"
+          >
+            <Button asChild size="lg">
+              <Link to="/register">Criar conta</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link to="/login">Entrar</Link>
+            </Button>
+          </motion.div>
+        </section>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
-              className="text-6xl font-bold tracking-tighter sm:text-8xl"
-            >
-              Astra
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-lg text-muted-foreground"
-            >
-              Seu ecossistema de estudos.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              className="flex gap-3"
-            >
-              <Button asChild size="lg">
-                <Link to="/register">Criar conta</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link to="/login">Entrar</Link>
-              </Button>
-            </motion.div>
-          </section>
-
-          <HeroPreview scrollContainerRef={scrollContainerRef} />
-        </div>
+        <HeroPreview scrollContainerRef={scrollContainerRef} />
 
         <SessionFlowScroll scrollContainerRef={scrollContainerRef} />
 
