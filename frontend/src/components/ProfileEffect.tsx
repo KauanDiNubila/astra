@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import type { JSX } from "react"
 import { motion, useReducedMotion } from "motion/react"
 import type { ProfileEffect as ProfileEffectName } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -74,7 +75,7 @@ function Snow() {
   )
 }
 
-const EFFECTS: Record<ProfileEffectName, () => React.JSX.Element> = {
+const EFFECTS: Record<ProfileEffectName, () => JSX.Element> = {
   SPARKLES: Sparkles,
   CONFETTI: Confetti,
   SNOW: Snow,
