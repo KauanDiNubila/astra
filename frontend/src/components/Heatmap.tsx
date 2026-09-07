@@ -1,6 +1,7 @@
+import { Tooltip as TooltipPrimitive } from "radix-ui"
 import type { DailyMinutes, GitHubDailyPoint } from "@/lib/types"
 import { formatMinutes } from "@/lib/format"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
 
 function levelClass(minutes: number): string {
   if (minutes <= 0) return "bg-muted"
@@ -57,15 +58,30 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
                   }`}
                 />
               </TooltipTrigger>
-              <TooltipContent>
-                <div className="flex flex-col items-center gap-0.5 py-0.5">
-                  <span className="font-medium">{formatDayLabel(cell.key)}</span>
-                  <span className="text-background/70">
-                    {cell.minutes > 0 ? formatMinutes(cell.minutes) : "0 min"} de estudo
-                    {cell.githubActivity > 0 && ` · ${cell.githubActivity} no GitHub`}
-                  </span>
-                </div>
-              </TooltipContent>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content
+                  sideOffset={6}
+                  className="z-50 min-w-32 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+                >
+                  <div className="grid gap-1">
+                    <span className="font-medium text-foreground">{formatDayLabel(cell.key)}</span>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">estudo</span>
+                      <span className="font-mono font-medium text-foreground tabular-nums">
+                        {cell.minutes > 0 ? formatMinutes(cell.minutes) : "0 min"}
+                      </span>
+                    </div>
+                    {cell.githubActivity > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-muted-foreground">GitHub</span>
+                        <span className="font-mono font-medium text-foreground tabular-nums">
+                          {cell.githubActivity}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
             </Tooltip>
           ))}
         </div>
