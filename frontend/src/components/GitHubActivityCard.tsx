@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const periods: { key: ActivityPeriod; label: string }[] = [
+  { key: "TODAY", label: "Hoje" },
   { key: "WEEK", label: "7 dias" },
   { key: "MONTH", label: "30 dias" },
   { key: "QUARTER", label: "90 dias" },
