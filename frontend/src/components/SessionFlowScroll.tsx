@@ -2,12 +2,12 @@ import { useRef } from "react"
 import type { RefObject } from "react"
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react"
 
-// Visualiza o ecossistema do Astra em duas camadas: Astra se divide em 3
-// pilares (Foco, Aprendizado, Social) e cada pilar abre nas telas reais do
-// app — só o pilar Foco é de fato calculado por agregação sobre a sessão;
-// os outros dois existem lado a lado, não "nascem" dela.
+// Visualiza o ecossistema do Astra em duas camadas: Astra se divide em 4
+// pilares (Foco, Aprendizado, Social, GitHub) e cada pilar abre nas telas
+// reais do app — só o pilar Foco é de fato calculado por agregação sobre a
+// sessão; os outros três existem lado a lado, não "nascem" dela.
 
-const WIDTH = 1200
+const WIDTH = 1480
 const ROOT_Y = 40
 const ROOT_LABEL_Y = 20
 const ROOT_TRUNK_BOTTOM_Y = 180
@@ -41,6 +41,14 @@ const groups = [
     leaves: [
       { label: "Amigos", x: 950 },
       { label: "Chat", x: 1090 },
+    ],
+  },
+  {
+    label: "GitHub",
+    x: 1310,
+    leaves: [
+      { label: "Atividade", x: 1240 },
+      { label: "Insights", x: 1380 },
     ],
   },
 ]
@@ -79,7 +87,8 @@ export function SessionFlowScroll({ scrollContainerRef }: Props) {
       <section className="mx-auto flex max-w-4xl flex-col items-center gap-10 px-4 py-24 text-center">
         <p className="max-w-md text-balance text-muted-foreground">
           Cada sessão de foco alimenta seu dashboard, metas e ranking. O Astra
-          vai além dela também, com aprendizado e conexão com outras pessoas.
+          vai além dela também, com aprendizado, conexão com outras pessoas e
+          integração com o GitHub.
         </p>
         <div className="flex flex-col gap-6">
           {groups.map((g) => (

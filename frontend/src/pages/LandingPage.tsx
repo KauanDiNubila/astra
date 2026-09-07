@@ -8,6 +8,7 @@ import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SCROLLBAR_HIDE_CLASS
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { SessionFlowScroll } from "@/components/SessionFlowScroll"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
+import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -37,6 +38,12 @@ const features = [
     title: "Ranking",
     description:
       "Compare seu tempo de foco com o de seus amigos em rankings diários, semanais ou mensais, com opção de participar do ranking global.",
+  },
+  {
+    icon: GitHubIcon,
+    title: "Integração com GitHub",
+    description:
+      "Conecte sua conta e cruze o tempo estudado com o que você realmente produziu: commits, PRs e issues por período, repositórios e linguagens mais usados, tudo combinado no seu heatmap.",
   },
 ]
 
@@ -125,7 +132,7 @@ export function LandingPage() {
           <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-24">
             <h2 className="text-center text-2xl font-semibold">Funcionalidades</h2>
             <motion.div
-              className="grid auto-rows-fr gap-4 sm:grid-cols-2"
+              className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3"
               variants={gridStagger}
               initial="hidden"
               whileInView="show"
