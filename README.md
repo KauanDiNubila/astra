@@ -2,11 +2,14 @@
 
 [![CI](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml/badge.svg?branch=development)](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml)
 
-App web para organizar estudos e trabalho de forma prática, com um gancho social
-(amigos, chat, ranking) para dar consistência. A unidade fundamental é a **sessão**:
-todo tempo focado vira uma sessão registrada e tudo o mais — ranking, heatmap,
-streak, estatísticas e progresso — é **calculado por agregação sobre as sessões**,
-nunca armazenado como tabela.
+App web para organizar estudos e trabalho: sessões de foco (Pomodoro ou manual),
+categorias, cursos com módulos, metas e roadmaps de aprendizado. Tem uma camada
+social (amigos, chat em tempo real, ranking) e integração com GitHub, que
+sincroniza atividade real (commits, PRs, issues, repositórios) e cruza com o
+tempo estudado. A unidade fundamental é a **sessão**: todo tempo focado vira uma
+sessão registrada, e tudo o mais — ranking, heatmap, streak, estatísticas e
+progresso — é **calculado por agregação sobre as sessões**, nunca armazenado
+como tabela.
 
 **🔗 No ar:** [astra-app.dev](https://astra-app.dev)
 
@@ -17,19 +20,30 @@ nunca armazenado como tabela.
 - **Autenticação** — registro e login com JWT de acesso curto (15min) + refresh
   token opaco em cookie `httpOnly` (rotação a cada uso, reuso detectado revoga
   a sessão inteira); senha em BCrypt, recusa senha já vazada (consulta ao Have
-  I Been Pwned por k-anonimato).
-- **Perfil** — nome, bio curta e avatar.
+  I Been Pwned por k-anonimato). Também dá pra entrar via **OAuth2 (Google e
+  GitHub)**, sem senha.
+- **Perfil** — nome, bio curta e avatar. Hierarquia de papel `USER < ADMIN <
+  OWNER`.
 - **Sessões** — registrar tempo focado (Pomodoro ou manual → minutos) e listar.
 - **Categorias** — separar o tempo por tipo (estudo, trabalho, leitura…).
 - **Dashboard** — horas de hoje/semana/total, streak e progresso das metas.
-- **Heatmap** — minutos por dia (estilo GitHub), no fuso de Brasília.
-- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); marcar um módulo inteiro como concluído de uma vez; ligar uma sessão a um curso.
+- **Heatmap** — minutos por dia (estilo GitHub) no fuso de Brasília, com a
+  atividade do GitHub combinada na mesma célula (ver seção **Integração com
+  GitHub**).
+- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); marcar um módulo inteiro como concluído de uma vez; ligar uma sessão a um curso; ligar repositórios do GitHub a um curso.
 - **Metas** — objetivo de horas diário/semanal (bateu ou não).
 - **Roadmaps** — trilhas com etapas ordenadas (próprias + pré-definidas), diagrama visual interativo, e o "pin": pendurar um curso numa etapa. Conclusão de etapa é por-usuário mesmo em roadmaps compartilhados.
 - **Amigos** — pedido de amizade por e-mail, aceitar/recusar/remover.
-- **Chat** — mensagens em tempo real entre amigos, via WebSocket (STOMP).
+- **Chat** — mensagens em tempo real entre amigos via WebSocket (STOMP), com
+  anexo de imagem, grupos, responder mensagem (duplo-clique no desktop, swipe
+  no mobile) e mensagens cifradas em repouso (AES-256-GCM).
 - **Ranking** — placar diário/semanal/mensal, global ou só entre amigos (reseta à meia-noite de Brasília).
-- **Administração** — painel pra listar, banir (reversível) ou excluir (cascata) contas; acesso restrito a `ROLE_ADMIN`.
+- **Integração com GitHub** — conectar a conta via OAuth2 e sincronizar sob
+  demanda: atividade (commits, PRs, issues) por período, heatmap combinado,
+  repositórios/linguagens mais usados, evidência de GitHub num passo de
+  roadmap concluído, sugestão automática de repositório pra uma sessão, e o
+  login do GitHub visível no perfil pros amigos — só se o dono autorizar.
+- **Administração** — painel pra listar, banir (reversível) ou excluir (cascata) contas; acesso restrito a `ADMIN`/`OWNER`.
 
 > Princípio central: nada de "total", "streak" ou "ranking" é armazenado — tudo é **agregação sobre `session`**.
 
@@ -39,7 +53,11 @@ nunca armazenado como tabela.
   rotação a cada uso, família inteira revogada se um token já usado reaparecer)
   — refresh token nunca trafega em JSON, só via cookie `httpOnly` + `Secure` +
   `SameSite=None`.
-- RBAC (`USER`/`ADMIN`), reavaliado a cada request (ban tem efeito imediato).
+- RBAC (`USER`/`ADMIN`/`OWNER`), reavaliado a cada request (ban tem efeito imediato).
+- Tokens de acesso do GitHub cifrados em repouso (mesmo esquema AES-256-GCM
+  do chat); falha ao descriptografar força reconexão em vez de seguir com
+  valor corrompido. Estado do fluxo OAuth (`state`) é um JWT de propósito
+  único, rejeitado pelo filtro de autenticação normal se vazar.
 - `Content-Security-Policy` restritiva no frontend (`script-src 'self'`, sem
   inline/eval) — bloqueia script injetado de rodar, não só protege onde o
   token mora.
@@ -161,7 +179,7 @@ Ajuste fino em `application.properties`: `astra.jwt.expiration-minutes`
 Documentação interativa completa no **Swagger UI** (`/swagger-ui.html`,
 disponível só em dev — desativado em produção). Grupos principais:
 
-- **Auth:** `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- **Auth:** `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /oauth2/authorization/{google|github}` (login sem senha)
 - **User:** `GET`/`PUT /me`, `POST /me/avatar`, `GET /users/{id}/avatar`
 - **Tracking:** `POST`/`GET /sessions`, `POST`/`GET /categories`
 - **Stats:** `GET /dashboard`, `GET /heatmap`, `GET /ranking?period=DAILY|WEEKLY|MONTHLY&scope=GLOBAL|FRIENDS`
@@ -169,9 +187,11 @@ disponível só em dev — desativado em produção). Grupos principais:
 - **Roadmap:** `POST`/`GET /roadmaps`, `GET /roadmaps/{id}`, `POST .../steps`, `PATCH .../steps/{id}`, `POST`/`GET`/`DELETE /steps/{id}/pins`
 - **Social:** `POST`/`GET /friends`, `GET /friends/requests`, `POST /friends/{id}/accept`, `DELETE /friends/{id}`
 - **Chat:** `GET /chat/conversations`, `GET /chat/{friendId}/messages`, `POST /chat/{friendId}/read`, WebSocket `/ws` (STOMP)
-- **Admin:** `GET /admin/users`, `POST /admin/users/{id}/ban|unban`, `DELETE /admin/users/{id}` — exige `ROLE_ADMIN`
+- **GitHub:** `GET /github/connect/authorize-url`, `GET /github/status`, `POST /github/sync`, `DELETE /github/connection`, `PATCH /github/visibility`, `GET /github/activity`, `GET /github/insights`
+- **Admin:** `GET /admin/users`, `POST /admin/users/{id}/ban|unban`, `DELETE /admin/users/{id}` — exige `ADMIN`/`OWNER`
 
-Tudo (exceto `/auth/**`, `/ws/**` e o avatar) exige `Authorization: Bearer <token>`.
+Tudo (exceto `/auth/**`, `/oauth2/**`, `/github/connect/callback`, `/ws/**` e o
+avatar) exige `Authorization: Bearer <token>`.
 Erros seguem um shape padrão (`timestamp, status, error, message, path, fieldErrors`).
 
 ## Arquitetura
@@ -184,12 +204,13 @@ acessando o repository ou a entity do vizinho — mantendo o grafo de dependênc
 
 ```
 com.astra
-├── user       → autenticação (JWT + refresh token), perfil, roles/admin
+├── user       → autenticação (JWT + refresh token, OAuth2), perfil, roles/admin
 ├── tracking   → Session, Category            (o núcleo)
 ├── learning   → Course, CourseModule, Goal
 ├── roadmap    → Roadmap, RoadmapStep, CourseStepLink (o "pin")
 ├── social     → Friendship (pedidos de amizade)
 ├── chat       → Message, WebSocket/STOMP
+├── github     → conexão OAuth2, sincronização e insights do GitHub
 ├── stats      → dashboard, heatmap, streak, ranking (só leitura sobre os domínios)
 └── shared     → config, security, exceptions, base
 ```
@@ -202,5 +223,5 @@ de UI reutilizáveis (shadcn) em `src/components/ui`, e componentes de domínio
 
 **Em produção.** Backend e frontend completos e implantados de ponta a ponta —
 sessões, dashboard, heatmap, cursos/módulos, metas, roadmaps (com diagrama
-interativo), amigos, chat em tempo real, ranking e administração.
-Em polimento contínuo de UX e correções.
+interativo), amigos, chat em tempo real, ranking, integração com GitHub e
+administração. Em polimento contínuo de UX e correções.
