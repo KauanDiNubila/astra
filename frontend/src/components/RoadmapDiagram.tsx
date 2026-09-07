@@ -6,6 +6,7 @@ import { api } from "@/lib/api"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { BUTTON_REVEAL_CLASS, cn } from "@/lib/utils"
 import type { CourseSummary, Pin, RoadmapStep, StepStatus } from "@/lib/types"
+import { RoadmapStepGithubEvidence } from "@/components/RoadmapStepGithubEvidence"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -430,6 +431,8 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChange
                       </Badge>
                     )}
                   </div>
+
+                  <RoadmapStepGithubEvidence stepId={selected.step.id} />
 
                   {(selected.step.description || selected.step.resources.length > 0) && (
                     <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-3">

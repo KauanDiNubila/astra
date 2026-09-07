@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { Check, Copy, X } from "lucide-react"
+import { Check, Copy, ExternalLink, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
+import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
 
@@ -113,6 +114,27 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
                 <Copy size={12} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
               )}
             </button>
+
+            {friend.friendGithubLogin && (
+              <div className="mt-5 w-full border-t border-border pt-4">
+                <span className="text-xs font-medium text-muted-foreground">Conexões</span>
+                <a
+                  href={`https://github.com/${friend.friendGithubLogin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-2 flex items-center gap-2.5 rounded-lg bg-muted/60 px-3 py-2 transition-colors hover:bg-muted"
+                >
+                  <GitHubIcon className="size-5 shrink-0 text-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                    {friend.friendGithubLogin}
+                  </span>
+                  <ExternalLink
+                    size={14}
+                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                  />
+                </a>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

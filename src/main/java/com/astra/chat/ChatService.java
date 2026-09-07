@@ -1,12 +1,14 @@
 package com.astra.chat;
 
-import com.astra.chat.crypto.ChatEncryptionService;
+import com.astra.shared.crypto.EncryptionService;
 import com.astra.chat.dto.AttachmentData;
 import com.astra.chat.dto.ConversationSummary;
 import com.astra.chat.dto.MessageResponse;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
+import com.astra.github.GitHubConnection;
+import com.astra.github.GitHubConnectionRepository;
 import com.astra.social.FriendshipService;
 import com.astra.user.User;
 import com.astra.user.UserRepository;
@@ -31,13 +33,14 @@ public class ChatService {
     private final UserRepository userRepository;
     private final FriendshipService friendshipService;
     private final CurrentUserProvider currentUserProvider;
-    private final ChatEncryptionService chatEncryptionService;
+    private final EncryptionService chatEncryptionService;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
+    private final GitHubConnectionRepository githubConnectionRepository;
 
     public ChatService(MessageRepository messageRepository, MessageAttachmentRepository messageAttachmentRepository,
             UserRepository userRepository, FriendshipService friendshipService,
-            CurrentUserProvider currentUserProvider, ChatEncryptionService chatEncryptionService,
-            ChatGroupMemberRepository chatGroupMemberRepository) {
+            CurrentUserProvider currentUserProvider, EncryptionService chatEncryptionService,
+            ChatGroupMemberRepository chatGroupMemberRepository, GitHubConnectionRepository githubConnectionRepository) {
         this.messageRepository = messageRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
         this.userRepository = userRepository;
@@ -45,6 +48,7 @@ public class ChatService {
         this.currentUserProvider = currentUserProvider;
         this.chatEncryptionService = chatEncryptionService;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
+        this.githubConnectionRepository = githubConnectionRepository;
     }
 
     @Transactional
@@ -235,6 +239,9 @@ public class ChatService {
 
         Map<UUID, UserRepository.NameBioView> usersById = userRepository.findNameBioByIdIn(friendIds).stream()
                 .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
+        Map<UUID, String> githubLoginByFriend = githubConnectionRepository.findByUserIdIn(friendIds).stream()
+                .filter(GitHubConnection::isVisibleToFriends)
+                .collect(Collectors.toMap(GitHubConnection::getUserId, GitHubConnection::getGithubLogin));
         Map<UUID, Long> unreadByFriend = messageRepository.unreadCountsFor(me, friendIds).stream()
                 .collect(Collectors.toMap(MessageRepository.UnreadBySender::getFriendId,
                         MessageRepository.UnreadBySender::getUnread));
@@ -249,14 +256,17 @@ public class ChatService {
                     String friendName = user != null ? user.getName() : "";
                     String friendTag = user != null ? user.getTag() : "";
                     String friendBio = user != null ? user.getBio() : null;
-                    boolean friendAdmin = user != null && User.ROLE_ADMIN.equals(user.getRole());
+                    boolean friendAdmin = user != null
+                            && (User.ROLE_ADMIN.equals(user.getRole()) || User.ROLE_OWNER.equals(user.getRole()));
+                    String friendGithubLogin = githubLoginByFriend.get(friendId);
                     long unread = unreadByFriend.getOrDefault(friendId, 0L);
                     MessageRepository.LastMessageView last = lastByFriend.get(friendId);
                     return last != null
                             ? new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
-                                    lastMessageText(last), last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
-                            : new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin, null,
-                                    null, unread);
+                                    friendGithubLogin, lastMessageText(last),
+                                    last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
+                            : new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
+                                    friendGithubLogin, null, null, unread);
                 })
                 .sorted(Comparator.comparing(ConversationSummary::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))

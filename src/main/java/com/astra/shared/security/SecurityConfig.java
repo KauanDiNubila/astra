@@ -44,8 +44,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/oauth2/**", "/login/oauth2/**", "/v3/api-docs/**",
-                                "/swagger-ui/**", "/swagger-ui.html", "/ws/**", "/users/*/avatar").permitAll()
+                        .requestMatchers("/auth/**", "/oauth2/**", "/login/oauth2/**", "/github/connect/callback",
+                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/ws/**", "/users/*/avatar")
+                        .permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

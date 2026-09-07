@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
-import { Check, ChevronDown, Copy, KeyRound, Pencil, X } from "lucide-react"
+import { Check, ChevronDown, Copy, GitBranch, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
+import { useGitHub } from "@/context/GitHubContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
+import { formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 type Props = {
   open: boolean
@@ -25,8 +28,18 @@ function initials(name: string) {
 
 export function EditProfileModal({ open, onClose }: Props) {
   const { user, refreshUser } = useAuth()
+  const {
+    status: githubStatus,
+    syncing: githubSyncing,
+    connect: connectGithub,
+    disconnect: disconnectGithub,
+    sync: syncGithub,
+    setVisibleToFriends: setGithubVisibility,
+  } = useGitHub()
   const reducedMotion = useReducedMotion()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [githubSectionOpen, setGithubSectionOpen] = useState(false)
+  const [disconnectingGithub, setDisconnectingGithub] = useState(false)
 
   const [name, setName] = useState("")
   const [bio, setBio] = useState("")
@@ -357,6 +370,129 @@ export function EditProfileModal({ open, onClose }: Props) {
                           >
                             {passwordSaving ? "Trocando..." : "Salvar senha nova"}
                           </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border px-6 py-4">
+                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setGithubSectionOpen((v) => !v)}
+                      aria-expanded={githubSectionOpen}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <GitBranch size={16} className="text-muted-foreground" />
+                        GitHub
+                      </span>
+                      <span className="flex items-center gap-2">
+                        {githubStatus?.connected && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500">
+                            <Check size={14} />
+                            Conectado
+                          </span>
+                        )}
+                        <ChevronDown
+                          size={16}
+                          className={cn(
+                            "text-muted-foreground transition-transform duration-200",
+                            githubSectionOpen && "rotate-180",
+                          )}
+                        />
+                      </span>
+                    </button>
+
+                    <div
+                      className={cn(
+                        "grid ease-out",
+                        githubSectionOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                        reducedMotion ? "duration-0" : "duration-300",
+                      )}
+                      style={{ transitionProperty: "grid-template-rows" }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="space-y-3 border-t border-border px-4 pb-4 pt-3">
+                          {githubStatus?.connected ? (
+                            <>
+                              <div className="flex items-center gap-3">
+                                {githubStatus.avatarUrl && (
+                                  <img
+                                    src={githubStatus.avatarUrl}
+                                    alt=""
+                                    className="size-8 rounded-full ring-1 ring-border"
+                                  />
+                                )}
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">@{githubStatus.login}</span>
+                                  {githubStatus.lastSyncedAt && (
+                                    <span className="text-xs text-muted-foreground">
+                                      Sincronizado {formatRelativeTime(githubStatus.lastSyncedAt)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
+                                <span className="text-xs text-muted-foreground">
+                                  Mostrar meu GitHub pros meus amigos
+                                </span>
+                                <Switch
+                                  size="sm"
+                                  checked={githubStatus.visibleToFriends}
+                                  onCheckedChange={setGithubVisibility}
+                                  tabIndex={githubSectionOpen ? 0 : -1}
+                                />
+                              </div>
+                              {githubStatus.lastSyncError && (
+                                <p className="text-xs text-destructive">{githubStatus.lastSyncError}</p>
+                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={githubSyncing}
+                                  onClick={syncGithub}
+                                  tabIndex={githubSectionOpen ? 0 : -1}
+                                >
+                                  {githubSyncing ? "Sincronizando..." : "Sincronizar"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={disconnectingGithub}
+                                  onClick={async () => {
+                                    setDisconnectingGithub(true)
+                                    try {
+                                      await disconnectGithub()
+                                    } finally {
+                                      setDisconnectingGithub(false)
+                                    }
+                                  }}
+                                  tabIndex={githubSectionOpen ? 0 : -1}
+                                >
+                                  {disconnectingGithub ? "Desconectando..." : "Desconectar"}
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-muted-foreground">
+                                Conecte pra ver commits, pull requests e issues cruzados com seu tempo de estudo.
+                              </p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={connectGithub}
+                                tabIndex={githubSectionOpen ? 0 : -1}
+                              >
+                                Conectar GitHub
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

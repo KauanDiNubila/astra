@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
+import { CourseGithubSection } from "@/components/CourseGithubSection"
 import { ModuleRow } from "@/components/ModuleRow"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { Button } from "@/components/ui/button"
@@ -124,6 +125,8 @@ export function CourseDetailPage() {
           </form>
         </CardContent>
       </Card>
+
+      <CourseGithubSection courseId={id!} />
     </div>
   )
 }

@@ -9,6 +9,7 @@ public record ConversationSummary(
         String friendTag,
         String friendBio,
         boolean friendAdmin,
+        String friendGithubLogin,
         String lastMessage,
         OffsetDateTime lastMessageAt,
         long unreadCount) {

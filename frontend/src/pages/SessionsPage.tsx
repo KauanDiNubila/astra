@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { CalendarIcon, Pencil, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatDateTime, formatMinutes, formatMinutesCompact, parseMinutesCompact } from "@/lib/format"
 import type { Session } from "@/lib/types"
@@ -10,6 +11,7 @@ import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
+import { SessionGithubActivity } from "@/components/SessionGithubActivity"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,9 +31,11 @@ type RegisterMode = "pomodoro" | "manual"
 
 export function SessionsPage() {
   const { sessionSavedAt, categories, loadCategories } = usePomodoro()
+  const { status: githubStatus } = useGitHub()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
 
   const [categoryId, setCategoryId] = useState("")
   const [minutes, setMinutes] = useState(25)
@@ -228,40 +232,68 @@ export function SessionsPage() {
           ) : (
             <ul className="flex flex-col divide-y">
               {sessions.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{formatMinutes(s.focusedMinutes)}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {categoryName(s.categoryId)} &middot; {formatDateTime(s.startedAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {s.note && (
-                      <span className="max-w-[50%] truncate text-sm text-muted-foreground">
-                        {s.note}
+                <li key={s.id} className="flex flex-col py-1">
+                  <div
+                    className={`flex items-center justify-between gap-4 py-2 ${githubStatus?.connected ? "cursor-pointer" : ""}`}
+                    onClick={() =>
+                      githubStatus?.connected &&
+                      setExpandedSessionId((prev) => (prev === s.id ? null : s.id))
+                    }
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{formatMinutes(s.focusedMinutes)}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {categoryName(s.categoryId)} &middot; {formatDateTime(s.startedAt)}
                       </span>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        confirmSessionId === s.id
-                          ? "text-destructive"
-                          : "text-muted-foreground hover:text-destructive"
-                      }
-                      disabled={deletingSessionId === s.id}
-                      onClick={() =>
-                        confirmSessionId === s.id ? confirmSessionDelete(s.id) : armSessionDelete(s.id)
-                      }
-                    >
-                      {confirmSessionId === s.id ? (
-                        "Confirmar?"
-                      ) : (
-                        <Trash2 className="size-4" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {s.note && (
+                        <span className="max-w-[50%] truncate text-sm text-muted-foreground">
+                          {s.note}
+                        </span>
                       )}
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={
+                          confirmSessionId === s.id
+                            ? "text-destructive"
+                            : "text-muted-foreground hover:text-destructive"
+                        }
+                        disabled={deletingSessionId === s.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirmSessionId === s.id) {
+                            confirmSessionDelete(s.id)
+                          } else {
+                            armSessionDelete(s.id)
+                          }
+                        }}
+                      >
+                        {confirmSessionId === s.id ? (
+                          "Confirmar?"
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
+                  {expandedSessionId === s.id && (
+                    <div className="rounded-md bg-muted/30 px-3 py-2 mb-2">
+                      <SessionGithubActivity
+                        sessionId={s.id}
+                        linkedRepositoryId={s.githubRepositoryId}
+                        onLinked={(repositoryId) =>
+                          setSessions((prev) =>
+                            prev.map((session) =>
+                              session.id === s.id ? { ...session, githubRepositoryId: repositoryId } : session,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

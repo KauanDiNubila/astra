@@ -39,6 +39,9 @@ public class Session {
     @Column(name = "course_id")
     private UUID courseId;
 
+    @Column(name = "github_repository_id")
+    private UUID githubRepositoryId;
+
     @Column(name = "focused_minutes", nullable = false)
     private int focusedMinutes;
 

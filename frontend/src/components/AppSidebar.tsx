@@ -2,6 +2,7 @@ import { useState } from "react"
 import {
   BookOpen,
   Clock,
+  GitBranch,
   LayoutDashboard,
   Map,
   MessageCircle,
@@ -42,6 +43,7 @@ const links = [
   { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
   { to: "/friends", label: "Amigos", end: false, icon: Users },
   { to: "/chat", label: "Chat", end: false, icon: MessageCircle },
+  { to: "/github", label: "GitHub", end: false, icon: GitBranch },
   { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
 ]
 

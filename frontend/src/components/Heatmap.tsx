@@ -1,4 +1,5 @@
-import type { DailyMinutes } from "@/lib/types"
+import type { DailyMinutes, GitHubDailyPoint } from "@/lib/types"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 function levelClass(minutes: number): string {
   if (minutes <= 0) return "bg-muted"
@@ -15,34 +16,48 @@ function dayKey(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-export function Heatmap({ data }: { data: DailyMinutes[] }) {
+export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData?: GitHubDailyPoint[] }) {
   const byDay = new Map(data.map((d) => [d.day, d.minutes]))
+  const githubByDay = new Map((githubData ?? []).map((d) => [d.date, d.contributionCount]))
   const today = new Date()
   const cursor = new Date(today)
   cursor.setDate(cursor.getDate() - 7 * 51 - today.getDay())
 
-  const weeks: { key: string; minutes: number }[][] = []
+  const weeks: { key: string; minutes: number; githubActivity: number }[][] = []
   while (cursor <= today) {
-    const week: { key: string; minutes: number }[] = []
+    const week: { key: string; minutes: number; githubActivity: number }[] = []
     for (let i = 0; i < 7; i++) {
       const key = dayKey(cursor)
-      week.push({ key, minutes: byDay.get(key) ?? 0 })
+      week.push({ key, minutes: byDay.get(key) ?? 0, githubActivity: githubByDay.get(key) ?? 0 })
       cursor.setDate(cursor.getDate() + 1)
     }
     weeks.push(week)
   }
 
   return (
-    <div className="flex gap-1 overflow-x-auto pb-2">
+    <div className="flex gap-1 overflow-x-auto p-1">
       {weeks.map((week, index) => (
         <div key={index} className="flex flex-col gap-1">
           {week.map((cell) => (
-            <div
-              key={cell.key}
-              style={{ animationDelay: `${index * 4}ms`, animationFillMode: "backwards" }}
-              className={`size-3 animate-in rounded-sm fade-in zoom-in-50 duration-300 motion-reduce:animate-none ${levelClass(cell.minutes)}`}
-              title={`${cell.key}: ${cell.minutes} min`}
-            />
+            <Tooltip key={cell.key}>
+              <TooltipTrigger asChild>
+                <div
+                  style={{ animationDelay: `${index * 4}ms`, animationFillMode: "backwards" }}
+                  className={`relative size-3 animate-in rounded-sm fade-in zoom-in-50 duration-300 motion-reduce:animate-none ${levelClass(cell.minutes)}`}
+                >
+                  {cell.githubActivity > 0 && (
+                    <span className="absolute top-0.5 right-0.5 size-1 rounded-full bg-sky-500" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="flex flex-col gap-0.5 text-center">
+                  <span>{cell.key}</span>
+                  <span>{cell.minutes} min de estudo</span>
+                  {cell.githubActivity > 0 && <span>{cell.githubActivity} no GitHub</span>}
+                </div>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
       ))}

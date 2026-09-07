@@ -1,6 +1,6 @@
 package com.astra.chat;
 
-import com.astra.chat.crypto.ChatEncryptionService;
+import com.astra.shared.crypto.EncryptionService;
 import com.astra.chat.dto.CreateGroupRequest;
 import com.astra.chat.dto.GroupConversationSummary;
 import com.astra.chat.dto.GroupMemberResponse;
@@ -32,13 +32,13 @@ public class ChatGroupService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final FriendshipService friendshipService;
-    private final ChatEncryptionService chatEncryptionService;
+    private final EncryptionService chatEncryptionService;
     private final CurrentUserProvider currentUserProvider;
 
     public ChatGroupService(ChatGroupRepository chatGroupRepository,
             ChatGroupMemberRepository chatGroupMemberRepository, MessageRepository messageRepository,
             UserRepository userRepository, FriendshipService friendshipService,
-            ChatEncryptionService chatEncryptionService, CurrentUserProvider currentUserProvider) {
+            EncryptionService chatEncryptionService, CurrentUserProvider currentUserProvider) {
         this.chatGroupRepository = chatGroupRepository;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
         this.messageRepository = messageRepository;

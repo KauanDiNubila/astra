@@ -10,6 +10,8 @@ import com.astra.learning.dto.ModuleProgressRequest;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.learning.dto.UpdateLessonRequest;
 import com.astra.learning.dto.UpdateModuleRequest;
+import com.astra.github.dto.CourseGithubSummary;
+import com.astra.github.dto.LinkGithubRepositoryRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -85,5 +87,22 @@ public class CourseController {
     public ModuleResponse updateModuleProgress(@PathVariable UUID courseId, @PathVariable UUID moduleId,
                                                @Valid @RequestBody ModuleProgressRequest request) {
         return courseService.setModuleProgress(courseId, moduleId, request.uptoPosition());
+    }
+
+    @GetMapping("/{id}/github-repositories")
+    public CourseGithubSummary githubRepositories(@PathVariable UUID id) {
+        return courseService.githubRepositories(id);
+    }
+
+    @PostMapping("/{id}/github-repositories")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void linkGithubRepository(@PathVariable UUID id, @Valid @RequestBody LinkGithubRepositoryRequest request) {
+        courseService.linkGithubRepository(id, request.repositoryId());
+    }
+
+    @DeleteMapping("/{id}/github-repositories/{repositoryId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlinkGithubRepository(@PathVariable UUID id, @PathVariable UUID repositoryId) {
+        courseService.unlinkGithubRepository(id, repositoryId);
     }
 }

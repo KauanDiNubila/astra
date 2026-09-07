@@ -56,6 +56,7 @@ export type Session = {
   id: string
   categoryId: string
   courseId: string | null
+  githubRepositoryId: string | null
   focusedMinutes: number
   startedAt: string
   note: string | null
@@ -181,6 +182,7 @@ export type ConversationSummary = {
   friendTag: string
   friendBio: string | null
   friendAdmin: boolean
+  friendGithubLogin: string | null
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number
@@ -199,4 +201,86 @@ export type GroupConversationSummary = {
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number
+}
+
+export type GitHubConnectionStatus = {
+  connected: boolean
+  login: string | null
+  avatarUrl: string | null
+  connectedAt: string | null
+  lastSyncedAt: string | null
+  lastSyncError: string | null
+  visibleToFriends: boolean
+}
+
+export type ActivityPeriod = "TODAY" | "WEEK" | "MONTH" | "QUARTER" | "YEAR"
+
+export type GitHubPeriodSummary = {
+  period: ActivityPeriod
+  commitCount: number
+  pullRequestOpenedCount: number
+  pullRequestMergedCount: number
+  issueClosedCount: number
+  activeRepoCount: number
+}
+
+export type GitHubActivityResponse = {
+  connected: boolean
+  periods: GitHubPeriodSummary[]
+  lastSyncedAt: string | null
+  lastSyncError: string | null
+}
+
+export type GitHubRepositoryInsight = {
+  id: string
+  name: string
+  fullName: string
+  htmlUrl: string
+  primaryLanguage: string | null
+  recentCommitCount: number
+  isPrivate: boolean
+}
+
+export type GitHubLanguageShare = {
+  language: string
+  commitCount: number
+  percentage: number
+}
+
+export type GitHubDailyPoint = {
+  date: string
+  contributionCount: number
+}
+
+export type GitHubInsightsResponse = {
+  connected: boolean
+  repositories: GitHubRepositoryInsight[]
+  languages: GitHubLanguageShare[]
+  series: GitHubDailyPoint[]
+  lastSyncedAt: string | null
+  lastSyncError: string | null
+}
+
+export type GitHubCommitInfo = {
+  sha: string
+  message: string
+  committedAt: string
+  repositoryFullName: string
+}
+
+export type SessionGitHubActivity = {
+  connected: boolean
+  commits: GitHubCommitInfo[]
+  suggestedRepositoryId: string | null
+  suggestedRepositoryName: string | null
+}
+
+export type CourseGithubSummary = {
+  repositories: GitHubRepositoryInsight[]
+  totalRecentCommits: number
+}
+
+export type GitHubStepEvidence = {
+  connected: boolean
+  matchedRepositories: GitHubRepositoryInsight[]
 }

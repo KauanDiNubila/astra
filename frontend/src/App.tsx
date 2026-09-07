@@ -8,6 +8,7 @@ import { CourseDetailPage } from "@/pages/CourseDetailPage"
 import { CoursesPage } from "@/pages/CoursesPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { FriendsPage } from "@/pages/FriendsPage"
+import { GitHubInsightsPage } from "@/pages/GitHubInsightsPage"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RankingPage } from "@/pages/RankingPage"
@@ -35,6 +36,7 @@ function App() {
           <Route path="/chat/g/:groupId" element={<ChatPage />} />
           <Route path="/chat/:friendId" element={<ChatPage />} />
           <Route path="/ranking" element={<RankingPage />} />
+          <Route path="/github" element={<GitHubInsightsPage />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminPage />} />
           </Route>

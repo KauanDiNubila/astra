@@ -7,6 +7,7 @@ public record SessionResponse(
         UUID id,
         UUID categoryId,
         UUID courseId,
+        UUID githubRepositoryId,
         int focusedMinutes,
         OffsetDateTime startedAt,
         String note,

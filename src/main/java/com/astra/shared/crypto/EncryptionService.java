@@ -1,4 +1,4 @@
-package com.astra.chat.crypto;
+package com.astra.shared.crypto;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -11,12 +11,13 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-// Criptografa mensagens e anexos em repouso (AES-256-GCM) — protege contra
-// vazamento do dump/credencial do banco. O servidor ainda processa o
-// conteudo em claro em memoria pra enviar por WebSocket etc; isso nao e
-// criptografia ponta-a-ponta.
+// Criptografa dados sensiveis em repouso (AES-256-GCM) - protege contra
+// vazamento do dump/credencial do banco. Usado hoje por mensagens/anexos de
+// chat e por tokens de integracao (ex: GitHub). O servidor ainda processa o
+// conteudo em claro em memoria quando precisa; isso nao e criptografia
+// ponta-a-ponta.
 @Component
-public class ChatEncryptionService {
+public class EncryptionService {
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int IV_LENGTH_BYTES = 12;
@@ -25,7 +26,7 @@ public class ChatEncryptionService {
     private final SecretKeySpec key;
     private final SecureRandom random = new SecureRandom();
 
-    public ChatEncryptionService(@Value("${astra.chat.encryption-key}") String base64Key) {
+    public EncryptionService(@Value("${astra.chat.encryption-key}") String base64Key) {
         this.key = new SecretKeySpec(Base64.getDecoder().decode(base64Key), "AES");
     }
 
@@ -36,20 +37,29 @@ public class ChatEncryptionService {
         return Base64.getEncoder().encodeToString(encryptBytes(plaintext.getBytes(StandardCharsets.UTF_8)));
     }
 
-    // Mensagens salvas antes dessa funcionalidade existir ainda estao em
-    // texto puro no banco — se a descriptografia falhar (nao e base64
-    // valido, ou a tag GCM nao bate), trata como legado e devolve como
-    // veio, em vez de quebrar o carregamento do historico.
+    // Dados salvos antes dessa funcionalidade existir ainda estao em texto
+    // puro no banco - se a descriptografia falhar (nao e base64 valido, ou a
+    // tag GCM nao bate), trata como legado e devolve como veio, em vez de
+    // quebrar o carregamento. Chamadores que nao podem aceitar esse fallback
+    // (ex: tokens de integracao) devem usar decryptStrict.
     public String decrypt(String stored) {
         if (stored == null) {
             return null;
         }
         try {
-            byte[] raw = Base64.getDecoder().decode(stored);
-            return new String(decryptBytes(raw), StandardCharsets.UTF_8);
+            return decryptStrict(stored);
         } catch (RuntimeException legacyPlaintext) {
             return stored;
         }
+    }
+
+    // Variante que nao aplica o fallback de "texto legado" - lanca se a
+    // descriptografia falhar. Usado por integracoes (ex: token do GitHub)
+    // onde um valor corrompido/chave rotacionada nunca deve ser tratado como
+    // se tivesse funcionado.
+    public String decryptStrict(String stored) {
+        byte[] raw = Base64.getDecoder().decode(stored);
+        return new String(decryptBytesStrict(raw), StandardCharsets.UTF_8);
     }
 
     public byte[] encryptBytes(byte[] plaintext) {
@@ -70,13 +80,21 @@ public class ChatEncryptionService {
 
     public byte[] decryptBytes(byte[] stored) {
         try {
+            return decryptBytesStrict(stored);
+        } catch (RuntimeException legacyPlaintext) {
+            return stored;
+        }
+    }
+
+    private byte[] decryptBytesStrict(byte[] stored) {
+        try {
             byte[] iv = Arrays.copyOfRange(stored, 0, IV_LENGTH_BYTES);
             byte[] ciphertext = Arrays.copyOfRange(stored, IV_LENGTH_BYTES, stored.length);
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
             return cipher.doFinal(ciphertext);
-        } catch (GeneralSecurityException | IllegalArgumentException legacyPlaintext) {
-            return stored;
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            throw new IllegalStateException("Falha ao descriptografar", e);
         }
     }
 }

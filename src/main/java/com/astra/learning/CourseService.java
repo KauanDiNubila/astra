@@ -8,6 +8,12 @@ import com.astra.learning.dto.CreateModuleRequest;
 import com.astra.learning.dto.LessonResponse;
 import com.astra.learning.dto.ModuleResponse;
 import com.astra.learning.dto.UpdateModuleRequest;
+import com.astra.github.CourseGithubRepo;
+import com.astra.github.CourseGithubRepoRepository;
+import com.astra.github.GitHubRepository;
+import com.astra.github.GitHubRepositoryRepository;
+import com.astra.github.dto.CourseGithubSummary;
+import com.astra.github.dto.GitHubRepositoryInsight;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
@@ -26,13 +32,19 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final CourseModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
+    private final GitHubRepositoryRepository githubRepositoryRepository;
+    private final CourseGithubRepoRepository courseGithubRepoRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public CourseService(CourseRepository courseRepository, CourseModuleRepository moduleRepository,
-                         LessonRepository lessonRepository, CurrentUserProvider currentUserProvider) {
+                         LessonRepository lessonRepository, GitHubRepositoryRepository githubRepositoryRepository,
+                         CourseGithubRepoRepository courseGithubRepoRepository,
+                         CurrentUserProvider currentUserProvider) {
         this.courseRepository = courseRepository;
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
+        this.githubRepositoryRepository = githubRepositoryRepository;
+        this.courseGithubRepoRepository = courseGithubRepoRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -221,6 +233,37 @@ public class CourseService {
     @Transactional(readOnly = true)
     public List<UUID> courseIdsForUser(UUID userId) {
         return courseRepository.findIdsByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public CourseGithubSummary githubRepositories(UUID courseId) {
+        ownedCourse(courseId);
+        List<CourseGithubRepo> links = courseGithubRepoRepository.findByCourseId(courseId);
+        List<UUID> repositoryIds = links.stream().map(CourseGithubRepo::getRepositoryId).toList();
+        List<GitHubRepositoryInsight> repositories = githubRepositoryRepository.findAllById(repositoryIds).stream()
+                .map(r -> new GitHubRepositoryInsight(r.getId(), r.getName(), r.getFullName(), r.getHtmlUrl(),
+                        r.getPrimaryLanguage(), r.getRecentCommitCount(), r.isPrivate()))
+                .toList();
+        int totalRecentCommits = repositories.stream().mapToInt(GitHubRepositoryInsight::recentCommitCount).sum();
+        return new CourseGithubSummary(repositories, totalRecentCommits);
+    }
+
+    @Transactional
+    public void linkGithubRepository(UUID courseId, UUID repositoryId) {
+        Course course = ownedCourse(courseId);
+        GitHubRepository repository = githubRepositoryRepository.findById(repositoryId)
+                .filter(r -> r.getUserId().equals(course.getUserId()))
+                .orElseThrow(() -> new NotFoundException("Repositório não encontrado"));
+        if (courseGithubRepoRepository.findByCourseId(courseId).stream()
+                .noneMatch(l -> l.getRepositoryId().equals(repository.getId()))) {
+            courseGithubRepoRepository.save(new CourseGithubRepo(courseId, repository.getId()));
+        }
+    }
+
+    @Transactional
+    public void unlinkGithubRepository(UUID courseId, UUID repositoryId) {
+        ownedCourse(courseId);
+        courseGithubRepoRepository.deleteByCourseIdAndRepositoryId(courseId, repositoryId);
     }
 
     private Course ownedCourse(UUID courseId) {

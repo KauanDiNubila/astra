@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react"
 import { Pencil } from "lucide-react"
 import { motion } from "motion/react"
 import { api } from "@/lib/api"
+import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { gridItem, gridStagger } from "@/lib/utils"
-import type { Dashboard, DailyMinutes, CategoryMinutes } from "@/lib/types"
+import type { Dashboard, DailyMinutes, CategoryMinutes, GitHubDailyPoint } from "@/lib/types"
 import { StatCard } from "@/components/StatCard"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
+import { GitHubActivityCard } from "@/components/GitHubActivityCard"
 import { Heatmap } from "@/components/Heatmap"
 import { FocusTrendChart } from "@/components/FocusTrendChart"
 import { CategoryDonutChart } from "@/components/CategoryDonutChart"
@@ -53,8 +55,10 @@ function lastNDays(n: number): string[] {
 
 export function DashboardPage() {
   const { categories } = usePomodoro()
+  const { status: githubStatus } = useGitHub()
   const [data, setData] = useState<Dashboard | null>(null)
   const [heatmap, setHeatmap] = useState<DailyMinutes[]>([])
+  const [githubHeatmap, setGithubHeatmap] = useState<GitHubDailyPoint[]>([])
   const [categoryMinutes, setCategoryMinutes] = useState<CategoryMinutes[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -82,6 +86,16 @@ export function DashboardPage() {
       })
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (!githubStatus?.connected) return
+    const controller = new AbortController()
+    api
+      .get<{ series: GitHubDailyPoint[] }>("/github/insights", { signal: controller.signal })
+      .then((res) => setGithubHeatmap(res.data.series))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [githubStatus?.connected])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -145,12 +159,14 @@ export function DashboardPage() {
         </motion.div>
       </motion.div>
 
+      <GitHubActivityCard />
+
       <Card>
         <CardHeader>
           <CardTitle>Atividade (último ano)</CardTitle>
         </CardHeader>
         <CardContent>
-          <Heatmap data={heatmap} />
+          <Heatmap data={heatmap} githubData={githubHeatmap} />
         </CardContent>
       </Card>
 
