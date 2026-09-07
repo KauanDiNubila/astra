@@ -43,12 +43,10 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
               <TooltipTrigger asChild>
                 <div
                   style={{ animationDelay: `${index * 4}ms`, animationFillMode: "backwards" }}
-                  className={`relative size-3 animate-in rounded-sm fade-in zoom-in-50 duration-300 motion-reduce:animate-none ${levelClass(cell.minutes)}`}
-                >
-                  {cell.githubActivity > 0 && (
-                    <span className="absolute top-0.5 right-0.5 size-1 rounded-full bg-sky-500" />
-                  )}
-                </div>
+                  className={`size-3 animate-in rounded-sm fade-in zoom-in-50 duration-300 motion-reduce:animate-none ${levelClass(cell.minutes)} ${
+                    cell.githubActivity > 0 ? "ring-1 ring-inset ring-sky-500" : ""
+                  }`}
+                />
               </TooltipTrigger>
               <TooltipContent>
                 <div className="flex flex-col gap-0.5 text-center">
