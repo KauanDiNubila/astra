@@ -159,6 +159,7 @@ function Stepper({
           type="text"
           inputMode={parseDisplay ? "text" : "numeric"}
           autoFocus
+          onFocus={(e) => e.currentTarget.select()}
           value={draft}
           onChange={(e) =>
             setDraft(e.target.value.replace(parseDisplay ? /[^0-9a-zA-Z:]/g : /[^0-9]/g, ""))
@@ -182,7 +183,10 @@ function Stepper({
           type="button"
           disabled={!editable}
           onClick={() => {
-            setDraft("")
+            // Preenche com o valor atual (não em branco) pra o usuário ver
+            // o formato esperado (ex.: "3h00") em vez de um campo vazio sem
+            // nenhuma pista de como digitar horas.
+            setDraft(display(current))
             setIsEditing(true)
           }}
           className={cn(

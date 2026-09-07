@@ -182,6 +182,7 @@ export function SessionsPage() {
                     parseDisplay={parseMinutesCompact}
                     aria-label="Tempo de foco"
                   />
+                  <p className="text-xs text-muted-foreground">Clique no valor pra digitar — ex.: 3h, 2h30 ou 90</p>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label>Quando</Label>
