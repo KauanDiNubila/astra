@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,18 +31,21 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final OAuthConnectionRepository oAuthConnectionRepository;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordBreachChecker passwordBreachChecker;
     private final UserTagGenerator userTagGenerator;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+    public UserService(UserRepository userRepository, OAuthConnectionRepository oAuthConnectionRepository,
+                       PasswordEncoder passwordEncoder,
                        CurrentUserProvider currentUserProvider,
                        ApplicationEventPublisher eventPublisher,
                        PasswordBreachChecker passwordBreachChecker,
                        UserTagGenerator userTagGenerator) {
         this.userRepository = userRepository;
+        this.oAuthConnectionRepository = oAuthConnectionRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUserProvider = currentUserProvider;
         this.eventPublisher = eventPublisher;
@@ -62,6 +66,25 @@ public class UserService {
         User saved = userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId()));
         return toDto(saved);
+    }
+
+    @Transactional
+    public UUID oauthLogin(String provider, String providerUserId, String email, String name) {
+        Optional<OAuthConnection> existingConnection =
+                oAuthConnectionRepository.findByProviderAndProviderUserId(provider, providerUserId);
+        if (existingConnection.isPresent()) {
+            return existingConnection.get().getUserId();
+        }
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            String tag = userTagGenerator.generate(name);
+            User created = userRepository.save(User.createFromOAuth(name, email, tag));
+            eventPublisher.publishEvent(new UserRegisteredEvent(created.getId()));
+            return created;
+        });
+
+        oAuthConnectionRepository.save(new OAuthConnection(user.getId(), provider, providerUserId));
+        return user.getId();
     }
 
     @Transactional(readOnly = true)
@@ -116,6 +139,9 @@ public class UserService {
         UUID userId = currentUserProvider.currentUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        if (user.getPasswordHash() == null) {
+            throw new ConflictException("Essa conta não tem senha definida (entrou via Google/GitHub)");
+        }
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new ConflictException("Senha atual incorreta");
         }

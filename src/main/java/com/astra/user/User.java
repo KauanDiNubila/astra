@@ -43,7 +43,7 @@ public class User {
     @Column(nullable = false, length = 180, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
     @CreationTimestamp
@@ -72,6 +72,14 @@ public class User {
         this.email = email;
         this.passwordHash = passwordHash;
         this.tag = tag;
+    }
+
+    public static User createFromOAuth(String name, String email, String tag) {
+        User user = new User();
+        user.name = name;
+        user.email = email;
+        user.tag = tag;
+        return user;
     }
 
     public boolean isBanned() {

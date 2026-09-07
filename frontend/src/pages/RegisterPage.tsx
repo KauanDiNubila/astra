@@ -4,6 +4,7 @@ import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { getErrorMessage } from "@/lib/api"
+import { OAuthButtons } from "@/components/OAuthButtons"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -100,6 +101,12 @@ export function RegisterPage() {
                 </Link>
               </p>
             </form>
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">ou</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <OAuthButtons />
           </CardContent>
         </Card>
       </motion.div>

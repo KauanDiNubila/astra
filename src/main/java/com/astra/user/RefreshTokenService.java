@@ -1,20 +1,26 @@
 package com.astra.user;
 
 import com.astra.shared.exception.UnauthorizedException;
+import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RefreshTokenService {
+
+    public static final String REFRESH_COOKIE = "astra_refresh_token";
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final long refreshExpirationDays;
@@ -59,6 +65,33 @@ public class RefreshTokenService {
     public void revoke(String rawToken) {
         refreshTokenRepository.findByTokenHash(hash(rawToken))
                 .ifPresent(rt -> rt.setRevokedAt(OffsetDateTime.now()));
+    }
+
+    public void issueAndAttachCookie(UUID userId, HttpServletResponse response) {
+        String rawToken = issue(userId);
+        attachCookie(response, rawToken);
+    }
+
+    public void attachCookie(HttpServletResponse response, String rawToken) {
+        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE, rawToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/auth")
+                .maxAge(Duration.ofDays(refreshExpirationDays))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    public void clearCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/auth")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private String hash(String rawToken) {

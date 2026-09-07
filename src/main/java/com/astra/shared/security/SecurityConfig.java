@@ -20,10 +20,21 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final LoginRateLimitFilter loginRateLimitFilter;
+    private final GoogleOidcUserService googleOidcUserService;
+    private final GitHubOAuth2UserService gitHubOAuth2UserService;
+    private final OAuthAuthenticationSuccessHandler oAuthAuthenticationSuccessHandler;
+    private final OAuthAuthenticationFailureHandler oAuthAuthenticationFailureHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LoginRateLimitFilter loginRateLimitFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LoginRateLimitFilter loginRateLimitFilter,
+            GoogleOidcUserService googleOidcUserService, GitHubOAuth2UserService gitHubOAuth2UserService,
+            OAuthAuthenticationSuccessHandler oAuthAuthenticationSuccessHandler,
+            OAuthAuthenticationFailureHandler oAuthAuthenticationFailureHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.loginRateLimitFilter = loginRateLimitFilter;
+        this.googleOidcUserService = googleOidcUserService;
+        this.gitHubOAuth2UserService = gitHubOAuth2UserService;
+        this.oAuthAuthenticationSuccessHandler = oAuthAuthenticationSuccessHandler;
+        this.oAuthAuthenticationFailureHandler = oAuthAuthenticationFailureHandler;
     }
 
     @Bean
@@ -33,8 +44,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/ws/**",
-                                "/users/*/avatar").permitAll()
+                        .requestMatchers("/auth/**", "/oauth2/**", "/login/oauth2/**", "/v3/api-docs/**",
+                                "/swagger-ui/**", "/swagger-ui.html", "/ws/**", "/users/*/avatar").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
@@ -42,6 +53,12 @@ public class SecurityConfig {
                                 response, request, HttpStatus.UNAUTHORIZED, "Não autenticado"))
                         .accessDeniedHandler((request, response, accessDeniedException) -> ApiErrorWriter.write(
                                 response, request, HttpStatus.FORBIDDEN, "Acesso negado")))
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(googleOidcUserService)
+                                .userService(gitHubOAuth2UserService))
+                        .successHandler(oAuthAuthenticationSuccessHandler)
+                        .failureHandler(oAuthAuthenticationFailureHandler))
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

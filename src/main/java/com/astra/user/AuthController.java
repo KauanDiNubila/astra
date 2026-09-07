@@ -8,12 +8,8 @@ import com.astra.user.dto.RegisterRequest;
 import com.astra.user.dto.UserResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.time.Duration;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,19 +21,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private static final String REFRESH_COOKIE = "astra_refresh_token";
+    private static final String REFRESH_COOKIE = RefreshTokenService.REFRESH_COOKIE;
 
     private final UserService userService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-    private final long refreshExpirationDays;
 
-    public AuthController(UserService userService, JwtService jwtService, RefreshTokenService refreshTokenService,
-            @Value("${astra.jwt.refresh-expiration-days}") long refreshExpirationDays) {
+    public AuthController(UserService userService, JwtService jwtService, RefreshTokenService refreshTokenService) {
         this.userService = userService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
-        this.refreshExpirationDays = refreshExpirationDays;
     }
 
     @PostMapping("/register")
@@ -72,35 +65,12 @@ public class AuthController {
         if (refreshToken != null) {
             refreshTokenService.revoke(refreshToken);
         }
-        clearRefreshCookie(response);
+        refreshTokenService.clearCookie(response);
     }
 
     private AuthResponse issueTokens(UUID userId, UserResponse user, HttpServletResponse response) {
         String accessToken = jwtService.generateToken(userId);
-        String refreshToken = refreshTokenService.issue(userId);
-        setRefreshCookie(response, refreshToken);
+        refreshTokenService.issueAndAttachCookie(userId, response);
         return new AuthResponse(accessToken, user);
-    }
-
-    private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
-        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE, refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/auth")
-                .maxAge(Duration.ofDays(refreshExpirationDays))
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
-
-    private void clearRefreshCookie(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE, "")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/auth")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
