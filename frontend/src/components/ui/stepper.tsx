@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "motion/react"
 import { Minus, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
 
 export interface StepperProps {
   id?: string
@@ -12,10 +11,8 @@ export interface StepperProps {
   min?: number
   max?: number
   step?: number
-  editable?: boolean
   size?: "default" | "sm"
   formatDisplay?: (value: number) => string
-  parseDisplay?: (text: string) => number | null
   onChange?: (val: number) => void
   className?: string
   "aria-label"?: string
@@ -49,10 +46,8 @@ function Stepper({
   min = 0,
   max = 999,
   step = 1,
-  editable = false,
   size = "default",
   formatDisplay,
-  parseDisplay,
   onChange,
   className,
   "aria-label": ariaLabel = "Seletor numérico",
@@ -60,8 +55,6 @@ function Stepper({
   const isControlled = value !== undefined
   const [internal, setInternal] = React.useState(defaultValue)
   const [direction, setDirection] = React.useState(0)
-  const [isEditing, setIsEditing] = React.useState(false)
-  const [draft, setDraft] = React.useState("")
 
   const current = isControlled ? value! : internal
   const sm = size === "sm"
@@ -114,19 +107,6 @@ function Stepper({
     onChange?.(next)
   }
 
-  const commitDraft = () => {
-    setIsEditing(false)
-    const parsed = parseDisplay ? parseDisplay(draft) : Number.parseInt(draft, 10)
-    const next =
-      parsed === null || parsed === undefined || Number.isNaN(parsed)
-        ? current
-        : Math.min(max, Math.max(min, parsed))
-    if (next === current) return
-    setDirection(next > current ? 1 : -1)
-    if (!isControlled) setInternal(next)
-    onChange?.(next)
-  }
-
   return (
     <div
       id={id}
@@ -154,67 +134,33 @@ function Stepper({
         <Minus className={sm ? "size-3" : "size-4"} />
       </motion.button>
 
-      {isEditing ? (
-        <Input
-          type="text"
-          inputMode={parseDisplay ? "text" : "numeric"}
-          autoFocus
-          onFocus={(e) => e.currentTarget.select()}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.replace(parseDisplay ? /[^0-9hH:]/g : /[^0-9]/g, ""))}
-          onBlur={commitDraft}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              commitDraft()
-            }
-            if (e.key === "Escape") setIsEditing(false)
-          }}
-          style={{ width: `${maxLength + 1.5}ch` }}
-          className={cn(
-            "rounded-md border-none bg-transparent font-semibold shadow-none focus-visible:ring-1",
-            sm ? "h-5 px-0.5 text-sm" : "h-6 px-1 text-base",
-          )}
-        />
-      ) : (
-        <button
-          type="button"
-          disabled={!editable}
-          onClick={() => {
-            // Preenche com o valor atual (não em branco) pra o usuário ver
-            // o formato esperado (ex.: "3h00") em vez de um campo vazio sem
-            // nenhuma pista de como digitar horas.
-            setDraft(display(current))
-            setIsEditing(true)
-          }}
-          className={cn(
-            "relative flex shrink-0 items-center justify-center gap-0.5 rounded-sm font-semibold text-foreground tabular-nums",
-            sm ? "h-5 text-sm" : "h-6 text-base",
-            editable && "cursor-text hover:bg-muted/50",
-          )}
-        >
-          {digits.map((digit, index) => (
-            <div key={index} className={cn("relative", sm ? "h-5 w-2.5" : "h-6 w-3")}>
-              {digit !== "" && (
-                <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                  <motion.span
-                    key={nextTicks[index]}
-                    custom={direction}
-                    variants={digitVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={{ type: "spring", stiffness: 200, damping: 16, mass: 1.2 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    {digit}
-                  </motion.span>
-                </AnimatePresence>
-              )}
-            </div>
-          ))}
-        </button>
-      )}
+      <div
+        className={cn(
+          "relative flex shrink-0 items-center justify-center gap-0.5 rounded-sm font-semibold text-foreground tabular-nums",
+          sm ? "h-5 text-sm" : "h-6 text-base",
+        )}
+      >
+        {digits.map((digit, index) => (
+          <div key={index} className={cn("relative", sm ? "h-5 w-2.5" : "h-6 w-3")}>
+            {digit !== "" && (
+              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                <motion.span
+                  key={nextTicks[index]}
+                  custom={direction}
+                  variants={digitVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ type: "spring", stiffness: 200, damping: 16, mass: 1.2 }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  {digit}
+                </motion.span>
+              </AnimatePresence>
+            )}
+          </div>
+        ))}
+      </div>
 
       <motion.button
         type="button"

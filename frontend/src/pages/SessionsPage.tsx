@@ -5,9 +5,10 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
-import { formatDateTime, formatMinutes, formatMinutesCompact, parseMinutesCompact } from "@/lib/format"
+import { formatDateTime, formatMinutes } from "@/lib/format"
 import type { Session } from "@/lib/types"
 import { CategoryPicker } from "@/components/CategoryPicker"
+import { DurationField } from "@/components/DurationField"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { PomodoroTimer } from "@/components/PomodoroTimer"
@@ -17,7 +18,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Stepper } from "@/components/ui/stepper"
 import { Textarea } from "@/components/ui/textarea"
 
 function combineDateWithNow(date: Date) {
@@ -169,20 +169,15 @@ export function SessionsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="minutes">Tempo de foco</Label>
-                  <Stepper
+                  <DurationField
                     id="minutes"
-                    editable
-                    size="sm"
                     step={5}
                     min={5}
                     max={1440}
                     value={minutes}
                     onChange={setMinutes}
-                    formatDisplay={formatMinutesCompact}
-                    parseDisplay={parseMinutesCompact}
                     aria-label="Tempo de foco"
                   />
-                  <p className="text-xs text-muted-foreground">Clique no valor pra digitar — ex.: 3h, 2h30 ou 90</p>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label>Quando</Label>
