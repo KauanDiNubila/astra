@@ -4,6 +4,7 @@ import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
 import { Check, ChevronDown, Copy, GitBranch, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
+import { FOUNDER_EMAIL, FounderBadge } from "@/components/FounderBadge"
 import { useAuth } from "@/context/AuthContext"
 import { useGitHub } from "@/context/GitHubContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
@@ -284,6 +285,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                     <h3 className="flex items-center justify-center gap-1.5 text-center text-lg font-bold text-foreground">
                       {name || user.name}
                       {(user.role === "ADMIN" || user.role === "OWNER") && <AdminBadge />}
+                      {user.email === FOUNDER_EMAIL && <FounderBadge />}
                     </h3>
                     {bio && <p className="text-center text-sm text-muted-foreground">{bio}</p>}
                   </div>

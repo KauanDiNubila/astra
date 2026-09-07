@@ -33,6 +33,9 @@ public class User {
         };
     }
 
+    // easter egg: símbolo de raio só pra conta do criador do app.
+    private static final String FOUNDER_EMAIL = "guiribeiro0910@gmail.com";
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -84,5 +87,13 @@ public class User {
 
     public boolean isBanned() {
         return bannedAt != null;
+    }
+
+    public boolean isFounder() {
+        return isFounderEmail(email);
+    }
+
+    public static boolean isFounderEmail(String email) {
+        return FOUNDER_EMAIL.equalsIgnoreCase(email);
     }
 }
