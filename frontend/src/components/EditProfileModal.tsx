@@ -278,6 +278,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         maxLength={80}
+                        autoComplete="off"
                       />
                     </div>
 
@@ -312,7 +313,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                         <SelectTrigger id="profile-effect" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent onEscapeKeyDown={(e) => e.stopPropagation()}>
                           <SelectItem value="NONE">Nenhum</SelectItem>
                           {PROFILE_EFFECT_OPTIONS.map((opt) => (
                             <SelectItem key={opt.value} value={opt.value}>
