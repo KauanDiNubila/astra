@@ -1,4 +1,5 @@
 import type { DailyMinutes, GitHubDailyPoint } from "@/lib/types"
+import { formatMinutes } from "@/lib/format"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 function levelClass(minutes: number): string {
@@ -14,6 +15,14 @@ function dayKey(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
+}
+
+function formatDayLabel(key: string): string {
+  const [year, month, day] = key.split("-").map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+  })
 }
 
 export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData?: GitHubDailyPoint[] }) {
@@ -49,10 +58,12 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <div className="flex flex-col gap-0.5 text-center">
-                  <span>{cell.key}</span>
-                  <span>{cell.minutes} min de estudo</span>
-                  {cell.githubActivity > 0 && <span>{cell.githubActivity} no GitHub</span>}
+                <div className="flex flex-col items-center gap-0.5 py-0.5">
+                  <span className="font-medium">{formatDayLabel(cell.key)}</span>
+                  <span className="text-background/70">
+                    {cell.minutes > 0 ? formatMinutes(cell.minutes) : "0 min"} de estudo
+                    {cell.githubActivity > 0 && ` · ${cell.githubActivity} no GitHub`}
+                  </span>
                 </div>
               </TooltipContent>
             </Tooltip>
