@@ -161,9 +161,7 @@ function Stepper({
           autoFocus
           onFocus={(e) => e.currentTarget.select()}
           value={draft}
-          onChange={(e) =>
-            setDraft(e.target.value.replace(parseDisplay ? /[^0-9a-zA-Z:]/g : /[^0-9]/g, ""))
-          }
+          onChange={(e) => setDraft(e.target.value.replace(parseDisplay ? /[^0-9hH:]/g : /[^0-9]/g, ""))}
           onBlur={commitDraft}
           onKeyDown={(e) => {
             if (e.key === "Enter") {

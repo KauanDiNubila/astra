@@ -32,8 +32,21 @@ export function parseMinutesCompact(text: string): number | null {
     return hours * 60 + mins
   }
 
-  const plain = Number.parseInt(trimmed, 10)
-  return Number.isNaN(plain) ? null : plain
+  if (!/^\d+$/.test(trimmed)) return null
+
+  // Número com 3+ dígitos: lê como "horas + minutos" (últimos dois dígitos),
+  // igual ao formato de exibição (ex.: "220" -> 2h20), desde que os dois
+  // últimos dígitos formem um minuto válido (00-59). Números de até 2
+  // dígitos continuam minutos literais (ex.: "90" -> 90 min).
+  if (trimmed.length > 2) {
+    const mins = Number.parseInt(trimmed.slice(-2), 10)
+    const hours = Number.parseInt(trimmed.slice(0, -2), 10)
+    if (mins < 60) {
+      return hours * 60 + mins
+    }
+  }
+
+  return Number.parseInt(trimmed, 10)
 }
 
 export function formatRelativeTime(iso: string): string {
