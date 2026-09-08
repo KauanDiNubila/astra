@@ -239,9 +239,10 @@ public class ChatService {
 
         Map<UUID, UserRepository.NameBioView> usersById = userRepository.findNameBioByIdIn(friendIds).stream()
                 .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
-        Map<UUID, String> githubLoginByFriend = githubConnectionRepository.findByUserIdIn(friendIds).stream()
+        Map<UUID, GitHubConnection> githubConnectionByFriend = githubConnectionRepository.findByUserIdIn(friendIds)
+                .stream()
                 .filter(GitHubConnection::isVisibleToFriends)
-                .collect(Collectors.toMap(GitHubConnection::getUserId, GitHubConnection::getGithubLogin));
+                .collect(Collectors.toMap(GitHubConnection::getUserId, c -> c));
         Map<UUID, Long> unreadByFriend = messageRepository.unreadCountsFor(me, friendIds).stream()
                 .collect(Collectors.toMap(MessageRepository.UnreadBySender::getFriendId,
                         MessageRepository.UnreadBySender::getUnread));
@@ -258,15 +259,17 @@ public class ChatService {
                     String friendBio = user != null ? user.getBio() : null;
                     boolean friendAdmin = user != null
                             && (User.ROLE_ADMIN.equals(user.getRole()) || User.ROLE_OWNER.equals(user.getRole()));
-                    String friendGithubLogin = githubLoginByFriend.get(friendId);
+                    GitHubConnection friendGithub = githubConnectionByFriend.get(friendId);
+                    String friendGithubLogin = friendGithub != null ? friendGithub.getGithubLogin() : null;
+                    String friendGithubAvatarUrl = friendGithub != null ? friendGithub.getGithubAvatarUrl() : null;
                     long unread = unreadByFriend.getOrDefault(friendId, 0L);
                     MessageRepository.LastMessageView last = lastByFriend.get(friendId);
                     return last != null
                             ? new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
-                                    friendGithubLogin, lastMessageText(last),
+                                    friendGithubLogin, friendGithubAvatarUrl, lastMessageText(last),
                                     last.getCreatedAt().atOffset(ZoneOffset.UTC), unread)
                             : new ConversationSummary(friendId, friendName, friendTag, friendBio, friendAdmin,
-                                    friendGithubLogin, null, null, unread);
+                                    friendGithubLogin, friendGithubAvatarUrl, null, null, unread);
                 })
                 .sorted(Comparator.comparing(ConversationSummary::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))

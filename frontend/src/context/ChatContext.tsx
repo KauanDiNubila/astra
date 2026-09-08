@@ -278,6 +278,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const friendBio = found?.friendBio ?? friend?.friendBio ?? null
     const friendAdmin = found?.friendAdmin ?? friend?.friendAdmin ?? false
     const friendGithubLogin = found?.friendGithubLogin ?? null
+    const friendGithubAvatarUrl = found?.friendGithubAvatarUrl ?? null
     const preview = message.content ?? "📷 Foto"
     const updated: ConversationSummary = {
       friendUserId: otherId,
@@ -286,6 +287,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       friendBio,
       friendAdmin,
       friendGithubLogin,
+      friendGithubAvatarUrl,
       lastMessage: preview,
       lastMessageAt: message.createdAt,
       unreadCount: bumpUnread ? (found?.unreadCount ?? 0) + 1 : (found?.unreadCount ?? 0),

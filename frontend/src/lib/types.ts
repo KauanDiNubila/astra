@@ -183,6 +183,7 @@ export type ConversationSummary = {
   friendBio: string | null
   friendAdmin: boolean
   friendGithubLogin: string | null
+  friendGithubAvatarUrl: string | null
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number

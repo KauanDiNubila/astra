@@ -92,10 +92,24 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
 
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-6 py-8">
             <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
-            <h3 className="mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground">
-              {friend.friendName}
-              {friend.friendAdmin && <AdminBadge />}
-            </h3>
+            {friend.friendGithubLogin ? (
+              <a
+                href={`https://github.com/${friend.friendGithubLogin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Abrir @${friend.friendGithubLogin} no GitHub`}
+                className="group mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground transition-colors hover:text-muted-foreground"
+              >
+                {friend.friendName}
+                {friend.friendAdmin && <AdminBadge />}
+                <GitHubIcon className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </a>
+            ) : (
+              <h3 className="mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground">
+                {friend.friendName}
+                {friend.friendAdmin && <AdminBadge />}
+              </h3>
+            )}
             {friend.friendBio && (
               <p className="mt-1 text-center text-sm text-muted-foreground">{friend.friendBio}</p>
             )}
@@ -124,7 +138,18 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
                   rel="noopener noreferrer"
                   className="group mt-2 flex items-center gap-2.5 rounded-lg bg-muted/60 px-3 py-2 transition-colors hover:bg-muted"
                 >
-                  <GitHubIcon className="size-5 shrink-0 text-foreground" />
+                  <span className="relative shrink-0">
+                    {friend.friendGithubAvatarUrl ? (
+                      <img
+                        src={friend.friendGithubAvatarUrl}
+                        alt=""
+                        className="size-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <GitHubIcon className="size-8 rounded-full bg-foreground/10 p-1.5 text-foreground" />
+                    )}
+                    <GitHubIcon className="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-background bg-foreground p-0.5 text-background" />
+                  </span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                     {friend.friendGithubLogin}
                   </span>
