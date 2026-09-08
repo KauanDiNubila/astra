@@ -26,14 +26,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<AuthInfoView> findAuthInfoById(@Param("id") UUID id);
 
     // Usado por /auth/refresh, /me e o construtor de UserResponse em geral.
-    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role, u.tag as tag, "
-            + "u.accentColor as accentColor, u.profileEffect as profileEffect from User u where u.id = :id")
+    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role, u.tag as tag from User u where u.id = :id")
     Optional<UserSummaryView> findSummaryById(@Param("id") UUID id);
 
     // Usado em lote por amigos/chat/ranking pra evitar 1 findById por pessoa.
     // Inclui role pra dar pra mostrar o selo de admin nessas listas.
-    @Query("select u.id as id, u.name as name, u.bio as bio, u.role as role, u.tag as tag, "
-            + "u.accentColor as accentColor, u.profileEffect as profileEffect from User u where u.id in :ids")
+    @Query("select u.id as id, u.name as name, u.bio as bio, u.role as role, u.tag as tag from User u where u.id in :ids")
     List<NameBioView> findNameBioByIdIn(@Param("ids") Collection<UUID> ids);
 
     // Lista de administração — mesmo motivo, sem o avatar de cada usuário.
@@ -59,10 +57,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String getRole();
 
         String getTag();
-
-        String getAccentColor();
-
-        String getProfileEffect();
     }
 
     interface NameBioView {
@@ -75,10 +69,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String getRole();
 
         String getTag();
-
-        String getAccentColor();
-
-        String getProfileEffect();
     }
 
     interface AdminSummaryView {

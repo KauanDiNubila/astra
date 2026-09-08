@@ -61,19 +61,4 @@ public class UserController {
                 .contentType(MediaType.parseMediaType(avatar.contentType()))
                 .body(avatar.bytes());
     }
-
-    @PostMapping("/me/banner")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updateBanner(@RequestParam("file") MultipartFile file) {
-        userService.updateBanner(file);
-    }
-
-    @GetMapping("/users/{id}/banner")
-    public ResponseEntity<byte[]> banner(@PathVariable UUID id) {
-        AvatarData banner = userService.banner(id);
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
-                .contentType(MediaType.parseMediaType(banner.contentType()))
-                .body(banner.bytes());
-    }
 }

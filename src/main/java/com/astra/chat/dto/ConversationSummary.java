@@ -9,8 +9,6 @@ public record ConversationSummary(
         String friendTag,
         String friendBio,
         boolean friendAdmin,
-        String friendAccentColor,
-        String friendProfileEffect,
         String friendGithubLogin,
         String lastMessage,
         OffsetDateTime lastMessageAt,

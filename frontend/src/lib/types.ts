@@ -1,5 +1,3 @@
-export type ProfileEffect = "SPARKLES" | "CONFETTI" | "SNOW"
-
 export type User = {
   id: string
   name: string
@@ -7,8 +5,6 @@ export type User = {
   bio: string | null
   role: "USER" | "ADMIN" | "OWNER"
   tag: string
-  accentColor: string | null
-  profileEffect: ProfileEffect | null
 }
 
 export type AdminUser = {
@@ -186,8 +182,6 @@ export type ConversationSummary = {
   friendTag: string
   friendBio: string | null
   friendAdmin: boolean
-  friendAccentColor: string | null
-  friendProfileEffect: ProfileEffect | null
   friendGithubLogin: string | null
   lastMessage: string | null
   lastMessageAt: string | null
