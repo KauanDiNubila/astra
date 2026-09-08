@@ -1,6 +1,6 @@
 import { useRef } from "react"
 import { BookOpen, Clock, Code2, LayoutDashboard, Trophy } from "lucide-react"
-import { motion, useReducedMotion } from "motion/react"
+import { motion } from "motion/react"
 import { Navigate, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
@@ -52,24 +52,11 @@ export function LandingPage() {
   const { user, loading } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { onMouseMove } = useSpotlight()
-  const reducedMotion = useReducedMotion()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   if (!loading && user) {
     return <Navigate to="/dashboard" replace />
   }
-
-  const shimmerStyle = reducedMotion
-    ? undefined
-    : {
-        backgroundImage:
-          "linear-gradient(90deg, var(--muted-foreground) 0%, var(--foreground) 50%, var(--muted-foreground) 100%)",
-        backgroundSize: "200% 100%",
-        WebkitBackgroundClip: "text" as const,
-        backgroundClip: "text" as const,
-        color: "transparent",
-        animation: "astra-shimmer 5s linear infinite",
-      }
 
   return (
     <div
@@ -99,19 +86,6 @@ export function LandingPage() {
 
       <main className="flex flex-1 flex-col">
         <section className="flex flex-col items-center gap-7 px-4 pb-16 pt-24 text-center sm:pt-32">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3.5 py-1.5 text-xs font-medium"
-          >
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-            </span>
-            <span style={shimmerStyle}>Agora com integração ao GitHub</span>
-          </motion.span>
-
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
