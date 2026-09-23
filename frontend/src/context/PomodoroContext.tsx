@@ -160,31 +160,33 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     return (isLongBreakRef.current ? settingsRef.current.longBreakMinutes : settingsRef.current.shortBreakMinutes) * 60
   }
 
-  function startPhase(seconds: number) {
-    phaseEndAtRef.current = Date.now() + seconds * 1000
-    lastTickAtRef.current = Date.now()
+  function startPhase(seconds: number, base = Date.now()) {
+    phaseEndAtRef.current = base + seconds * 1000
+    lastTickAtRef.current = base
     setTimeLeft(seconds)
   }
 
-  function advancePhase() {
+  function advancePhase(phaseEnd: number, late: boolean) {
     const s = settingsRef.current
-    if (s.soundEnabled) playChime(s.soundId)
+    if (s.soundEnabled && !late) playChime(s.soundId)
 
     if (modeRef.current === "focus") {
       completedRef.current += 1
       setCompletedPomodoros(completedRef.current)
 
       if (s.disableBreaks) {
-        startPhase(s.focusMinutes * 60)
+        startPhase(s.focusMinutes * 60, phaseEnd)
         return
       }
 
       const longBreak = s.pomodorosUntilLongBreak > 0 && completedRef.current % s.pomodorosUntilLongBreak === 0
       setIsLongBreak(longBreak)
+      modeRef.current = "break"
+      isLongBreakRef.current = longBreak
       setMode("break")
       const breakSeconds = (longBreak ? s.longBreakMinutes : s.shortBreakMinutes) * 60
       if (s.autoStartBreak) {
-        startPhase(breakSeconds)
+        startPhase(breakSeconds, phaseEnd)
       } else {
         setRunning(false)
         phaseEndAtRef.current = null
@@ -193,10 +195,11 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    modeRef.current = "focus"
     setMode("focus")
     const focusSeconds = s.focusMinutes * 60
     if (s.autoStartNextPomodoro) {
-      startPhase(focusSeconds)
+      startPhase(focusSeconds, phaseEnd)
     } else {
       setRunning(false)
       phaseEndAtRef.current = null
@@ -205,20 +208,23 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   }
 
   function recompute() {
-    if (phaseEndAtRef.current === null) return
-    const now = Date.now()
-    const deltaSeconds = Math.max(0, Math.round((now - lastTickAtRef.current) / 1000))
-    const remainingSeconds = Math.max(0, Math.round((phaseEndAtRef.current - now) / 1000))
-    lastTickAtRef.current = now
+    for (let guard = 0; guard < 100 && phaseEndAtRef.current !== null; guard++) {
+      const now = Date.now()
+      const phaseEnd = phaseEndAtRef.current
+      const upTo = Math.min(now, phaseEnd)
+      const deltaSeconds = Math.max(0, Math.round((upTo - lastTickAtRef.current) / 1000))
+      lastTickAtRef.current = upTo
 
-    if (modeRef.current === "focus" && deltaSeconds > 0) {
-      setFocusedSeconds((sec) => sec + deltaSeconds)
-    }
+      if (modeRef.current === "focus" && deltaSeconds > 0) {
+        setFocusedSeconds((sec) => sec + deltaSeconds)
+      }
 
-    if (remainingSeconds > 0) {
-      setTimeLeft(remainingSeconds)
-    } else {
-      advancePhase()
+      const remainingSeconds = Math.round((phaseEnd - now) / 1000)
+      if (remainingSeconds > 0) {
+        setTimeLeft(remainingSeconds)
+        return
+      }
+      advancePhase(phaseEnd, now - phaseEnd > 5000)
     }
   }
 
