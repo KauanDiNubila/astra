@@ -1,6 +1,6 @@
 package com.astra.shared.security;
 
-import com.astra.user.UserService;
+import com.astra.user.service.UserService;
 import java.util.UUID;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;

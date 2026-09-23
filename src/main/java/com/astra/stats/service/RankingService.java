@@ -1,0 +1,79 @@
+package com.astra.stats.service;
+
+import com.astra.shared.CurrentUserProvider;
+import com.astra.social.service.FriendshipService;
+import com.astra.stats.dto.RankingEntry;
+import com.astra.tracking.session.service.SessionStatsService;
+import com.astra.tracking.session.dto.UserMinutes;
+import com.astra.user.entity.User;
+import com.astra.user.repository.UserRepository;
+import com.astra.user.service.UserService;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import com.astra.stats.dto.RankingPeriod;
+import com.astra.stats.dto.RankingScope;
+
+@Service
+public class RankingService {
+
+    private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
+
+    private final SessionStatsService sessionStatsService;
+    private final UserService userService;
+    private final FriendshipService friendshipService;
+    private final CurrentUserProvider currentUserProvider;
+
+    public RankingService(SessionStatsService sessionStatsService, UserService userService,
+                          FriendshipService friendshipService, CurrentUserProvider currentUserProvider) {
+        this.sessionStatsService = sessionStatsService;
+        this.userService = userService;
+        this.friendshipService = friendshipService;
+        this.currentUserProvider = currentUserProvider;
+    }
+
+    public List<RankingEntry> ranking(RankingPeriod period, RankingScope scope) {
+        OffsetDateTime start = startOf(period);
+        List<UserMinutes> rows = scope == RankingScope.FRIENDS
+                ? friendsRanking(start)
+                : sessionStatsService.rankingSince(start);
+        Map<UUID, UserRepository.NameBioView> users = userService.nameBioByIds(
+                rows.stream().map(UserMinutes::userId).toList());
+
+        List<RankingEntry> entries = new ArrayList<>();
+        int position = 1;
+        for (UserMinutes row : rows) {
+            UserRepository.NameBioView user = users.get(row.userId());
+            String name = user != null ? user.getName() : "";
+            boolean admin = user != null && User.ROLE_ADMIN.equals(user.getRole());
+            entries.add(new RankingEntry(position++, row.userId(), name, row.minutes(), admin));
+        }
+        return entries;
+    }
+
+    private List<UserMinutes> friendsRanking(OffsetDateTime start) {
+        UUID me = currentUserProvider.currentUserId();
+        Set<UUID> ids = new LinkedHashSet<>(friendshipService.friendIdsOf(me));
+        ids.add(me);
+        return sessionStatsService.rankingSinceForUsers(start, ids);
+    }
+
+    private OffsetDateTime startOf(RankingPeriod period) {
+        LocalDate today = LocalDate.now(ZONE);
+        LocalDate startDate = switch (period) {
+            case DAILY -> today;
+            case WEEKLY -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            case MONTHLY -> today.withDayOfMonth(1);
+        };
+        return startDate.atStartOfDay(ZONE).toOffsetDateTime();
+    }
+}

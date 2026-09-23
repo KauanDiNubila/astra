@@ -1,6 +1,6 @@
 package com.astra.github.dto;
 
-import com.astra.github.ActivityPeriod;
+import com.astra.github.entity.ActivityPeriod;
 
 public record GitHubPeriodSummary(
         ActivityPeriod period,

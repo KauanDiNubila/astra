@@ -1,6 +1,6 @@
 package com.astra.learning.dto;
 
-import com.astra.learning.GoalType;
+import com.astra.learning.entity.GoalType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 

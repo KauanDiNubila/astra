@@ -1,6 +1,6 @@
 package com.astra.learning.dto;
 
-import com.astra.learning.CourseStatus;
+import com.astra.learning.entity.CourseStatus;
 import java.util.UUID;
 
 public record CourseResponse(

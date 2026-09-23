@@ -1,6 +1,6 @@
 package com.astra.shared.security;
 
-import com.astra.user.UserService;
+import com.astra.user.service.UserService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

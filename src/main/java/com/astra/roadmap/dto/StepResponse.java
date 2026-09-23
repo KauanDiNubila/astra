@@ -1,6 +1,6 @@
 package com.astra.roadmap.dto;
 
-import com.astra.roadmap.StepStatus;
+import com.astra.roadmap.entity.StepStatus;
 import java.util.List;
 import java.util.UUID;
 

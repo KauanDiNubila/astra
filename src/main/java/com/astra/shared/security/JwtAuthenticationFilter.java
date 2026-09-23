@@ -1,7 +1,7 @@
 package com.astra.shared.security;
 
-import com.astra.user.User;
-import com.astra.user.UserService;
+import com.astra.user.entity.User;
+import com.astra.user.service.UserService;
 import com.astra.user.dto.AuthInfo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

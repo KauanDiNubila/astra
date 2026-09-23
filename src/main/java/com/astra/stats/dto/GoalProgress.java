@@ -1,6 +1,6 @@
 package com.astra.stats.dto;
 
-import com.astra.learning.GoalType;
+import com.astra.learning.entity.GoalType;
 
 public record GoalProgress(
         GoalType type,

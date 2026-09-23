@@ -1,6 +1,6 @@
 package com.astra.learning.dto;
 
-import com.astra.learning.CourseStatus;
+import com.astra.learning.entity.CourseStatus;
 import java.util.List;
 import java.util.UUID;
 
