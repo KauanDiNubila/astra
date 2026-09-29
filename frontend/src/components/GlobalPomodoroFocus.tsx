@@ -11,12 +11,14 @@ export function GlobalPomodoroFocus() {
     isLongBreak,
     timeLeft,
     totalSeconds,
+    running,
     focusedMinutes,
     completedPomodoros,
     dailyGoal,
     settings,
     primaryLabel,
     handlePrimaryClick,
+    skipBreak,
     courseId,
     courseDetail,
     note,
@@ -64,8 +66,10 @@ export function GlobalPomodoroFocus() {
     >
       <PomodoroFocusView
         ring={{ mode, isLongBreak, timeLeft, totalSeconds, sessionCaption }}
+        running={running}
         primaryLabel={primaryLabel}
         onPrimaryClick={handlePrimaryClick}
+        onSkipBreak={skipBreak}
         header={header}
         bottom={{
           currentLabel: currentLesson?.title,

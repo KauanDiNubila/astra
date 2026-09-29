@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { Badge } from "@/components/ui/badge"
 import { FlipDigits } from "@/components/FlipDigits"
 
@@ -50,18 +50,15 @@ export function PomodoroDisplay({
       style={{ width: size }}
     >
       {showBadge && (
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={`${mode}-${isLongBreak}-badge`}
-            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="mb-2"
-          >
-            <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={`${mode}-${isLongBreak}-badge`}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-2"
+        >
+          <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
+        </motion.div>
       )}
       <div className="h-[3px] w-full overflow-hidden rounded-full bg-foreground/10">
         <div
@@ -71,23 +68,20 @@ export function PomodoroDisplay({
           style={{ width: `${progress * 100}%` }}
         />
       </div>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`${mode}-${isLongBreak}`}
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-4 flex flex-col items-center gap-2"
-        >
-          <FlipDigits
-            value={formatClock(timeLeft)}
-            className="font-mono font-semibold tabular-nums"
-            style={{ fontSize: size * 0.22 }}
-          />
-          {caption && <span className="text-xs text-muted-foreground">{caption}</span>}
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key={`${mode}-${isLongBreak}`}
+        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-4 flex flex-col items-center gap-2"
+      >
+        <FlipDigits
+          value={formatClock(timeLeft)}
+          className="font-mono font-semibold tabular-nums"
+          style={{ fontSize: size * 0.22 }}
+        />
+        {caption && <span className="text-xs text-muted-foreground">{caption}</span>}
+      </motion.div>
     </motion.div>
   )
 }

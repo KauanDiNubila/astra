@@ -29,10 +29,12 @@ export function PomodoroTimer() {
     isLongBreak,
     timeLeft,
     totalSeconds,
+    running,
     focusedMinutes,
     completedPomodoros,
     primaryLabel,
     handlePrimaryClick,
+    skipBreak,
     resetCycle,
     discard,
     categories,
@@ -103,6 +105,11 @@ export function PomodoroTimer() {
           <Button type="button" onClick={handlePrimaryClick}>
             {primaryLabel}
           </Button>
+          {mode === "break" && !running && (
+            <Button type="button" variant="outline" onClick={skipBreak}>
+              Pular pausa
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={resetCycle}>
             Reiniciar ciclo
           </Button>

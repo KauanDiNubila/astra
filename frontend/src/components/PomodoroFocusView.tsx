@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { PomodoroDisplay, pomodoroModeLabel } from "@/components/PomodoroDisplay"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,8 +9,10 @@ type Mode = "focus" | "break"
 
 type Props = {
   ring: { mode: Mode; isLongBreak: boolean; timeLeft: number; totalSeconds: number; sessionCaption: string }
+  running: boolean
   primaryLabel: string
   onPrimaryClick: () => void
+  onSkipBreak: () => void
   header: { title: string; subtitle?: string; progress?: number } | null
   bottom: {
     currentLabel?: string
@@ -27,25 +29,22 @@ const fadeUp = {
   transition: { delay: 0.2, duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
 }
 
-export function PomodoroFocusView({ ring, primaryLabel, onPrimaryClick, header, bottom }: Props) {
+export function PomodoroFocusView({ ring, running, primaryLabel, onPrimaryClick, onSkipBreak, header, bottom }: Props) {
   const reducedMotion = useReducedMotion()
   const hasBottomContent = bottom.currentLabel || bottom.objective || bottom.nextLabel || bottom.moduleProgress
   const modeLabel = pomodoroModeLabel(ring.mode, ring.isLongBreak)
 
   return (
     <div className="flex min-h-full flex-1 flex-col gap-12">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`${ring.mode}-${ring.isLongBreak}-top-badge`}
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="flex justify-center"
-        >
-          <Badge variant={ring.mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key={`${ring.mode}-${ring.isLongBreak}-top-badge`}
+        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="flex justify-center"
+      >
+        <Badge variant={ring.mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
+      </motion.div>
 
       {header && (
         <motion.div {...fadeUp} className="flex flex-col items-center gap-2 text-center">
@@ -70,9 +69,16 @@ export function PomodoroFocusView({ ring, primaryLabel, onPrimaryClick, header, 
           totalSeconds={ring.totalSeconds}
           caption={ring.sessionCaption}
         />
-        <Button type="button" variant="outline" onClick={onPrimaryClick}>
-          {primaryLabel}
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onPrimaryClick}>
+            {primaryLabel}
+          </Button>
+          {ring.mode === "break" && !running && (
+            <Button type="button" variant="ghost" onClick={onSkipBreak}>
+              Pular pausa
+            </Button>
+          )}
+        </div>
       </div>
 
       {hasBottomContent && (

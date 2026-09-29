@@ -22,6 +22,7 @@ type PomodoroContextValue = {
   completedPomodoros: number
   primaryLabel: string
   handlePrimaryClick: () => void
+  skipBreak: () => void
   resetCycle: () => void
   discard: () => void
 
@@ -318,6 +319,11 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     if (startingUp) setFocusMode(true)
   }
 
+  function skipBreak() {
+    if (modeRef.current !== "break") return
+    advancePhase(Date.now(), true)
+  }
+
   function resetCycle() {
     setRunning(false)
     phaseEndAtRef.current = null
@@ -389,6 +395,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         completedPomodoros,
         primaryLabel,
         handlePrimaryClick,
+        skipBreak,
         resetCycle,
         discard,
         categories,
