@@ -3,7 +3,6 @@ import { Pause, Play } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { usePomodoro } from "@/context/PomodoroContext"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 function formatClock(totalSeconds: number) {
@@ -16,10 +15,9 @@ export function PomodoroMiniWidget() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const reducedMotion = useReducedMotion()
-  const { running, focusedSeconds, mode, isLongBreak, timeLeft, handlePrimaryClick } = usePomodoro()
+  const { running, focusedSeconds, timeLeft, handlePrimaryClick } = usePomodoro()
 
   const visible = (running || focusedSeconds > 0) && pathname !== "/sessions"
-  const modeLabel = mode === "focus" ? "Foco" : isLongBreak ? "Pausa longa" : "Pausa"
 
   // Timer manual em vez de AnimatePresence.exit: essa versão do motion trava
   // sem desmontar quando `visible` alterna rápido (ex.: navegação entre
@@ -53,7 +51,6 @@ export function PomodoroMiniWidget() {
         className="flex items-center gap-2 text-left"
         title="Abrir sessões"
       >
-        <Badge variant={mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
         <span className="font-mono text-sm tabular-nums">{formatClock(timeLeft)}</span>
       </button>
       <Button

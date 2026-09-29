@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
-import { motion, useReducedMotion } from "motion/react"
-import { PomodoroDisplay, pomodoroModeLabel } from "@/components/PomodoroDisplay"
-import { Badge } from "@/components/ui/badge"
+import { motion } from "motion/react"
+import { PomodoroDisplay } from "@/components/PomodoroDisplay"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 
@@ -30,22 +29,10 @@ const fadeUp = {
 }
 
 export function PomodoroFocusView({ ring, running, primaryLabel, onPrimaryClick, onSkipBreak, header, bottom }: Props) {
-  const reducedMotion = useReducedMotion()
   const hasBottomContent = bottom.currentLabel || bottom.objective || bottom.nextLabel || bottom.moduleProgress
-  const modeLabel = pomodoroModeLabel(ring.mode, ring.isLongBreak)
 
   return (
     <div className="flex min-h-full flex-1 flex-col gap-12">
-      <motion.div
-        key={`${ring.mode}-${ring.isLongBreak}-top-badge`}
-        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="flex justify-center"
-      >
-        <Badge variant={ring.mode === "focus" ? "default" : "secondary"}>{modeLabel}</Badge>
-      </motion.div>
-
       {header && (
         <motion.div {...fadeUp} className="flex flex-col items-center gap-2 text-center">
           <div className="flex flex-col items-center">
@@ -62,7 +49,6 @@ export function PomodoroFocusView({ ring, running, primaryLabel, onPrimaryClick,
         <PomodoroDisplay
           size={280}
           emphasize
-          showBadge={false}
           mode={ring.mode}
           isLongBreak={ring.isLongBreak}
           timeLeft={ring.timeLeft}
