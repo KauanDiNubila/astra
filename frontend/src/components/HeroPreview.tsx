@@ -18,7 +18,7 @@ function Frame() {
         width={2880}
         height={1800}
         fetchPriority="high"
-        className="aspect-square w-full object-cover object-top sm:aspect-[2.12/1]"
+        className="aspect-[1.6/1] w-full object-cover object-top sm:aspect-[2.12/1]"
       />
     </div>
   )
