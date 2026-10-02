@@ -1,5 +1,6 @@
 import { useRef } from "react"
 import type { RefObject } from "react"
+import type { MotionValue } from "motion/react"
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react"
 
 // Visualiza o ecossistema do Astra em duas camadas: Astra se divide em 4
@@ -64,7 +65,7 @@ type Props = {
   scrollContainerRef: RefObject<HTMLElement | null>
 }
 
-export function SessionFlowStatic() {
+function StaticFlow() {
   return (
     <section className="mx-auto flex max-w-4xl flex-col items-center gap-10 px-4 py-24 text-center">
       <p className="max-w-md text-balance text-muted-foreground">
@@ -93,6 +94,193 @@ export function SessionFlowStatic() {
   )
 }
 
+const V_WIDTH = 200
+const V_X_TRUNK = 16
+const V_X_GROUP = 52
+const V_X_LEAF = 88
+const V_ROOT_Y = 18
+const V_GROUP_ROW = 38
+const V_LEAF_ROW = 30
+const V_GROUP_GAP = 18
+const V_TRUNK_SPAN = 0.6
+const V_START = 0.02
+
+const verticalLayout = (() => {
+  let y = 66
+  const items = groups.map((g) => {
+    const groupY = y
+    y += V_GROUP_ROW
+    const leaves = g.leaves.map((l) => {
+      const leafY = y
+      y += V_LEAF_ROW
+      return { label: l.label, y: leafY }
+    })
+    y += V_GROUP_GAP
+    return { label: g.label, y: groupY, leaves }
+  })
+  const trunkEndY = items[items.length - 1].y
+  const trunkSpan = trunkEndY - V_ROOT_Y
+  return {
+    items: items.map((item) => ({
+      ...item,
+      start: V_START + V_TRUNK_SPAN * ((item.y - V_ROOT_Y) / trunkSpan),
+    })),
+    trunkEndY,
+    height: y - V_GROUP_GAP,
+  }
+})()
+
+const springConfig = { stiffness: 300, damping: 40 }
+
+function useDrawn(length: MotionValue<number>) {
+  return useTransform(length, (v) => (v > 0.005 ? 1 : 0))
+}
+
+function VerticalLeaf({
+  label,
+  y,
+  groupY,
+  start,
+  progress,
+}: {
+  label: string
+  y: number
+  groupY: number
+  start: number
+  progress: MotionValue<number>
+}) {
+  const branch = useSpring(useTransform(progress, [start, start + 0.06], [0, 1]), springConfig)
+  const opacity = useTransform(progress, [start + 0.03, start + 0.08], [0, 1])
+  const drawn = useDrawn(branch)
+  const from = Math.max(groupY + 8, y - 14)
+  return (
+    <>
+      <motion.path
+        d={`M ${V_X_GROUP} ${from} C ${V_X_GROUP} ${y} ${V_X_GROUP} ${y} ${V_X_LEAF} ${y}`}
+        stroke="currentColor"
+        className="text-border"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        style={{ pathLength: branch, opacity: drawn }}
+      />
+      <motion.g style={{ opacity }}>
+        <circle cx={V_X_LEAF} cy={y} r={3.5} className="fill-foreground" />
+        <text x={V_X_LEAF + 12} y={y + 4.5} className="fill-muted-foreground text-[14px]">
+          {label}
+        </text>
+      </motion.g>
+    </>
+  )
+}
+
+function VerticalGroup({
+  group,
+  progress,
+}: {
+  group: (typeof verticalLayout.items)[number]
+  progress: MotionValue<number>
+}) {
+  const { start, y } = group
+  const branch = useSpring(useTransform(progress, [start, start + 0.05], [0, 1]), springConfig)
+  const opacity = useTransform(progress, [start + 0.02, start + 0.07], [0, 1])
+  const sub = useSpring(useTransform(progress, [start + 0.05, start + 0.17], [0, 1]), springConfig)
+  const branchDrawn = useDrawn(branch)
+  const subDrawn = useDrawn(sub)
+  const lastLeafY = group.leaves[group.leaves.length - 1].y
+
+  return (
+    <>
+      <motion.path
+        d={`M ${V_X_TRUNK} ${y - 16} C ${V_X_TRUNK} ${y} ${V_X_TRUNK} ${y} ${V_X_GROUP} ${y}`}
+        stroke="currentColor"
+        className="text-border"
+        strokeWidth={2}
+        strokeLinecap="round"
+        style={{ pathLength: branch, opacity: branchDrawn }}
+      />
+      <motion.path
+        d={`M ${V_X_GROUP} ${y} L ${V_X_GROUP} ${lastLeafY - 14}`}
+        stroke="currentColor"
+        className="text-border"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        style={{ pathLength: sub, opacity: subDrawn }}
+      />
+      <motion.g style={{ opacity }}>
+        <circle cx={V_X_GROUP} cy={y} r={5.5} className="fill-primary" />
+        <text x={V_X_GROUP + 14} y={y + 5} className="fill-foreground text-[15px] font-medium">
+          {group.label}
+        </text>
+      </motion.g>
+      {group.leaves.map((leaf, i) => (
+        <VerticalLeaf
+          key={leaf.label}
+          label={leaf.label}
+          y={leaf.y}
+          groupY={y}
+          start={start + 0.07 + i * 0.02}
+          progress={progress}
+        />
+      ))}
+    </>
+  )
+}
+
+export function SessionFlowVertical({ scrollContainerRef }: Props) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const reducedMotion = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    container: scrollContainerRef,
+    offset: ["start start", "end end"],
+  })
+  const trunk = useSpring(useTransform(scrollYProgress, [V_START, V_START + V_TRUNK_SPAN], [0, 1]), springConfig)
+  const rootDotOpacity = useTransform(trunk, (v) => (v > 0 ? 1 : 0))
+  const trunkDrawn = useDrawn(trunk)
+
+  if (reducedMotion) return <StaticFlow />
+
+  return (
+    <div>
+      <p className="mx-auto max-w-xs text-balance px-4 pt-24 text-center text-muted-foreground">
+        Cada sessão de foco alimenta seu dashboard, metas e ranking. O Astra vai além dela também, com
+        aprendizado, conexão com outras pessoas e integração com o GitHub.
+      </p>
+      <section ref={sectionRef} className="relative h-[240vh] w-full">
+        <div className="sticky top-0 flex h-svh w-full items-center justify-center overflow-hidden">
+          <svg
+            viewBox={`0 0 ${V_WIDTH} ${verticalLayout.height + 16}`}
+            className="h-[78svh] w-auto max-w-[92vw]"
+            fill="none"
+          >
+            <motion.path
+              d={`M ${V_X_TRUNK} ${V_ROOT_Y} L ${V_X_TRUNK} ${verticalLayout.trunkEndY}`}
+              stroke="currentColor"
+              className="text-primary"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              style={{ pathLength: trunk, opacity: trunkDrawn }}
+            />
+            <motion.circle
+              cx={V_X_TRUNK}
+              cy={V_ROOT_Y}
+              r={6}
+              className="fill-primary"
+              style={{ opacity: rootDotOpacity }}
+            />
+            <text x={V_X_TRUNK + 16} y={V_ROOT_Y + 6} className="fill-foreground text-[20px] font-semibold">
+              Astra
+            </text>
+            {verticalLayout.items.map((group) => (
+              <VerticalGroup key={group.label} group={group} progress={scrollYProgress} />
+            ))}
+          </svg>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export function SessionFlowScroll({ scrollContainerRef }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
@@ -102,7 +290,6 @@ export function SessionFlowScroll({ scrollContainerRef }: Props) {
     offset: ["start start", "end end"],
   })
 
-  const springConfig = { stiffness: 300, damping: 40 }
   const rootTrunkLength = useSpring(useTransform(scrollYProgress, [0, 0.2], [0, 1]), springConfig)
   const midBranchLength = useSpring(useTransform(scrollYProgress, [0.15, 0.45], [0, 1]), springConfig)
   const leafBranchLength = useSpring(useTransform(scrollYProgress, [0.4, 0.7], [0, 1]), springConfig)
@@ -111,7 +298,7 @@ export function SessionFlowScroll({ scrollContainerRef }: Props) {
   const rootDotOpacity = useTransform(rootTrunkLength, (v) => (v > 0 ? 1 : 0))
   const barProgress = useSpring(scrollYProgress, { stiffness: 280, damping: 18, mass: 0.3 })
 
-  if (reducedMotion) return <SessionFlowStatic />
+  if (reducedMotion) return <StaticFlow />
 
   return (
     <section ref={sectionRef} className="relative h-[260vh] w-full">

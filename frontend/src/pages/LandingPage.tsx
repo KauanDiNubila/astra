@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
 import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SCROLLBAR_HIDE_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import { useSpotlight } from "@/hooks/useSpotlight"
-import { SessionFlowScroll, SessionFlowStatic } from "@/components/SessionFlowScroll"
+import { SessionFlowScroll, SessionFlowVertical } from "@/components/SessionFlowScroll"
 import { HeroPreview } from "@/components/HeroPreview"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
@@ -120,7 +120,7 @@ export function LandingPage() {
         <HeroPreview scrollContainerRef={scrollContainerRef} />
 
         <div className="lg:hidden">
-          <SessionFlowStatic />
+          <SessionFlowVertical scrollContainerRef={scrollContainerRef} />
         </div>
         <div className="hidden lg:block">
           <SessionFlowScroll scrollContainerRef={scrollContainerRef} />
