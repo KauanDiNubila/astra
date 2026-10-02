@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
 import type { DailyMinutes, GitHubDailyPoint } from "@/lib/types"
 import { formatMinutes } from "@/lib/format"
@@ -27,6 +28,13 @@ function formatDayLabel(key: string): string {
 }
 
 export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData?: GitHubDailyPoint[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [])
+
   const byDay = new Map(data.map((d) => [d.day, d.minutes]))
   const githubByDay = new Map((githubData ?? []).map((d) => [d.date, d.contributionCount]))
   const today = new Date()
@@ -45,7 +53,7 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
   }
 
   return (
-    <div className="flex gap-1 overflow-x-auto p-1">
+    <div ref={scrollRef} className="flex gap-1 overflow-x-auto p-1">
       {weeks.map((week, index) => (
         <div key={index} className="flex flex-col gap-1">
           {week.map((cell) => (

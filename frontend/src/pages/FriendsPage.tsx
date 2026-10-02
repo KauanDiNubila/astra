@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { Check, UserPlus, X } from "lucide-react"
 import { toast } from "sonner"
@@ -16,6 +16,15 @@ export function FriendsPage() {
   const [handle, setHandle] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
+    },
+    [],
+  )
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -45,6 +54,17 @@ export function FriendsPage() {
     } catch {
       toast.error("Não foi possível concluir a ação.")
     }
+  }
+
+  function requestRemoveFriend(id: string) {
+    if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current)
+    if (confirmRemoveId === id) {
+      setConfirmRemoveId(null)
+      remove(id)
+      return
+    }
+    setConfirmRemoveId(id)
+    confirmTimeoutRef.current = setTimeout(() => setConfirmRemoveId(null), 3000)
   }
 
   if (loading) {
@@ -181,11 +201,11 @@ export function FriendsPage() {
                   </span>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => remove(f.id)}
+                    variant={confirmRemoveId === f.id ? "destructive" : "ghost"}
+                    className={confirmRemoveId === f.id ? undefined : "text-muted-foreground hover:text-destructive"}
+                    onClick={() => requestRemoveFriend(f.id)}
                   >
-                    Remover
+                    {confirmRemoveId === f.id ? "Confirmar remoção" : "Remover"}
                   </Button>
                 </li>
               ))}

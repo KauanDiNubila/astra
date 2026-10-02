@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 import { motion } from "motion/react"
+import { Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
@@ -25,6 +26,7 @@ export function CoursesPage() {
   const [platform, setPlatform] = useState("")
   const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
   const { onMouseMove } = useSpotlight()
   const { courses, loadCourses } = usePomodoro()
 
@@ -46,6 +48,7 @@ export function CoursesPage() {
       setTitle("")
       setPlatform("")
       setModuleCount(0)
+      setFormOpen(false)
       await loadCourses()
     } catch {
       toast.error("Não foi possível criar o curso.")
@@ -60,9 +63,23 @@ export function CoursesPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold">Cursos</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Cursos</h1>
+        {courses.length > 0 && (
+          <Button
+            type="button"
+            variant={formOpen ? "secondary" : "outline"}
+            className="gap-1.5 sm:hidden"
+            aria-expanded={formOpen}
+            onClick={() => setFormOpen((open) => !open)}
+          >
+            <Plus className="size-4" />
+            Novo curso
+          </Button>
+        )}
+      </div>
 
-      <Card>
+      <Card className={cn(!formOpen && courses.length > 0 && "max-sm:hidden")}>
         <CardHeader>
           <CardTitle>Novo curso</CardTitle>
         </CardHeader>
@@ -111,7 +128,9 @@ export function CoursesPage() {
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between gap-2">
-                      <CardTitle className="text-base">{course.title}</CardTitle>
+                      <CardTitle className="line-clamp-2 break-words text-base" title={course.title}>
+                        {course.title}
+                      </CardTitle>
                       <Badge variant="secondary">
                         {course.completedLessons}/{course.totalLessons} aulas
                       </Badge>

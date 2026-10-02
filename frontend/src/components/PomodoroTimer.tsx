@@ -101,7 +101,7 @@ export function PomodoroTimer() {
 
         <PomodoroDisplay size={220} mode={mode} isLongBreak={isLongBreak} timeLeft={timeLeft} totalSeconds={totalSeconds} />
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-center gap-2 px-3">
           <Button type="button" onClick={handlePrimaryClick}>
             {primaryLabel}
           </Button>
@@ -145,7 +145,7 @@ export function PomodoroTimer() {
               value={courseId}
               onValueChange={(v) => setCourseId(v === "none" ? "" : v)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Nenhum curso" />
               </SelectTrigger>
               <SelectContent>

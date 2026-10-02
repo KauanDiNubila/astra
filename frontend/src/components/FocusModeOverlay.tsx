@@ -599,7 +599,9 @@ export function FocusModeOverlay({
 
             <div className="fixed left-4 top-4 z-10 flex items-center gap-3">
               <LiveClock />
-              <BatteryIndicator />
+              <div className="hidden sm:block">
+                <BatteryIndicator />
+              </div>
             </div>
 
             <div className="fixed right-4 top-4 z-10 flex flex-col items-end gap-1">
@@ -629,15 +631,17 @@ export function FocusModeOverlay({
                 >
                   <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
-                  onClick={toggleFullscreen}
-                >
-                  {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
-                </Button>
+                {document.fullscreenEnabled && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+                    onClick={toggleFullscreen}
+                  >
+                    {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="ghost"

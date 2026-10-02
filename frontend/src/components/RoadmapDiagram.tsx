@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
-import { CheckCircle2, X } from "lucide-react"
+import { CheckCircle2, ChevronDown, X } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import { api } from "@/lib/api"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { BUTTON_REVEAL_CLASS, cn } from "@/lib/utils"
 import type { CourseSummary, Pin, RoadmapStep, StepStatus } from "@/lib/types"
@@ -158,7 +159,7 @@ function PinPanel({
   return (
     <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
       <Select value={courseId} onValueChange={setCourseId}>
-        <SelectTrigger className="h-8 w-40 text-xs">
+        <SelectTrigger className="h-8 w-40 text-xs max-sm:w-full">
           <SelectValue placeholder="Pinar curso" />
         </SelectTrigger>
         <SelectContent>
@@ -206,13 +207,13 @@ function ResourceForm({
         placeholder="Título do link"
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        className="h-8 w-32 text-xs"
+        className="h-8 w-32 text-xs max-sm:w-full"
       />
       <Input
         placeholder="URL"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        className="h-8 w-40 text-xs"
+        className="h-8 w-40 text-xs max-sm:w-full"
       />
       <Button type="submit" size="sm" className="h-8" disabled={saving}>
         Adicionar link
@@ -304,6 +305,207 @@ function edgePath(from: Positioned, to: Positioned, kind: "trunk" | "branch") {
   return `M ${x1} ${y1} C ${midX} ${y1} ${midX} ${y2} ${x2} ${y2}`
 }
 
+function StepDetails({
+  roadmapId,
+  step,
+  pins,
+  courses,
+  predefined,
+  onChanged,
+}: {
+  roadmapId: string
+  step: RoadmapStep
+  pins: Pin[]
+  courses: CourseSummary[]
+  predefined: boolean
+  onChanged: Props["onChanged"]
+}) {
+  const { onMouseMove } = useSpotlight()
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 pt-6">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-medium">{step.title}</h3>
+          {step.status === "DONE" && (
+            <Badge variant="secondary" className="gap-1">
+              <CheckCircle2 className="size-3 text-emerald-500" />
+              Concluído
+            </Badge>
+          )}
+        </div>
+
+        <RoadmapStepGithubEvidence stepId={step.id} />
+
+        {(step.description || step.resources.length > 0) && (
+          <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-3">
+            {step.description && (
+              <p className="text-sm leading-relaxed">{step.description}</p>
+            )}
+            {step.resources.length > 0 && (
+              <ul className="flex flex-col gap-1">
+                {step.resources.map((resource) => (
+                  <li key={resource.id} className="flex items-center gap-1.5">
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary underline-offset-2 hover:underline"
+                    >
+                      {resource.label}
+                    </a>
+                    {!predefined && (
+                      <button
+                        type="button"
+                        title="Remover link"
+                        onClick={() => removeResource(step.id, resource.id, onChanged)}
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {!predefined && <ResourceForm stepId={step.id} onAdded={onChanged} />}
+
+        {pins.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {pins.map((pin) => (
+              <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
+                {courseTitle(courses, pin.courseId)}
+                <button
+                  type="button"
+                  title="Despinar curso"
+                  onClick={() => unpinCourse(step.id, pin.id, onChanged)}
+                  className="rounded-full p-0.5 hover:bg-foreground/10"
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <Select
+          value={step.status ?? ""}
+          onValueChange={(value) => setStepStatus(roadmapId, step, value as StepStatus, onChanged)}
+        >
+          <SelectTrigger className={cn("h-8 w-fit text-xs", BUTTON_REVEAL_CLASS)} onMouseMove={onMouseMove}>
+            <SelectValue placeholder="Definir status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="LEARNING">Aprendendo</SelectItem>
+            <SelectItem value="DONE">Concluído</SelectItem>
+            <SelectItem value="SKIPPED">Pulado</SelectItem>
+          </SelectContent>
+        </Select>
+        <PinPanel stepId={step.id} courses={courses} onPinned={onChanged} />
+      </CardContent>
+    </Card>
+  )
+}
+
+function StepStatusMark({ status }: { status: StepStatus | null }) {
+  if (status === "DONE") return <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+  if (status === "LEARNING") return <span aria-label="Aprendendo" className="size-2.5 shrink-0 rounded-full bg-amber-500" />
+  return null
+}
+
+function StepListView({ roadmapId, steps, pinsByStep, courses, predefined, onChanged }: Props) {
+  const mains = useMemo(
+    () => steps.filter((s) => !s.parentStepId).sort((a, b) => a.position - b.position),
+    [steps],
+  )
+  const [openMainId, setOpenMainId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  function rowClass(step: RoadmapStep, nested: boolean) {
+    return cn(
+      "flex min-h-12 flex-1 items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50",
+      nested ? "pl-6 text-[0.8rem]" : "font-medium",
+      step.status === "SKIPPED" && "text-muted-foreground line-through",
+      selectedId === step.id && "bg-muted/60",
+    )
+  }
+
+  function details(step: RoadmapStep) {
+    if (selectedId !== step.id) return null
+    return (
+      <div className="border-t bg-muted/20 p-3">
+        <StepDetails
+          roadmapId={roadmapId}
+          step={step}
+          pins={pinsByStep[step.id] ?? []}
+          courses={courses}
+          predefined={predefined}
+          onChanged={onChanged}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {mains.map((main) => {
+        const children = steps.filter((s) => s.parentStepId === main.id).sort((a, b) => a.position - b.position)
+        const expanded = openMainId === main.id
+        return (
+          <li key={main.id} className="overflow-hidden rounded-lg border bg-card">
+            <div className="flex items-stretch">
+              <button
+                type="button"
+                aria-expanded={selectedId === main.id}
+                onClick={() => setSelectedId((prev) => (prev === main.id ? null : main.id))}
+                className={rowClass(main, false)}
+              >
+                <StepStatusMark status={main.status} />
+                <span className="min-w-0 flex-1">{main.title}</span>
+              </button>
+              {children.length > 0 && (
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-label={`${expanded ? "Ocultar" : "Mostrar"} ${children.length} tópicos de ${main.title}`}
+                  onClick={() => setOpenMainId((prev) => (prev === main.id ? null : main.id))}
+                  className="flex min-w-14 items-center justify-center gap-1 border-l px-3 text-xs text-muted-foreground hover:bg-muted/50"
+                >
+                  {children.length}
+                  <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+                </button>
+              )}
+            </div>
+            {details(main)}
+            {expanded && (
+              <ul className="divide-y border-t">
+                {children.map((child) => (
+                  <li key={child.id}>
+                    <div className="flex items-stretch">
+                      <button
+                        type="button"
+                        aria-expanded={selectedId === child.id}
+                        onClick={() => setSelectedId((prev) => (prev === child.id ? null : child.id))}
+                        className={rowClass(child, true)}
+                      >
+                        <StepStatusMark status={child.status} />
+                        <span className="min-w-0 flex-1">{child.title}</span>
+                      </button>
+                    </div>
+                    {details(child)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChanged }: Props) {
   const { nodes, edges, width, height } = useMemo(() => computeGraphLayout(steps), [steps])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -314,7 +516,6 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChange
   const byId = Object.fromEntries(nodes.map((n) => [n.step.id, n]))
   const selected = selectedId ? byId[selectedId] : null
   const selectedPins = selected ? (pinsByStep[selected.step.id] ?? []) : []
-  const { onMouseMove } = useSpotlight()
   const closeSelected = useCallback(() => setSelectedId(null), [])
 
   useCloseOnClickOutside(selectedId !== null, containerRef, closeSelected)
@@ -420,89 +621,14 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChange
               key="content"
               onAnimationComplete={() => isFreshOpen && revealIfHidden(panelOuterRef.current)}
             >
-              <Card>
-                <CardContent className="flex flex-col gap-3 pt-6">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-medium">{selected.step.title}</h3>
-                    {selected.step.status === "DONE" && (
-                      <Badge variant="secondary" className="gap-1">
-                        <CheckCircle2 className="size-3 text-emerald-500" />
-                        Concluído
-                      </Badge>
-                    )}
-                  </div>
-
-                  <RoadmapStepGithubEvidence stepId={selected.step.id} />
-
-                  {(selected.step.description || selected.step.resources.length > 0) && (
-                    <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-3">
-                      {selected.step.description && (
-                        <p className="text-sm leading-relaxed">{selected.step.description}</p>
-                      )}
-                      {selected.step.resources.length > 0 && (
-                        <ul className="flex flex-col gap-1">
-                          {selected.step.resources.map((resource) => (
-                            <li key={resource.id} className="flex items-center gap-1.5">
-                              <a
-                                href={resource.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary underline-offset-2 hover:underline"
-                              >
-                                {resource.label}
-                              </a>
-                              {!predefined && (
-                                <button
-                                  type="button"
-                                  title="Remover link"
-                                  onClick={() => removeResource(selected.step.id, resource.id, onChanged)}
-                                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10"
-                                >
-                                  <X className="size-3" />
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  {!predefined && <ResourceForm stepId={selected.step.id} onAdded={onChanged} />}
-
-                  {selectedPins.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedPins.map((pin) => (
-                        <Badge key={pin.id} variant="outline" className="gap-1 pr-1">
-                          {courseTitle(courses, pin.courseId)}
-                          <button
-                            type="button"
-                            title="Despinar curso"
-                            onClick={() => unpinCourse(selected.step.id, pin.id, onChanged)}
-                            className="rounded-full p-0.5 hover:bg-foreground/10"
-                          >
-                            <X className="size-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <Select
-                    value={selected.step.status ?? ""}
-                    onValueChange={(value) => setStepStatus(roadmapId, selected.step, value as StepStatus, onChanged)}
-                  >
-                    <SelectTrigger className={cn("h-8 w-fit text-xs", BUTTON_REVEAL_CLASS)} onMouseMove={onMouseMove}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LEARNING">Aprendendo</SelectItem>
-                      <SelectItem value="DONE">Concluído</SelectItem>
-                      <SelectItem value="SKIPPED">Pulado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <PinPanel stepId={selected.step.id} courses={courses} onPinned={onChanged} />
-                </CardContent>
-              </Card>
+              <StepDetails
+                roadmapId={roadmapId}
+                step={selected.step}
+                pins={selectedPins}
+                courses={courses}
+                predefined={predefined}
+                onChanged={onChanged}
+              />
             </MeasuredPanel>
           ) : (
             <MeasuredPanel key="hint">
@@ -520,9 +646,14 @@ function GraphView({ roadmapId, steps, pinsByStep, courses, predefined, onChange
 // ---------- Container ----------
 
 export function RoadmapDiagram(props: Props) {
+  const isMobile = useIsMobile()
   const hasSteps = props.steps.some((s) => !s.parentStepId)
   if (!hasSteps) {
     return <p className="text-sm text-muted-foreground">Nenhuma etapa ainda.</p>
+  }
+
+  if (isMobile) {
+    return <StepListView {...props} />
   }
 
   return (

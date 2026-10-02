@@ -211,6 +211,10 @@ export function ChatPage() {
   }, [friendId, groupId])
 
   const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
+  const activeConversationLastMessageAt = isGroup
+    ? groupConversations.find((c) => c.groupId === groupId)?.lastMessageAt
+    : conversations.find((c) => c.friendUserId === friendId)?.lastMessageAt
+  const conversationIsEmpty = messages.length === 0 && ready && !activeConversationLastMessageAt
 
   // Em grupo, cada bolha de outra pessoa ganha o nome de quem mandou acima do
   // conteúdo — e esse nome só existe depois que loadGroupMembers responde, ou
@@ -420,7 +424,15 @@ export function ChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-9rem)]">
+    <div
+      className={cn(
+        "sm:h-[calc(100dvh-9rem)]",
+        friendId || groupId
+          ? "max-sm:h-[calc(100dvh-3.6rem)]"
+          : "max-sm:h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))]",
+      )}
+    >
+      <h1 className="sr-only">Chat</h1>
       <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-xl">
       <div
         className={cn(
@@ -435,7 +447,7 @@ export function ChatPage() {
             variant="ghost"
             size="icon"
             title={chatSoundEnabled ? "Silenciar som de mensagem" : "Ativar som de mensagem"}
-            className="size-6"
+            className="size-6 max-sm:size-10"
             onClick={() => setChatSoundEnabled(!chatSoundEnabled)}
           >
             {chatSoundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
@@ -497,12 +509,15 @@ export function ChatPage() {
             variant="ghost"
             size="icon"
             title="Criar grupo"
-            className="size-6"
+            className="size-6 max-sm:size-10"
             onClick={() => setCreateGroupModalOpen(true)}
           >
             <Plus className="size-3.5" />
           </Button>
         </div>
+        {groupConversations.length === 0 && (
+          <p className="px-4 pb-3 text-sm text-muted-foreground">Nenhum grupo ainda. Toque em + para criar um.</p>
+        )}
         {groupConversations.length > 0 && (
           <ul className="flex flex-col gap-0.5 p-2">
             {groupConversations.map((c) => (
@@ -611,6 +626,9 @@ export function ChatPage() {
             )}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
               <div ref={messagesContentRef} className="flex flex-col">
+                {conversationIsEmpty && (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
+                )}
                 {messages.map((m, i) => {
                   const mine = m.senderId === user?.id
                   const prev = messages[i - 1]
@@ -629,7 +647,7 @@ export function ChatPage() {
                       type="button"
                       title="Responder"
                       onClick={() => startReply(m)}
-                      className="shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                      className="shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 [@media(hover:none)]:opacity-60"
                     >
                       <Reply className="size-3.5" />
                     </button>

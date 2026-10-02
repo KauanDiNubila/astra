@@ -6,11 +6,24 @@ import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
 import { cn } from "@/lib/utils"
 import { AppSidebar } from "@/components/AppSidebar"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
+import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { PomodoroMiniWidget } from "@/components/PomodoroMiniWidget"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+
+const PAGE_TITLES: Record<string, string> = {
+  dashboard: "Dashboard",
+  sessions: "Sessões",
+  courses: "Cursos",
+  roadmaps: "Roadmaps",
+  friends: "Amigos",
+  chat: "Chat",
+  ranking: "Ranking",
+  github: "GitHub Insights",
+  admin: "Admin",
+}
 
 function getInitialSidebarOpen() {
   const match = document.cookie.match(/(?:^|; )sidebar_state=([^;]+)/)
@@ -20,7 +33,7 @@ function getInitialSidebarOpen() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { totalUnread, totalGroupUnread } = useChat()
-  useUnreadTabIndicator(totalUnread + totalGroupUnread)
+  useUnreadTabIndicator(totalUnread + totalGroupUnread, PAGE_TITLES[pathname.split("/")[1] ?? ""])
   // Chat se beneficia de ocupar a largura toda, igual apps de mensagem
   // dedicados — as outras páginas (texto/formulário) ficam melhor contidas.
   const isChatRoute = pathname.startsWith("/chat")
@@ -36,7 +49,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <AppSidebar />
         <SidebarInset>
           <header className="flex h-14 items-center gap-2 border-b px-4">
-            <SidebarTrigger />
+            <SidebarTrigger className="max-sm:size-10" />
             <Separator orientation="vertical" className="h-4" />
             <div className="ml-auto">
               <NotificationsPopover />
@@ -47,11 +60,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className={cn("mx-auto w-full py-8", isChatRoute ? "px-0 sm:px-6" : "max-w-5xl px-6")}
+            className={cn(
+              "mx-auto w-full",
+              isChatRoute ? "px-0 sm:px-6 sm:py-8" : "max-w-5xl px-4 py-6 max-md:pb-24 sm:px-6 sm:py-8",
+            )}
           >
             {children}
           </motion.div>
         </SidebarInset>
+        <MobileBottomNav />
       </SidebarProvider>
       <GlobalPomodoroFocus />
       <PomodoroMiniWidget />

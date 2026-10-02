@@ -43,7 +43,7 @@ export function PomodoroMiniWidget() {
           : { opacity: visible ? 1 : 0, y: visible ? 0 : -16, scale: visible ? 1 : 0.96 }
       }
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed right-4 top-20 z-40 flex items-center gap-3 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg"
+      className="fixed right-4 top-20 z-40 flex max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-md:top-auto items-center gap-3 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg"
     >
       <button
         type="button"

@@ -140,7 +140,7 @@ export function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       <motion.div
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         variants={gridStagger}
         initial="hidden"
         animate="show"
@@ -173,16 +173,16 @@ export function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Tempo de foco</CardTitle>
-              <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
+              <div className="flex w-fit gap-1 rounded-md border bg-muted/30 p-1">
                 {trendPeriods.map((p) => (
                   <PillToggleButton
                     key={p.key}
                     active={trendPeriod === p.key}
                     layoutId="trend-period-pill"
                     onClick={() => setTrendPeriod(p.key)}
-                    className="h-7 px-2"
+                    className="h-7 px-2 max-sm:h-9 max-sm:px-3"
                   >
                     {p.label}
                   </PillToggleButton>
@@ -197,16 +197,16 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Tempo por categoria</CardTitle>
-              <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
+              <div className="flex w-fit gap-1 rounded-md border bg-muted/30 p-1">
                 {categoryPeriods.map((p) => (
                   <PillToggleButton
                     key={p.key}
                     active={categoryPeriod === p.key}
                     layoutId="category-period-pill"
                     onClick={() => setCategoryPeriod(p.key)}
-                    className="h-7 px-2"
+                    className="h-7 px-2 max-sm:h-9 max-sm:px-3"
                   >
                     {p.label}
                   </PillToggleButton>

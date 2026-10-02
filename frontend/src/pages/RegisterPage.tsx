@@ -84,6 +84,7 @@ export function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="new-password"
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

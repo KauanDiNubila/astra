@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 
-const BASE_TITLE = "Astra"
+const APP_NAME = "Astra"
 const PLAIN_FAVICON = "/favicon.svg"
 
 // O SVG é montado aqui em vez de desenhar o favicon original num canvas: o
@@ -18,14 +18,15 @@ const BADGE_FAVICON =
     </svg>`.replace(/\s+/g, " "),
   )
 
-export function useUnreadTabIndicator(unread: number) {
+export function useUnreadTabIndicator(unread: number, pageTitle?: string) {
   useEffect(() => {
-    document.title = unread > 0 ? `(${unread}) ${BASE_TITLE}` : BASE_TITLE
+    const baseTitle = pageTitle ? `${pageTitle} · ${APP_NAME}` : APP_NAME
+    document.title = unread > 0 ? `(${unread}) ${baseTitle}` : baseTitle
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (link) link.href = unread > 0 ? BADGE_FAVICON : PLAIN_FAVICON
 
     return () => {
-      document.title = BASE_TITLE
+      document.title = APP_NAME
     }
-  }, [unread])
+  }, [unread, pageTitle])
 }

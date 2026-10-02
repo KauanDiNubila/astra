@@ -63,7 +63,7 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {editingTitle ? (
           <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 flex items-center gap-1 motion-safe:duration-150">
             <Input
@@ -111,7 +111,7 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
             <Pencil className="size-3 text-transparent transition-colors group-hover:text-muted-foreground" />
           </button>
         )}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="gap-1">
             <PlayCircle className="size-3" />
             {module.completedLessons}/{module.totalLessons} aulas
@@ -120,7 +120,7 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
             type="button"
             variant={module.completed ? "secondary" : "outline"}
             size="sm"
-            className="h-7 gap-1 text-xs"
+            className="h-7 gap-1 text-xs max-sm:h-9"
             onClick={toggleModuleCompleted}
             disabled={saving}
             title={module.completed ? "Desmarcar módulo" : "Marcar módulo como concluído"}
@@ -143,7 +143,7 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
           type="button"
           variant="outline"
           size="icon"
-          className="size-6 shrink-0 rounded-full"
+          className="size-6 shrink-0 rounded-full max-sm:size-9"
           onClick={addLesson}
           disabled={addingLesson}
           title="Adicionar aula"

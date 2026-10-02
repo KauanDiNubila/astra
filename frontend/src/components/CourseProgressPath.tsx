@@ -65,7 +65,7 @@ function ProgressDot({
       animate={pop ? { scale: [1, 1.4, 1] } : { scale: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       onAnimationComplete={() => setPop(false)}
-      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors ${
+      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors before:absolute before:-inset-x-[3px] before:-inset-y-3 before:content-[''] ${
         item.completed
           ? "border-emerald-500 bg-emerald-500"
           : "border-border bg-card hover:border-foreground/40"
