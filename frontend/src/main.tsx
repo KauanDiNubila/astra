@@ -6,6 +6,13 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import './index.css'
 import App from './App.tsx'
 
+window.addEventListener('vite:preloadError', () => {
+  const key = 'astra:preload-reload'
+  if (sessionStorage.getItem(key)) return
+  sessionStorage.setItem(key, '1')
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
