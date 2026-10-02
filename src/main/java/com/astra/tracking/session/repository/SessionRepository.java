@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +14,7 @@ import com.astra.tracking.session.entity.Session;
 
 public interface SessionRepository extends JpaRepository<Session, UUID> {
 
-    List<Session> findByUserId(UUID userId);
+    List<Session> findByUserId(UUID userId, Pageable pageable);
 
     boolean existsByCategoryId(UUID categoryId);
 

@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
 
+const PAGE_SIZE = 30
+
 function combineDateWithNow(date: Date) {
   const now = new Date()
   const combined = new Date(date)
@@ -46,10 +48,32 @@ export function SessionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmSessionId, setConfirmSessionId] = useState<string | null>(null)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const confirmSessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function loadSessions() {
-    return api.get<Session[]>("/sessions").then((res) => setSessions(res.data))
+    return api.get<Session[]>("/sessions", { params: { page: 0, size: PAGE_SIZE } }).then((res) => {
+      setSessions(res.data)
+      setHasMore(res.data.length === PAGE_SIZE)
+    })
+  }
+
+  async function loadMoreSessions() {
+    setLoadingMore(true)
+    try {
+      const page = Math.floor(sessions.length / PAGE_SIZE)
+      const res = await api.get<Session[]>("/sessions", { params: { page, size: PAGE_SIZE } })
+      setSessions((prev) => {
+        const known = new Set(prev.map((session) => session.id))
+        return [...prev, ...res.data.filter((session) => !known.has(session.id))]
+      })
+      setHasMore(res.data.length === PAGE_SIZE)
+    } catch {
+      toast.error("Não foi possível carregar mais sessões.")
+    } finally {
+      setLoadingMore(false)
+    }
   }
 
   useEffect(() => {
@@ -98,13 +122,13 @@ export function SessionsPage() {
     }
     setSaving(true)
     try {
-      const res = await api.post<Session>("/sessions", {
+      await api.post<Session>("/sessions", {
         categoryId,
         focusedMinutes: minutes,
         startedAt: combineDateWithNow(selectedDate).toISOString(),
         note: note.trim() || null,
       })
-      setSessions((prev) => [res.data, ...prev])
+      await loadSessions()
       setMinutes(25)
       setNote("")
       setSelectedDate(new Date())
@@ -128,7 +152,7 @@ export function SessionsPage() {
       <h1 className="text-2xl font-semibold">Sessões</h1>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle>Registrar sessão</CardTitle>
           <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
             <PillToggleButton
@@ -236,15 +260,20 @@ export function SessionsPage() {
                       setExpandedSessionId((prev) => (prev === s.id ? null : s.id))
                     }
                   >
-                    <div className="flex flex-col">
+                    <div className="flex min-w-0 flex-col">
                       <span className="font-medium">{formatMinutes(s.focusedMinutes)}</span>
                       <span className="text-sm text-muted-foreground">
                         {categoryName(s.categoryId)} &middot; {formatDateTime(s.startedAt)}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-3">
                       {s.note && (
-                        <span className="max-w-[50%] truncate text-sm text-muted-foreground">
+                        <span className="line-clamp-2 break-words text-sm text-muted-foreground sm:hidden">
+                          {s.note}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {s.note && (
+                        <span className="max-w-[50%] truncate text-sm text-muted-foreground max-sm:hidden">
                           {s.note}
                         </span>
                       )}
@@ -293,6 +322,17 @@ export function SessionsPage() {
                 </li>
               ))}
             </ul>
+          )}
+          {hasMore && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4 w-full"
+              disabled={loadingMore}
+              onClick={loadMoreSessions}
+            >
+              {loadingMore ? "Carregando..." : "Carregar mais"}
+            </Button>
           )}
         </CardContent>
       </Card>

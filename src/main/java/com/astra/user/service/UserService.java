@@ -178,13 +178,10 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public AvatarData avatar(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Não encontrado"));
-        if (user.getAvatar() == null) {
-            throw new NotFoundException("Não encontrado");
-        }
-        return new AvatarData(user.getAvatar(), user.getAvatarContentType());
+    public Optional<AvatarData> avatar(UUID userId) {
+        return userRepository.findById(userId)
+                .filter(user -> user.getAvatar() != null)
+                .map(user -> new AvatarData(user.getAvatar(), user.getAvatarContentType()));
     }
 
     @Transactional(readOnly = true)

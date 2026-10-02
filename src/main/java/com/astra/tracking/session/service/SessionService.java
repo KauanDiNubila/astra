@@ -10,6 +10,9 @@ import com.astra.tracking.session.dto.CreateSessionRequest;
 import com.astra.tracking.session.dto.SessionResponse;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.astra.learning.entity.Course;
@@ -54,9 +57,11 @@ public class SessionService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionResponse> listForCurrentUser() {
+    public List<SessionResponse> listForCurrentUser(int page, int size) {
         UUID userId = currentUserProvider.currentUserId();
-        return sessionRepository.findByUserId(userId).stream()
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "startedAt"));
+        return sessionRepository.findByUserId(userId, pageable).stream()
                 .map(this::toDto)
                 .toList();
     }

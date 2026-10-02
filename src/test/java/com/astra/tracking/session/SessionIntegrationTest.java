@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.astra.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,6 +35,10 @@ class SessionIntegrationTest {
                         .content("{\"name\":\"Test\",\"email\":\"" + email + "\",\"password\":\"Xk9$mQ2vN8pL4wR7\"}"))
                 .andExpect(status().isCreated());
         String body = mockMvc.perform(post("/auth/login")
+                        .with(request -> {
+                            request.setRemoteAddr("10.1." + ThreadLocalRandom.current().nextInt(256) + "." + ThreadLocalRandom.current().nextInt(1, 255));
+                            return request;
+                        })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"Xk9$mQ2vN8pL4wR7\"}"))
                 .andExpect(status().isOk())
@@ -70,6 +75,33 @@ class SessionIntegrationTest {
         mockMvc.perform(get("/sessions").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void listaDaMaisRecenteParaAMaisAntigaComPaginacao() throws Exception {
+        String token = authToken();
+        String categoryId = createCategory(token);
+        for (String day : new String[] {"2026-08-01", "2026-08-03", "2026-08-02"}) {
+            mockMvc.perform(post("/sessions")
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":"%s","focusedMinutes":30,"startedAt":"%sT14:00:00-03:00"}
+                                    """.formatted(categoryId, day)))
+                    .andExpect(status().isCreated());
+        }
+
+        mockMvc.perform(get("/sessions").param("size", "2").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].startedAt").value(org.hamcrest.Matchers.startsWith("2026-08-03")))
+                .andExpect(jsonPath("$[1].startedAt").value(org.hamcrest.Matchers.startsWith("2026-08-02")));
+
+        mockMvc.perform(get("/sessions").param("size", "2").param("page", "1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].startedAt").value(org.hamcrest.Matchers.startsWith("2026-08-01")));
     }
 
     @Test

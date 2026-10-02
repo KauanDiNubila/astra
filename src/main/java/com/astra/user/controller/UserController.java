@@ -1,6 +1,5 @@
 package com.astra.user.controller;
 
-import com.astra.user.dto.AvatarData;
 import com.astra.user.dto.ChangePasswordRequest;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
@@ -56,10 +55,13 @@ public class UserController {
 
     @GetMapping("/users/{id}/avatar")
     public ResponseEntity<byte[]> avatar(@PathVariable UUID id) {
-        AvatarData avatar = userService.avatar(id);
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
-                .contentType(MediaType.parseMediaType(avatar.contentType()))
-                .body(avatar.bytes());
+        return userService.avatar(id)
+                .map(avatar -> ResponseEntity.ok()
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
+                        .contentType(MediaType.parseMediaType(avatar.contentType()))
+                        .body(avatar.bytes()))
+                .orElseGet(() -> ResponseEntity.noContent()
+                        .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePrivate())
+                        .build());
     }
 }
