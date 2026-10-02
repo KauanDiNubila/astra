@@ -64,6 +64,35 @@ type Props = {
   scrollContainerRef: RefObject<HTMLElement | null>
 }
 
+export function SessionFlowStatic() {
+  return (
+    <section className="mx-auto flex max-w-4xl flex-col items-center gap-10 px-4 py-24 text-center">
+      <p className="max-w-md text-balance text-muted-foreground">
+        Cada sessão de foco alimenta seu dashboard, metas e ranking. O Astra
+        vai além dela também, com aprendizado, conexão com outras pessoas e
+        integração com o GitHub.
+      </p>
+      <div className="flex flex-col gap-6">
+        {groups.map((g) => (
+          <div key={g.label} className="flex flex-col items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{g.label}</span>
+            <div className="flex flex-wrap justify-center gap-3">
+              {g.leaves.map((l) => (
+                <span
+                  key={l.label}
+                  className="rounded-full border px-4 py-1.5 text-sm text-muted-foreground"
+                >
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function SessionFlowScroll({ scrollContainerRef }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
@@ -82,34 +111,7 @@ export function SessionFlowScroll({ scrollContainerRef }: Props) {
   const rootDotOpacity = useTransform(rootTrunkLength, (v) => (v > 0 ? 1 : 0))
   const barProgress = useSpring(scrollYProgress, { stiffness: 280, damping: 18, mass: 0.3 })
 
-  if (reducedMotion) {
-    return (
-      <section className="mx-auto flex max-w-4xl flex-col items-center gap-10 px-4 py-24 text-center">
-        <p className="max-w-md text-balance text-muted-foreground">
-          Cada sessão de foco alimenta seu dashboard, metas e ranking. O Astra
-          vai além dela também, com aprendizado, conexão com outras pessoas e
-          integração com o GitHub.
-        </p>
-        <div className="flex flex-col gap-6">
-          {groups.map((g) => (
-            <div key={g.label} className="flex flex-col items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{g.label}</span>
-              <div className="flex flex-wrap justify-center gap-3">
-                {g.leaves.map((l) => (
-                  <span
-                    key={l.label}
-                    className="rounded-full border px-4 py-1.5 text-sm text-muted-foreground"
-                  >
-                    {l.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    )
-  }
+  if (reducedMotion) return <SessionFlowStatic />
 
   return (
     <section ref={sectionRef} className="relative h-[260vh] w-full">
