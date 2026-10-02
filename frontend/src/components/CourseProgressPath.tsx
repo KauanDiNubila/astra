@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { X } from "lucide-react"
+import { Trash2, X } from "lucide-react"
 import { cn, SCROLLBAR_HIDE_CLASS } from "@/lib/utils"
 
 type PathItem = {
@@ -26,6 +26,9 @@ const PADDING = 8
 const POP_MARGIN = 6
 const BADGE_SIZE = 14
 const BADGE_GAP = 6
+const LONG_PRESS_MS = 450
+const TOUCH_PILL_HALF_WIDTH = 60
+const TOUCH_PILL_OFFSET = 46
 
 function ProgressDot({
   item,
@@ -34,6 +37,7 @@ function ProgressDot({
   disabled,
   onClick,
   onHoverChange,
+  onLongPress,
 }: {
   item: PathItem
   x: number
@@ -41,10 +45,41 @@ function ProgressDot({
   disabled: boolean
   onClick: () => void
   onHoverChange: (hovering: boolean, el: HTMLButtonElement | null) => void
+  onLongPress?: (el: HTMLButtonElement) => void
 }) {
   const prevCompleted = useRef(item.completed)
   const [pop, setPop] = useState(false)
   const ref = useRef<HTMLButtonElement>(null)
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressedRef = useRef(false)
+
+  function cancelPress() {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
+  }
+
+  useEffect(() => cancelPress, [])
+
+  function handlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    longPressedRef.current = false
+    if (event.pointerType !== "touch" || !onLongPress || disabled) return
+    cancelPress()
+    pressTimerRef.current = setTimeout(() => {
+      longPressedRef.current = true
+      navigator.vibrate?.(12)
+      if (ref.current) onLongPress(ref.current)
+    }, LONG_PRESS_MS)
+  }
+
+  function handleClick() {
+    if (longPressedRef.current) {
+      longPressedRef.current = false
+      return
+    }
+    onClick()
+  }
 
   useEffect(() => {
     if (item.completed && !prevCompleted.current) setPop(true)
@@ -57,7 +92,14 @@ function ProgressDot({
       type="button"
       title={item.title}
       disabled={disabled}
-      onClick={onClick}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onPointerCancel={cancelPress}
+      onContextMenu={(event) => {
+        if (longPressedRef.current) event.preventDefault()
+      }}
       onMouseEnter={() => onHoverChange(true, ref.current)}
       onMouseLeave={() => onHoverChange(false, ref.current)}
       whileHover={{ scale: 1.15 }}
@@ -65,7 +107,7 @@ function ProgressDot({
       animate={pop ? { scale: [1, 1.4, 1] } : { scale: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       onAnimationComplete={() => setPop(false)}
-      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors before:absolute before:-inset-x-[3px] before:-inset-y-3 before:content-[''] ${
+      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors select-none [-webkit-touch-callout:none] before:absolute before:-inset-x-[3px] before:-inset-y-3 before:content-[''] ${
         item.completed
           ? "border-emerald-500 bg-emerald-500"
           : "border-border bg-card hover:border-foreground/40"
@@ -79,11 +121,22 @@ export function CourseProgressPath({ items, onSetProgress, onDelete, saving }: P
   const sorted = [...items].sort((a, b) => a.position - b.position)
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null)
+  const [hover, setHover] = useState<{ id: string; left: number; top: number; touch: boolean } | null>(null)
 
   useEffect(() => () => {
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current)
   }, [])
+
+  const touchOpen = hover?.touch ?? false
+  useEffect(() => {
+    if (!touchOpen) return
+    function handlePointerDown(event: PointerEvent) {
+      if ((event.target as HTMLElement).closest("[data-lesson-delete]")) return
+      setHover(null)
+    }
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [touchOpen])
 
   if (sorted.length === 0) return null
 
@@ -125,6 +178,22 @@ export function CourseProgressPath({ items, onSetProgress, onDelete, saving }: P
       id: itemId,
       left: dotRect.left - containerRect.left + dotRect.width / 2,
       top: dotRect.top - containerRect.top,
+      touch: false,
+    })
+  }
+
+  function handleLongPress(itemId: string, el: HTMLButtonElement) {
+    if (!containerRef.current || !onDelete || saving) return
+    cancelHoverClear()
+    const dotRect = el.getBoundingClientRect()
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const center = dotRect.left - containerRect.left + dotRect.width / 2
+    const maxLeft = Math.max(TOUCH_PILL_HALF_WIDTH, containerRect.width - TOUCH_PILL_HALF_WIDTH)
+    setHover({
+      id: itemId,
+      left: Math.min(Math.max(center, TOUCH_PILL_HALF_WIDTH), maxLeft),
+      top: dotRect.top - containerRect.top,
+      touch: true,
     })
   }
 
@@ -176,13 +245,38 @@ export function CourseProgressPath({ items, onSetProgress, onDelete, saving }: P
               disabled={saving}
               onClick={() => handleClick(p.item.position)}
               onHoverChange={(hovering, el) => handleHoverChange(p.item.id, hovering, el)}
+              onLongPress={onDelete ? (el) => handleLongPress(p.item.id, el) : undefined}
             />
           ))}
         </div>
       </div>
 
+      {hover && onDelete && hover.touch && (
+        <motion.div
+          data-lesson-delete
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.12 }}
+          className="absolute z-20 -translate-x-1/2"
+          style={{ left: hover.left, top: hover.top - TOUCH_PILL_OFFSET }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              const id = hover.id
+              setHover(null)
+              onDelete(id)
+            }}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-destructive px-4 text-sm font-medium whitespace-nowrap text-destructive-foreground shadow-lg"
+          >
+            <Trash2 className="size-4" />
+            Excluir aula
+          </button>
+        </motion.div>
+      )}
+
       <AnimatePresence>
-        {hover && onDelete && (
+        {hover && onDelete && !hover.touch && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

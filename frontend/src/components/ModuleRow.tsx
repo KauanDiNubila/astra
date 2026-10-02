@@ -151,6 +151,11 @@ export function ModuleRow({ module, courseId, onChanged }: Props) {
           <Plus className="size-3.5" />
         </Button>
       </div>
+      {module.lessons.length > 0 && (
+        <p className="hidden text-xs text-muted-foreground [@media(hover:none)]:block">
+          Segure uma aula para excluir.
+        </p>
+      )}
     </div>
   )
 }
