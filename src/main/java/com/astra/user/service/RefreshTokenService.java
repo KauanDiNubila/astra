@@ -23,6 +23,7 @@ import com.astra.user.repository.RefreshTokenRepository;
 public class RefreshTokenService {
 
     public static final String REFRESH_COOKIE = "astra_refresh_token";
+    private static final Duration REUSE_LEEWAY = Duration.ofSeconds(10);
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final long refreshExpirationDays;
@@ -52,6 +53,9 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
 
         if (existing.getRevokedAt() != null) {
+            if (existing.getRevokedAt().isAfter(OffsetDateTime.now().minus(REUSE_LEEWAY))) {
+                return existing.getUserId();
+            }
             refreshTokenRepository.revokeAllForUser(existing.getUserId(), OffsetDateTime.now());
             throw new UnauthorizedException("Refresh token inválido");
         }

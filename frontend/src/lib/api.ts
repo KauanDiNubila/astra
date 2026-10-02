@@ -34,12 +34,19 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-let refreshPromise: Promise<string> | null = null
+let refreshPromise: Promise<AuthResponse> | null = null
 
-async function performRefresh(): Promise<string> {
-  const res = await axios.post<AuthResponse>(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
-  setAccessToken(res.data.accessToken)
-  return res.data.accessToken
+export function refreshSession(): Promise<AuthResponse> {
+  refreshPromise ??= axios
+    .post<AuthResponse>(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
+    .then((res) => {
+      setAccessToken(res.data.accessToken)
+      return res.data
+    })
+    .finally(() => {
+      refreshPromise = null
+    })
+  return refreshPromise
 }
 
 function logoutLocally() {
@@ -58,10 +65,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && original && !original._retry && !isAuthCall) {
       original._retry = true
       try {
-        refreshPromise ??= performRefresh().finally(() => {
-          refreshPromise = null
-        })
-        const newAccessToken = await refreshPromise
+        const { accessToken: newAccessToken } = await refreshSession()
         original.headers = original.headers ?? {}
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return api(original)

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { api, clearAccessToken, setAccessToken } from "@/lib/api"
+import { api, clearAccessToken, refreshSession, setAccessToken } from "@/lib/api"
 import type { AuthResponse, User } from "@/lib/types"
 
 type AuthContextValue = {
@@ -21,12 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [avatarVersion, setAvatarVersion] = useState(() => Date.now())
 
   useEffect(() => {
-    api
-      .post<AuthResponse>("/auth/refresh")
-      .then((res) => {
-        setAccessToken(res.data.accessToken)
-        setUser(res.data.user)
-      })
+    refreshSession()
+      .then((data) => setUser(data.user))
       .catch(() => clearAccessToken())
       .finally(() => setLoading(false))
   }, [])
