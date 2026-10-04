@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import { watchSpeaking } from "@/lib/callAudio"
+import { startRingback, watchSpeaking } from "@/lib/callAudio"
 import { loadDevicePrefs, listDevices, saveDevicePrefs } from "@/lib/callDevices"
 import type { DeviceLists, DevicePrefs } from "@/lib/callDevices"
 import { PeerMesh } from "@/lib/callPeers"
@@ -217,7 +217,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }
 
   async function openCamera(deviceId: string) {
-    const base = { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 }, frameRate: { ideal: 24 } }
+    const base = { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16 / 9 }, frameRate: { ideal: 30 } }
     if (deviceId) {
       try {
         return await navigator.mediaDevices.getUserMedia({ video: { ...base, deviceId: { exact: deviceId } } })
@@ -518,8 +518,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (!mesh || !navigator.mediaDevices?.getDisplayMedia) return
     try {
       const screen = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: { ideal: 30 } },
-        audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false },
+        video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 60, max: 60 } },
+        audio: {
+          suppressLocalAudioPlayback: true,
+          restrictOwnAudio: true,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+        systemAudio: "include",
       } as DisplayMediaStreamOptions)
       if (!meshRef.current) {
         screen.getTracks().forEach((t) => t.stop())
@@ -527,10 +534,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
       screenRef.current = screen
       const video = screen.getVideoTracks()[0]
-      if ("contentHint" in video) video.contentHint = "detail"
       video.onended = stopScreen
       mesh.publishTrack(video, screen, true)
       screen.getAudioTracks().forEach((track) => mesh.publishTrack(track, screen, true))
+      const wholeScreenAudio =
+        screen.getAudioTracks().length > 0 &&
+        (video.getSettings() as MediaTrackSettings & { displaySurface?: string }).displaySurface === "monitor"
+      const ownAudioExcluded = !!(
+        navigator.mediaDevices.getSupportedConstraints() as MediaTrackSupportedConstraints & {
+          restrictOwnAudio?: boolean
+        }
+      ).restrictOwnAudio
+      if (wholeScreenAudio && !ownAudioExcluded) {
+        toast("Você está compartilhando o som do computador inteiro, inclusive a voz da call. Se alguém ouvir a própria voz, compartilhe uma aba e marque 'Compartilhar áudio da aba'.", { duration: 10000 })
+      }
       setScreenSharing(true)
       bump()
     } catch (error) {
@@ -696,6 +713,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [participants, mediaVersion])
+
+  useEffect(() => {
+    if (phase !== "active" || !ringing) return
+    return startRingback()
+  }, [phase, ringing])
 
   useEffect(() => {
     if (phase !== "active" || !navigator.mediaDevices) return

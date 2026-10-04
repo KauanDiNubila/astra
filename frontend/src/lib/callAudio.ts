@@ -59,3 +59,17 @@ export function startRingtone() {
   const interval = setInterval(ring, 2400)
   return () => clearInterval(interval)
 }
+
+export function startRingback() {
+  const ctx = getAudioContext()
+  if (!ctx) return () => {}
+
+  function beep() {
+    if (!ctx) return
+    tone(ctx, 425, ctx.currentTime, 1.1, 0.1)
+  }
+
+  beep()
+  const interval = setInterval(beep, 4000)
+  return () => clearInterval(interval)
+}

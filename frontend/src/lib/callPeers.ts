@@ -10,9 +10,14 @@ type MeshHandlers = {
   onChange: () => void
 }
 
-const SCREEN_MAX_BITRATE = 2_500_000
-const SCREEN_MAX_BITRATE_MULTI = 1_200_000
-const CAMERA_MAX_BITRATE = 800_000
+const SCREEN_BITRATE_BY_PEERS = [8_000_000, 4_000_000, 2_500_000]
+const CAMERA_BITRATE_BY_PEERS = [4_000_000, 2_000_000, 1_200_000]
+const MIC_MAX_BITRATE = 64_000
+const SCREEN_AUDIO_MAX_BITRATE = 128_000
+
+function bitrateFor(table: number[], peers: number) {
+  return table[Math.min(Math.max(peers, 1), table.length) - 1]
+}
 
 class PeerLink {
   readonly clientId: string
@@ -135,13 +140,19 @@ class PeerLink {
 
   applyEncodings() {
     if (this.closed) return
-    const multi = this.mesh.peerCount() > 1
+    const peers = this.mesh.peerCount()
     for (const [trackId, sender] of this.senders) {
-      if (sender.track?.kind !== "video") continue
+      const kind = sender.track?.kind
+      if (!kind) continue
       const params = sender.getParameters()
       if (!params.encodings || params.encodings.length === 0) continue
       const isScreen = this.mesh.isScreenTrack(trackId)
-      const max = isScreen ? (multi ? SCREEN_MAX_BITRATE_MULTI : SCREEN_MAX_BITRATE) : CAMERA_MAX_BITRATE
+      let max: number
+      if (kind === "video") {
+        max = bitrateFor(isScreen ? SCREEN_BITRATE_BY_PEERS : CAMERA_BITRATE_BY_PEERS, peers)
+      } else {
+        max = isScreen ? SCREEN_AUDIO_MAX_BITRATE : MIC_MAX_BITRATE
+      }
       if (params.encodings[0].maxBitrate === max) continue
       params.encodings[0].maxBitrate = max
       sender.setParameters(params).catch(() => {})
@@ -218,6 +229,7 @@ export class PeerMesh {
     this.links.set(clientId, link)
     if (this.screenStreamId) this.signal(clientId, "meta", JSON.stringify({ screenStreamId: this.screenStreamId }))
     for (const { track, stream } of this.localTracks.values()) link.addLocalTrack(track, stream)
+    this.reapplyEncodings()
     this.changed()
   }
 
@@ -226,7 +238,12 @@ export class PeerMesh {
     if (!link) return
     link.close()
     this.links.delete(clientId)
+    this.reapplyEncodings()
     this.changed()
+  }
+
+  private reapplyEncodings() {
+    for (const link of this.links.values()) link.applyEncodings()
   }
 
   async handleSignal(fromClient: string, type: SignalType, data: string) {
