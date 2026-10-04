@@ -27,7 +27,7 @@ export type IncomingCall = {
   fromName: string
 }
 
-type CallContextValue = {
+export type CallContextValue = {
   phase: Phase
   call: CallInfo | null
   incoming: IncomingCall | null
@@ -54,6 +54,7 @@ type CallContextValue = {
   selectMic: (deviceId: string) => Promise<void>
   selectCamera: (deviceId: string) => Promise<void>
   selectSpeaker: (deviceId: string) => void
+  setMicProcessing: (patch: Partial<Pick<DevicePrefs, "echoCancellation" | "noiseSuppression">>) => Promise<void>
   startDirectCall: (friendId: string, friendName: string) => Promise<void>
   startGroupCall: (groupId: string, groupName: string) => Promise<void>
   joinGroupCall: (callId: string, groupId: string, groupName: string) => Promise<void>
@@ -184,10 +185,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
     setCall(null)
     setRinging(false)
     setStartedAt(null)
-    setMuted(false)
-    setDeafened(false)
-    setCameraOn(false)
-    setScreenSharing(false)
     setMinimized(false)
     setPhase("idle")
   }
@@ -205,7 +202,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }
 
   async function openMic(deviceId: string) {
-    const base = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    const { echoCancellation, noiseSuppression } = devicePrefsRef.current
+    const base = { echoCancellation, noiseSuppression, autoGainControl: true }
     if (deviceId) {
       try {
         return await navigator.mediaDevices.getUserMedia({ audio: { ...base, deviceId: { exact: deviceId } } })
@@ -403,10 +401,23 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   async function selectMic(deviceId: string) {
     updateDevicePrefs({ micId: deviceId })
+    await swapMic()
+  }
+
+  async function setMicProcessing(patch: Partial<Pick<DevicePrefs, "echoCancellation" | "noiseSuppression">>) {
+    updateDevicePrefs(patch)
+    await swapMic()
+  }
+
+  async function swapMic() {
+    const deviceId = devicePrefsRef.current.micId
     const mic = micRef.current
     const mesh = meshRef.current
     const previous = mic?.getAudioTracks()[0]
     if (!mic || !mesh || !previous) return
+    const wasEnabled = previous.enabled
+    previous.onended = null
+    previous.stop()
     try {
       const stream = await openMic(deviceId)
       const next = stream.getAudioTracks()[0]
@@ -414,13 +425,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
         next.stop()
         return
       }
-      next.enabled = previous.enabled
+      next.enabled = wasEnabled
       next.onended = handleMicLost
-      previous.onended = null
       mic.addTrack(next)
       await mesh.replaceTrack(previous, next, mic)
       mic.removeTrack(previous)
-      previous.stop()
       watchSelf(mic)
     } catch {
       toast.error("Não consegui trocar o microfone.")
@@ -590,8 +599,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
         clearStartTimeout()
         const others = (event.participants ?? []).filter((p) => p.clientId !== clientIdRef.current)
         for (const peer of participantsRef.current) {
-          if (!others.some((o) => o.clientId === peer.clientId)) mesh.removePeer(peer.clientId)
-          else if (mesh.connectionState(peer.clientId) !== "connected") mesh.removePeer(peer.clientId)
+          const state = mesh.connectionState(peer.clientId)
+          const gone = !others.some((o) => o.clientId === peer.clientId)
+          if (gone || state === "failed" || state === "closed") mesh.removePeer(peer.clientId)
         }
         updateParticipants(others)
         others.forEach((peer) => mesh.addPeer(peer.clientId))
@@ -760,6 +770,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         selectMic,
         selectCamera,
         selectSpeaker,
+        setMicProcessing,
         startDirectCall,
         startGroupCall,
         joinGroupCall,

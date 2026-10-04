@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import type { ReactNode } from "react"
 import {
   HeadphoneOff,
   Headphones,
@@ -13,13 +14,17 @@ import {
   Video,
   VideoOff,
 } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
+import type { CallContextValue } from "@/context/CallContext"
+import { useDelayedUnmount, useFrozen } from "@/hooks/useDelayedUnmount"
 import { cn } from "@/lib/utils"
 import { deviceLabel, supportsSpeakerSelection } from "@/lib/callDevices"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
 
 type Tile = {
   key: string
@@ -101,10 +106,15 @@ function CallTile({
   const showVideo = tile.kind === "screen" ? !!tile.stream : tile.stream !== null && hasLiveVideo(tile.stream)
   const connecting = tile.connection !== null && tile.connection !== "connected"
 
+  const reducedMotion = useReducedMotion()
+
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
+      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "relative flex min-h-0 items-center justify-center overflow-hidden rounded-xl bg-muted outline-none ring-2 ring-transparent transition-shadow duration-150 focus-visible:ring-ring",
         tile.speaking && tile.kind === "person" && "ring-emerald-500",
@@ -126,7 +136,7 @@ function CallTile({
           Conectando…
         </span>
       )}
-    </button>
+    </motion.button>
   )
 }
 
@@ -163,8 +173,34 @@ function DeviceSelect({
   )
 }
 
+function ProcessingToggle({
+  id,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  id: string
+  label: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </label>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} className="mt-0.5" />
+    </div>
+  )
+}
+
 function DeviceSettings({ buttonClass }: { buttonClass: string }) {
-  const { devices, devicePrefs, refreshDevices, selectMic, selectCamera, selectSpeaker } = useCall()
+  const { devices, devicePrefs, refreshDevices, selectMic, selectCamera, selectSpeaker, setMicProcessing } = useCall()
   const speakerSupported = supportsSpeakerSelection()
 
   return (
@@ -209,6 +245,22 @@ function DeviceSettings({ buttonClass }: { buttonClass: string }) {
         {devices.cameras.length > 0 && devices.cameras.every((d) => !d.label) && (
           <p className="text-xs text-muted-foreground">Ligue a câmera uma vez para ver os nomes dos dispositivos.</p>
         )}
+        <div className="flex flex-col gap-3 border-t pt-3">
+          <ProcessingToggle
+            id="call-echo-cancellation"
+            label="Cancelamento de eco"
+            description="Evita que os outros ouçam a própria voz pela sua caixa de som. Com fone de ouvido, pode desligar."
+            checked={devicePrefs.echoCancellation}
+            onChange={(checked) => void setMicProcessing({ echoCancellation: checked })}
+          />
+          <ProcessingToggle
+            id="call-noise-suppression"
+            label="Supressão de ruído"
+            description="Reduz ruídos de fundo, como ventilador e teclado."
+            checked={devicePrefs.noiseSuppression}
+            onChange={(checked) => void setMicProcessing({ noiseSuppression: checked })}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -305,50 +357,42 @@ function gridClass(count: number) {
   return "grid-cols-2 lg:grid-cols-3"
 }
 
-function FullCall() {
-  const { user } = useAuth()
-  const {
-    call,
-    ringing,
-    startedAt,
-    participants,
-    remoteMedia,
-    connectionOf,
-    localStream,
-    localScreen,
-    cameraOn,
-    screenSharing,
-    speaking,
-    setMinimized,
-  } = useCall()
-  const [pinnedKey, setPinnedKey] = useState<string | null>(null)
+type CallView = {
+  title: string
+  ringing: boolean
+  startedAt: number | null
+  count: number
+  troubled: boolean
+  tiles: Tile[]
+}
 
+function buildView(call: CallContextValue, userId: string): CallView {
   const tiles: Tile[] = [
     {
       key: "self",
       kind: "person",
-      userId: user?.id ?? "",
+      userId,
       name: "Você",
-      stream: cameraOn ? localStream : null,
+      stream: call.cameraOn ? call.localStream : null,
       isSelf: true,
-      speaking: !!speaking.self,
+      speaking: !!call.speaking.self,
       connection: null,
     },
   ]
-  if (screenSharing && localScreen) {
+  if (call.screenSharing && call.localScreen) {
     tiles.push({
       key: "self-screen",
       kind: "screen",
-      userId: user?.id ?? "",
+      userId,
       name: "Você",
-      stream: localScreen,
+      stream: call.localScreen,
       isSelf: true,
       speaking: false,
       connection: null,
     })
   }
-  for (const peer of participants) {
-    const media = remoteMedia(peer.clientId)
+  for (const peer of call.participants) {
+    const media = call.remoteMedia(peer.clientId)
     tiles.push({
       key: peer.clientId,
       kind: "person",
@@ -356,8 +400,8 @@ function FullCall() {
       name: peer.name || "Participante",
       stream: media.camera,
       isSelf: false,
-      speaking: !!speaking[peer.clientId],
-      connection: connectionOf(peer.clientId),
+      speaking: !!call.speaking[peer.clientId],
+      connection: call.connectionOf(peer.clientId),
     })
     if (media.screen) {
       tiles.push({
@@ -372,6 +416,53 @@ function FullCall() {
       })
     }
   }
+  return {
+    title: call.call?.title ?? "",
+    ringing: call.ringing,
+    startedAt: call.startedAt,
+    count: call.participants.length + 1,
+    troubled: call.participants.some((p) => call.connectionOf(p.clientId) === "failed"),
+    tiles,
+  }
+}
+
+const EASE = [0.22, 1, 0.36, 1] as const
+
+function Presence({
+  visible,
+  from,
+  className,
+  children,
+  ...rest
+}: {
+  visible: boolean
+  from: { y?: number; scale: number }
+  className: string
+  children: ReactNode
+  role?: string
+  "aria-label"?: string
+}) {
+  const reducedMotion = useReducedMotion()
+  const hidden = reducedMotion ? { opacity: 0 } : { opacity: 0, y: from.y ?? 0, scale: from.scale }
+  const shown = reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }
+
+  return (
+    <motion.div
+      {...rest}
+      initial={hidden}
+      animate={visible ? shown : hidden}
+      transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: EASE }}
+      className={cn(className, !visible && "pointer-events-none")}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
+  const { setMinimized } = useCall()
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null)
+  const { tiles } = view
 
   const autoStageKey = tiles.find((t) => t.kind === "screen" && !t.isSelf)?.key ?? null
   const stageKey = pinnedKey && tiles.some((t) => t.key === pinnedKey) ? pinnedKey : autoStageKey
@@ -382,27 +473,27 @@ function FullCall() {
     setPinnedKey((current) => (current === key ? null : key))
   }
 
-  const troubled = participants.some((p) => connectionOf(p.clientId) === "failed")
-
   return (
-    <div
+    <Presence
+      visible={visible}
+      from={{ scale: 0.985 }}
       role="dialog"
-      aria-label={`Chamada com ${call?.title ?? ""}`}
+      aria-label={`Chamada com ${view.title}`}
       className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]"
     >
       <div className="flex items-center gap-3 border-b px-4 py-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{call?.title}</p>
+          <p className="truncate font-medium">{view.title}</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {ringing ? (
+            {view.ringing ? (
               <span>Chamando…</span>
-            ) : troubled ? (
+            ) : view.troubled ? (
               <span className="text-destructive">Conexão instável</span>
             ) : (
               <>
                 <span className="size-1.5 rounded-full bg-emerald-500" />
-                <CallTimer startedAt={startedAt} />
-                <span>· {participants.length + 1} na call</span>
+                <CallTimer startedAt={view.startedAt} />
+                <span>· {view.count} na call</span>
               </>
             )}
           </p>
@@ -444,14 +535,18 @@ function FullCall() {
       </div>
 
       <CallControls />
-    </div>
+    </Presence>
   )
 }
 
-function MiniCall() {
-  const { call, ringing, startedAt, muted, toggleMute, setMinimized, leave } = useCall()
+function MiniCall({ view, visible }: { view: CallView; visible: boolean }) {
+  const { muted, toggleMute, setMinimized, leave } = useCall()
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-md:left-4 max-md:right-auto">
+    <Presence
+      visible={visible}
+      from={{ y: 16, scale: 0.96 }}
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border bg-card py-2 pl-4 pr-2 shadow-lg max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-md:left-4 max-md:right-auto"
+    >
       <span className="size-2 shrink-0 rounded-full bg-emerald-500" />
       <button
         type="button"
@@ -459,9 +554,9 @@ function MiniCall() {
         className="flex min-w-0 flex-col text-left"
         title="Abrir chamada"
       >
-        <span className="max-w-32 truncate text-sm font-medium">{call?.title}</span>
+        <span className="max-w-32 truncate text-sm font-medium">{view.title}</span>
         <span className="text-[11px] text-muted-foreground">
-          {ringing ? "Chamando…" : <CallTimer startedAt={startedAt} />}
+          {view.ringing ? "Chamando…" : <CallTimer startedAt={view.startedAt} />}
         </span>
       </button>
       <Button
@@ -497,26 +592,49 @@ function MiniCall() {
       >
         <PhoneOff className="size-4" />
       </Button>
-    </div>
+    </Presence>
   )
 }
 
 export function CallOverlay() {
-  const { phase, minimized, participants, remoteMedia, deafened, devicePrefs } = useCall()
-  if (phase !== "active") return null
+  const { user } = useAuth()
+  const call = useCall()
+  const active = call.phase === "active"
+  const view = useFrozen(buildView(call, user?.id ?? ""), !active)
+
+  const fullVisible = active && !call.minimized
+  const miniVisible = active && call.minimized
+  const showFull = useDelayedUnmount(fullVisible)
+  const showMini = useDelayedUnmount(miniVisible)
 
   return (
     <>
-      {participants.map((peer) => {
-        const media = remoteMedia(peer.clientId)
-        return (
-          <span key={peer.clientId}>
-            {media.camera && <MediaAudio key={media.camera.id} stream={media.camera} deafened={deafened} speakerId={devicePrefs.speakerId} />}
-            {media.screen && <MediaAudio key={media.screen.id} stream={media.screen} deafened={deafened} speakerId={devicePrefs.speakerId} />}
-          </span>
-        )
-      })}
-      {minimized ? <MiniCall /> : <FullCall />}
+      {active &&
+        call.participants.map((peer) => {
+          const media = call.remoteMedia(peer.clientId)
+          return (
+            <span key={peer.clientId}>
+              {media.camera && (
+                <MediaAudio
+                  key={media.camera.id}
+                  stream={media.camera}
+                  deafened={call.deafened}
+                  speakerId={call.devicePrefs.speakerId}
+                />
+              )}
+              {media.screen && (
+                <MediaAudio
+                  key={media.screen.id}
+                  stream={media.screen}
+                  deafened={call.deafened}
+                  speakerId={call.devicePrefs.speakerId}
+                />
+              )}
+            </span>
+          )
+        })}
+      {showFull && <FullCall view={view} visible={fullVisible} />}
+      {showMini && <MiniCall view={view} visible={miniVisible} />}
     </>
   )
 }

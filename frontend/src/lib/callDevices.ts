@@ -4,6 +4,8 @@ export type DevicePrefs = {
   micId: string
   cameraId: string
   speakerId: string
+  echoCancellation: boolean
+  noiseSuppression: boolean
 }
 
 export type DeviceLists = {
@@ -13,7 +15,13 @@ export type DeviceLists = {
 }
 
 export function loadDevicePrefs(): DevicePrefs {
-  const empty = { micId: "", cameraId: "", speakerId: "" }
+  const empty: DevicePrefs = {
+    micId: "",
+    cameraId: "",
+    speakerId: "",
+    echoCancellation: true,
+    noiseSuppression: true,
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? { ...empty, ...JSON.parse(raw) } : empty

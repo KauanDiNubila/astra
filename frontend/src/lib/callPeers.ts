@@ -28,6 +28,8 @@ class PeerLink {
   readonly senders = new Map<string, RTCRtpSender>()
   screenStreamId: string | null = null
 
+  private queue: Promise<void> = Promise.resolve()
+  private pendingCandidates: RTCIceCandidateInit[] = []
   private makingOffer = false
   private ignoreOffer = false
   private settingRemoteAnswer = false
@@ -40,6 +42,7 @@ class PeerLink {
     this.pc = new RTCPeerConnection({ iceServers })
 
     this.pc.onnegotiationneeded = async () => {
+      if (this.polite && !this.pc.remoteDescription) return
       try {
         this.makingOffer = true
         await this.pc.setLocalDescription()
@@ -82,16 +85,22 @@ class PeerLink {
     }
   }
 
-  async handleDescriptionOrCandidate(type: SignalType, raw: string) {
+  handleDescriptionOrCandidate(type: SignalType, raw: string) {
+    const run = this.queue.then(() => this.process(type, raw))
+    this.queue = run.catch(() => {})
+    return run
+  }
+
+  private async process(type: SignalType, raw: string) {
     if (this.closed) return
     const payload = JSON.parse(raw)
 
     if (type === "ice") {
-      try {
-        await this.pc.addIceCandidate(payload as RTCIceCandidateInit)
-      } catch (error) {
-        if (!this.ignoreOffer) throw error
+      if (!this.pc.remoteDescription) {
+        this.pendingCandidates.push(payload as RTCIceCandidateInit)
+        return
       }
+      await this.addCandidate(payload as RTCIceCandidateInit)
       return
     }
 
@@ -106,11 +115,23 @@ class PeerLink {
     await this.pc.setRemoteDescription(description)
     this.settingRemoteAnswer = false
 
+    const pending = this.pendingCandidates
+    this.pendingCandidates = []
+    for (const candidate of pending) await this.addCandidate(candidate)
+
     if (description.type === "offer") {
       await this.pc.setLocalDescription()
       if (this.pc.localDescription) {
         this.mesh.signal(this.clientId, "answer", JSON.stringify(this.pc.localDescription))
       }
+    }
+  }
+
+  private async addCandidate(candidate: RTCIceCandidateInit) {
+    try {
+      await this.pc.addIceCandidate(candidate)
+    } catch (error) {
+      if (!this.ignoreOffer) throw error
     }
   }
 
