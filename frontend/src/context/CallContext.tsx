@@ -1,0 +1,764 @@
+import { createContext, useContext, useEffect, useRef, useState } from "react"
+import type { ReactNode } from "react"
+import { toast } from "sonner"
+import { api } from "@/lib/api"
+import { watchSpeaking } from "@/lib/callAudio"
+import { loadDevicePrefs, listDevices, saveDevicePrefs } from "@/lib/callDevices"
+import type { DeviceLists, DevicePrefs } from "@/lib/callDevices"
+import { PeerMesh } from "@/lib/callPeers"
+import type { PeerMedia, SignalType } from "@/lib/callPeers"
+import { useAuth } from "@/context/AuthContext"
+import { useChat } from "@/context/ChatContext"
+import type { CallEvent, CallParticipant } from "@/lib/types"
+
+type Phase = "idle" | "starting" | "active"
+
+export type CallInfo = {
+  callId: string
+  groupId: string | null
+  title: string
+}
+
+export type IncomingCall = {
+  callId: string
+  groupId: string | null
+  groupName: string | null
+  fromUserId: string
+  fromName: string
+}
+
+type CallContextValue = {
+  phase: Phase
+  call: CallInfo | null
+  incoming: IncomingCall | null
+  ringing: boolean
+  startedAt: number | null
+  participants: CallParticipant[]
+  selfClientId: string | null
+  mediaVersion: number
+  remoteMedia: (clientId: string) => PeerMedia
+  connectionOf: (clientId: string) => RTCPeerConnectionState
+  localStream: MediaStream | null
+  localScreen: MediaStream | null
+  speaking: Record<string, boolean>
+  muted: boolean
+  deafened: boolean
+  cameraOn: boolean
+  screenSharing: boolean
+  screenShareSupported: boolean
+  minimized: boolean
+  setMinimized: (minimized: boolean) => void
+  devices: DeviceLists
+  devicePrefs: DevicePrefs
+  refreshDevices: () => Promise<void>
+  selectMic: (deviceId: string) => Promise<void>
+  selectCamera: (deviceId: string) => Promise<void>
+  selectSpeaker: (deviceId: string) => void
+  startDirectCall: (friendId: string, friendName: string) => Promise<void>
+  startGroupCall: (groupId: string, groupName: string) => Promise<void>
+  joinGroupCall: (callId: string, groupId: string, groupName: string) => Promise<void>
+  acceptIncoming: () => Promise<void>
+  declineIncoming: () => void
+  leave: () => void
+  toggleMute: () => void
+  toggleDeafen: () => void
+  toggleCamera: () => Promise<void>
+  toggleScreenShare: () => Promise<void>
+}
+
+const CallContext = createContext<CallContextValue | undefined>(undefined)
+
+const FALLBACK_ICE: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }]
+const ICE_CACHE_MS = 45 * 60 * 1000
+const START_TIMEOUT_MS = 10_000
+
+const END_REASON_MESSAGES: Record<string, string> = {
+  "no-answer": "Ninguém atendeu a chamada",
+  declined: "A chamada foi recusada",
+  left: "A chamada foi encerrada",
+  ended: "A chamada já foi encerrada",
+}
+
+export function CallProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const { connected, publishStomp, subscribeCallEvents } = useChat()
+
+  const [phase, setPhaseState] = useState<Phase>("idle")
+  const [call, setCall] = useState<CallInfo | null>(null)
+  const [incoming, setIncoming] = useState<IncomingCall | null>(null)
+  const [ringing, setRinging] = useState(false)
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [participants, setParticipants] = useState<CallParticipant[]>([])
+  const [mediaVersion, setMediaVersion] = useState(0)
+  const [speaking, setSpeaking] = useState<Record<string, boolean>>({})
+  const [muted, setMuted] = useState(false)
+  const [deafened, setDeafened] = useState(false)
+  const [cameraOn, setCameraOn] = useState(false)
+  const [screenSharing, setScreenSharing] = useState(false)
+  const [minimized, setMinimized] = useState(false)
+  const [devices, setDevices] = useState<DeviceLists>({ mics: [], cameras: [], speakers: [] })
+  const [devicePrefs, setDevicePrefs] = useState<DevicePrefs>(loadDevicePrefs)
+
+  const phaseRef = useRef<Phase>("idle")
+  const callRef = useRef<CallInfo | null>(null)
+  const incomingRef = useRef<IncomingCall | null>(null)
+  const participantsRef = useRef<CallParticipant[]>([])
+  const clientIdRef = useRef<string | null>(null)
+  const meshRef = useRef<PeerMesh | null>(null)
+  const micRef = useRef<MediaStream | null>(null)
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null)
+  const screenRef = useRef<MediaStream | null>(null)
+  const pendingRef = useRef<{ title: string; groupId: string | null } | null>(null)
+  const startTimeoutRef = useRef<number | null>(null)
+  const mutedBeforeDeafenRef = useRef(false)
+  const iceCacheRef = useRef<{ servers: RTCIceServer[]; at: number } | null>(null)
+  const watchersRef = useRef(new Map<string, { streamId: string; stop: () => void }>())
+  const selfWatcherRef = useRef<(() => void) | null>(null)
+  const devicePrefsRef = useRef(devicePrefs)
+  const publishRef = useRef(publishStomp)
+  const handleEventRef = useRef<(event: CallEvent) => void>(() => {})
+
+  useEffect(() => {
+    publishRef.current = publishStomp
+  })
+
+  function updateDevicePrefs(patch: Partial<DevicePrefs>) {
+    const next = { ...devicePrefsRef.current, ...patch }
+    devicePrefsRef.current = next
+    setDevicePrefs(next)
+    saveDevicePrefs(next)
+  }
+
+  async function refreshDevices() {
+    try {
+      setDevices(await listDevices())
+    } catch {
+      setDevices({ mics: [], cameras: [], speakers: [] })
+    }
+  }
+
+  function setPhase(next: Phase) {
+    phaseRef.current = next
+    setPhaseState(next)
+  }
+
+  function updateParticipants(next: CallParticipant[]) {
+    participantsRef.current = next
+    setParticipants(next)
+  }
+
+  function bump() {
+    setMediaVersion((v) => v + 1)
+  }
+
+  function clearStartTimeout() {
+    if (startTimeoutRef.current !== null) {
+      window.clearTimeout(startTimeoutRef.current)
+      startTimeoutRef.current = null
+    }
+  }
+
+  function stopWatchers() {
+    selfWatcherRef.current?.()
+    selfWatcherRef.current = null
+    watchersRef.current.forEach((watcher) => watcher.stop())
+    watchersRef.current.clear()
+    setSpeaking({})
+  }
+
+  function teardown() {
+    clearStartTimeout()
+    stopWatchers()
+    meshRef.current?.close()
+    meshRef.current = null
+    micRef.current?.getTracks().forEach((t) => t.stop())
+    micRef.current = null
+    cameraTrackRef.current?.stop()
+    cameraTrackRef.current = null
+    screenRef.current?.getTracks().forEach((t) => t.stop())
+    screenRef.current = null
+    clientIdRef.current = null
+    pendingRef.current = null
+    callRef.current = null
+    updateParticipants([])
+    setCall(null)
+    setRinging(false)
+    setStartedAt(null)
+    setMuted(false)
+    setDeafened(false)
+    setCameraOn(false)
+    setScreenSharing(false)
+    setMinimized(false)
+    setPhase("idle")
+  }
+
+  async function loadIceServers() {
+    const cached = iceCacheRef.current
+    if (cached && Date.now() - cached.at < ICE_CACHE_MS) return cached.servers
+    try {
+      const { data } = await api.get<{ iceServers: RTCIceServer[] }>("/call/ice-servers")
+      iceCacheRef.current = { servers: data.iceServers, at: Date.now() }
+      return data.iceServers
+    } catch {
+      return FALLBACK_ICE
+    }
+  }
+
+  async function openMic(deviceId: string) {
+    const base = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    if (deviceId) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: { ...base, deviceId: { exact: deviceId } } })
+      } catch {
+        updateDevicePrefs({ micId: "" })
+      }
+    }
+    return navigator.mediaDevices.getUserMedia({ audio: base })
+  }
+
+  async function openCamera(deviceId: string) {
+    const base = { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 }, frameRate: { ideal: 24 } }
+    if (deviceId) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: { ...base, deviceId: { exact: deviceId } } })
+      } catch {
+        updateDevicePrefs({ cameraId: "" })
+      }
+    }
+    return navigator.mediaDevices.getUserMedia({ video: base })
+  }
+
+  function watchSelf(mic: MediaStream) {
+    selfWatcherRef.current?.()
+    selfWatcherRef.current = watchSpeaking(mic, (isSpeaking) =>
+      setSpeaking((prev) => ({ ...prev, self: isSpeaking })),
+    )
+  }
+
+  async function prepare() {
+    if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === "undefined") {
+      toast.error("Seu navegador não suporta chamadas de voz.")
+      return false
+    }
+    let mic: MediaStream
+    try {
+      mic = await openMic(devicePrefsRef.current.micId)
+    } catch {
+      toast.error("Não consegui acessar o microfone. Verifique a permissão do navegador.")
+      return false
+    }
+    const servers = await loadIceServers()
+
+    const clientId = crypto.randomUUID()
+    clientIdRef.current = clientId
+    micRef.current = mic
+    const mesh = new PeerMesh(clientId, servers, {
+      sendSignal: (toClient, type: SignalType, data) => {
+        const callId = callRef.current?.callId
+        if (callId) publishRef.current("/app/call.signal", { callId, toClient, type, data })
+      },
+      onChange: bump,
+    })
+    meshRef.current = mesh
+    const micTrack = mic.getAudioTracks()[0]
+    micTrack.onended = handleMicLost
+    mesh.publishTrack(micTrack, mic)
+    watchSelf(mic)
+    setMuted(false)
+    setDeafened(false)
+    setCameraOn(false)
+    setScreenSharing(false)
+    return true
+  }
+
+  function requestNotificationPermission() {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {})
+    }
+  }
+
+  async function start(target: { targetUserId?: string; groupId?: string }, title: string) {
+    if (phaseRef.current !== "idle" || incomingRef.current) {
+      toast("Você já está em uma call.")
+      return
+    }
+    setPhase("starting")
+    requestNotificationPermission()
+    if (!(await prepare())) {
+      teardown()
+      return
+    }
+    pendingRef.current = { title, groupId: target.groupId ?? null }
+    const sent = publishRef.current("/app/call.start", { ...target, clientId: clientIdRef.current })
+    if (!sent) {
+      toast.error("Sem conexão com o servidor. Tente de novo em instantes.")
+      teardown()
+      return
+    }
+    startTimeoutRef.current = window.setTimeout(() => {
+      if (phaseRef.current === "starting") {
+        toast.error("Não foi possível iniciar a chamada.")
+        teardown()
+      }
+    }, START_TIMEOUT_MS)
+  }
+
+  async function join(callId: string, groupId: string | null, title: string) {
+    if (phaseRef.current !== "idle") {
+      toast("Você já está em uma call.")
+      return
+    }
+    setPhase("starting")
+    requestNotificationPermission()
+    if (!(await prepare())) {
+      teardown()
+      return
+    }
+    const info = { callId, groupId, title }
+    callRef.current = info
+    setCall(info)
+    const sent = publishRef.current("/app/call.join", { callId, clientId: clientIdRef.current })
+    if (!sent) {
+      toast.error("Sem conexão com o servidor. Tente de novo em instantes.")
+      teardown()
+      return
+    }
+    startTimeoutRef.current = window.setTimeout(() => {
+      if (phaseRef.current === "starting") {
+        toast.error("Não foi possível entrar na chamada.")
+        teardown()
+      }
+    }, START_TIMEOUT_MS)
+  }
+
+  async function startDirectCall(friendId: string, friendName: string) {
+    await start({ targetUserId: friendId }, friendName)
+  }
+
+  async function startGroupCall(groupId: string, groupName: string) {
+    await start({ groupId }, groupName)
+  }
+
+  async function joinGroupCall(callId: string, groupId: string, groupName: string) {
+    await join(callId, groupId, groupName)
+  }
+
+  async function acceptIncoming() {
+    const current = incomingRef.current
+    if (!current) return
+    incomingRef.current = null
+    setIncoming(null)
+    await join(current.callId, current.groupId, current.groupName ?? current.fromName)
+  }
+
+  function declineIncoming() {
+    const current = incomingRef.current
+    if (!current) return
+    incomingRef.current = null
+    setIncoming(null)
+    publishRef.current("/app/call.decline", { callId: current.callId })
+  }
+
+  function leave() {
+    const info = callRef.current
+    if (info) publishRef.current("/app/call.leave", { callId: info.callId, clientId: clientIdRef.current })
+    teardown()
+  }
+
+  function toggleMute() {
+    const track = micRef.current?.getAudioTracks()[0]
+    if (!track) return
+    if (deafened) {
+      mutedBeforeDeafenRef.current = false
+      setDeafened(false)
+      track.enabled = true
+      setMuted(false)
+      return
+    }
+    track.enabled = !track.enabled
+    setMuted(!track.enabled)
+  }
+
+  function toggleDeafen() {
+    const track = micRef.current?.getAudioTracks()[0]
+    if (!deafened) {
+      mutedBeforeDeafenRef.current = muted
+      setDeafened(true)
+      if (track) track.enabled = false
+      setMuted(true)
+      return
+    }
+    setDeafened(false)
+    const restoreMuted = mutedBeforeDeafenRef.current
+    if (track) track.enabled = !restoreMuted
+    setMuted(restoreMuted)
+  }
+
+  function handleMicLost() {
+    if (phaseRef.current !== "active" && phaseRef.current !== "starting") return
+    toast("Microfone desconectado. Usando o padrão do sistema.")
+    updateDevicePrefs({ micId: "" })
+    void selectMic("")
+  }
+
+  async function selectMic(deviceId: string) {
+    updateDevicePrefs({ micId: deviceId })
+    const mic = micRef.current
+    const mesh = meshRef.current
+    const previous = mic?.getAudioTracks()[0]
+    if (!mic || !mesh || !previous) return
+    try {
+      const stream = await openMic(deviceId)
+      const next = stream.getAudioTracks()[0]
+      if (micRef.current !== mic) {
+        next.stop()
+        return
+      }
+      next.enabled = previous.enabled
+      next.onended = handleMicLost
+      previous.onended = null
+      mic.addTrack(next)
+      await mesh.replaceTrack(previous, next, mic)
+      mic.removeTrack(previous)
+      previous.stop()
+      watchSelf(mic)
+    } catch {
+      toast.error("Não consegui trocar o microfone.")
+    }
+  }
+
+  async function selectCamera(deviceId: string) {
+    updateDevicePrefs({ cameraId: deviceId })
+    const mic = micRef.current
+    const mesh = meshRef.current
+    const previous = cameraTrackRef.current
+    if (!mic || !mesh || !previous) return
+    try {
+      const stream = await openCamera(deviceId)
+      const next = stream.getVideoTracks()[0]
+      if (cameraTrackRef.current !== previous) {
+        next.stop()
+        return
+      }
+      next.onended = stopCamera
+      previous.onended = null
+      mic.addTrack(next)
+      await mesh.replaceTrack(previous, next, mic)
+      mic.removeTrack(previous)
+      previous.stop()
+      cameraTrackRef.current = next
+      bump()
+    } catch {
+      toast.error("Não consegui trocar a câmera.")
+    }
+  }
+
+  function selectSpeaker(deviceId: string) {
+    updateDevicePrefs({ speakerId: deviceId })
+  }
+
+  function stopCamera() {
+    const track = cameraTrackRef.current
+    if (!track) return
+    cameraTrackRef.current = null
+    track.onended = null
+    track.stop()
+    micRef.current?.removeTrack(track)
+    meshRef.current?.unpublishTrack(track)
+    setCameraOn(false)
+    bump()
+  }
+
+  async function toggleCamera() {
+    if (cameraTrackRef.current) {
+      stopCamera()
+      return
+    }
+    const mic = micRef.current
+    const mesh = meshRef.current
+    if (!mic || !mesh) return
+    try {
+      const stream = await openCamera(devicePrefsRef.current.cameraId)
+      const track = stream.getVideoTracks()[0]
+      if (!micRef.current || !meshRef.current) {
+        track.stop()
+        return
+      }
+      track.onended = stopCamera
+      cameraTrackRef.current = track
+      mic.addTrack(track)
+      mesh.publishTrack(track, mic)
+      setCameraOn(true)
+      bump()
+      void refreshDevices()
+    } catch {
+      toast.error("Não consegui acessar a câmera. Verifique a permissão do navegador.")
+    }
+  }
+
+  function stopScreen() {
+    const screen = screenRef.current
+    if (!screen) return
+    screenRef.current = null
+    for (const track of screen.getTracks()) {
+      track.onended = null
+      track.stop()
+      meshRef.current?.unpublishTrack(track)
+    }
+    setScreenSharing(false)
+    bump()
+  }
+
+  async function toggleScreenShare() {
+    if (screenRef.current) {
+      stopScreen()
+      return
+    }
+    const mesh = meshRef.current
+    if (!mesh || !navigator.mediaDevices?.getDisplayMedia) return
+    try {
+      const screen = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 } },
+        audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false },
+      } as DisplayMediaStreamOptions)
+      if (!meshRef.current) {
+        screen.getTracks().forEach((t) => t.stop())
+        return
+      }
+      screenRef.current = screen
+      const video = screen.getVideoTracks()[0]
+      if ("contentHint" in video) video.contentHint = "detail"
+      video.onended = stopScreen
+      mesh.publishTrack(video, screen, true)
+      screen.getAudioTracks().forEach((track) => mesh.publishTrack(track, screen, true))
+      setScreenSharing(true)
+      bump()
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "NotAllowedError") return
+      toast.error("Não consegui compartilhar a tela.")
+    }
+  }
+
+  function handleEvent(event: CallEvent) {
+    const mesh = meshRef.current
+
+    switch (event.type) {
+      case "started": {
+        const pending = pendingRef.current
+        if (phaseRef.current !== "starting" || !pending || !event.callId) return
+        clearStartTimeout()
+        const info = { callId: event.callId, groupId: pending.groupId, title: pending.title }
+        callRef.current = info
+        setCall(info)
+        setRinging(true)
+        setStartedAt(Date.now())
+        setPhase("active")
+        return
+      }
+      case "incoming": {
+        if (phaseRef.current !== "idle" || incomingRef.current || !event.callId || !event.userId) return
+        const info: IncomingCall = {
+          callId: event.callId,
+          groupId: event.groupId ?? null,
+          groupName: event.groupName ?? null,
+          fromUserId: event.userId,
+          fromName: event.userName ?? "",
+        }
+        incomingRef.current = info
+        setIncoming(info)
+        return
+      }
+      case "state": {
+        if (event.callId !== callRef.current?.callId || !mesh || !clientIdRef.current) return
+        clearStartTimeout()
+        const others = (event.participants ?? []).filter((p) => p.clientId !== clientIdRef.current)
+        for (const peer of participantsRef.current) {
+          if (!others.some((o) => o.clientId === peer.clientId)) mesh.removePeer(peer.clientId)
+          else if (mesh.connectionState(peer.clientId) !== "connected") mesh.removePeer(peer.clientId)
+        }
+        updateParticipants(others)
+        others.forEach((peer) => mesh.addPeer(peer.clientId))
+        setRinging(others.length === 0)
+        setStartedAt((prev) => prev ?? Date.now())
+        setPhase("active")
+        return
+      }
+      case "joined": {
+        if (event.callId !== callRef.current?.callId || !event.clientId || !event.userId || !mesh) return
+        const known = participantsRef.current.filter((p) => p.clientId !== event.clientId)
+        updateParticipants([...known, { userId: event.userId, clientId: event.clientId, name: event.userName ?? "" }])
+        mesh.addPeer(event.clientId)
+        setRinging(false)
+        return
+      }
+      case "left": {
+        if (event.callId !== callRef.current?.callId || !event.clientId) return
+        mesh?.removePeer(event.clientId)
+        updateParticipants(participantsRef.current.filter((p) => p.clientId !== event.clientId))
+        return
+      }
+      case "declined": {
+        if (event.callId !== callRef.current?.callId) return
+        if (!callRef.current?.groupId) toast("A chamada foi recusada.")
+        return
+      }
+      case "dismissed": {
+        if (incomingRef.current?.callId === event.callId) {
+          incomingRef.current = null
+          setIncoming(null)
+        }
+        return
+      }
+      case "ended": {
+        if (incomingRef.current?.callId === event.callId) {
+          incomingRef.current = null
+          setIncoming(null)
+        }
+        if (callRef.current?.callId === event.callId) {
+          const message = END_REASON_MESSAGES[event.reason ?? "ended"]
+          if (message && event.reason !== "declined") toast(message)
+          teardown()
+        }
+        return
+      }
+      case "signal": {
+        if (event.callId !== callRef.current?.callId || !event.clientId || !event.signalType || !event.data || !mesh) {
+          return
+        }
+        const fromClient = event.clientId
+        if (event.userId && !participantsRef.current.some((p) => p.clientId === fromClient)) {
+          updateParticipants([...participantsRef.current, { userId: event.userId, clientId: fromClient, name: "" }])
+        }
+        mesh.handleSignal(fromClient, event.signalType, event.data).catch(() => {})
+        return
+      }
+      case "error": {
+        toast.error(event.message ?? "Erro na chamada")
+        if (phaseRef.current === "starting") teardown()
+        return
+      }
+    }
+  }
+
+  useEffect(() => {
+    handleEventRef.current = handleEvent
+  })
+
+  useEffect(() => {
+    if (!user) return
+    return subscribeCallEvents((event) => handleEventRef.current(event))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!connected) return
+    const info = callRef.current
+    if (phaseRef.current === "active" && info && clientIdRef.current) {
+      publishRef.current("/app/call.join", { callId: info.callId, clientId: clientIdRef.current })
+    }
+  }, [connected])
+
+  useEffect(() => {
+    if (!user) {
+      if (phaseRef.current !== "idle") teardown()
+      incomingRef.current = null
+      setIncoming(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  useEffect(() => {
+    return () => {
+      if (phaseRef.current !== "idle") teardown()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const mesh = meshRef.current
+    const watchers = watchersRef.current
+    const live = new Set<string>()
+    for (const peer of participants) {
+      const stream = mesh?.media(peer.clientId).camera ?? null
+      if (!stream || stream.getAudioTracks().length === 0) continue
+      live.add(peer.clientId)
+      if (watchers.get(peer.clientId)?.streamId === stream.id) continue
+      watchers.get(peer.clientId)?.stop()
+      const stop = watchSpeaking(stream, (isSpeaking) =>
+        setSpeaking((prev) => ({ ...prev, [peer.clientId]: isSpeaking })),
+      )
+      watchers.set(peer.clientId, { streamId: stream.id, stop })
+    }
+    for (const [clientId, watcher] of watchers) {
+      if (!live.has(clientId)) {
+        watcher.stop()
+        watchers.delete(clientId)
+      }
+    }
+  }, [participants, mediaVersion])
+
+  useEffect(() => {
+    if (phase !== "active" || !navigator.mediaDevices) return
+    void refreshDevices()
+    const onChange = () => void refreshDevices()
+    navigator.mediaDevices.addEventListener("devicechange", onChange)
+    return () => navigator.mediaDevices.removeEventListener("devicechange", onChange)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
+  const screenShareSupported =
+    typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function"
+
+  return (
+    <CallContext.Provider
+      value={{
+        phase,
+        call,
+        incoming,
+        ringing,
+        startedAt,
+        participants,
+        selfClientId: clientIdRef.current,
+        mediaVersion,
+        remoteMedia: (clientId) => meshRef.current?.media(clientId) ?? { camera: null, screen: null },
+        connectionOf: (clientId) => meshRef.current?.connectionState(clientId) ?? "new",
+        localStream: micRef.current,
+        localScreen: screenRef.current,
+        speaking,
+        muted,
+        deafened,
+        cameraOn,
+        screenSharing,
+        screenShareSupported,
+        minimized,
+        setMinimized,
+        devices,
+        devicePrefs,
+        refreshDevices,
+        selectMic,
+        selectCamera,
+        selectSpeaker,
+        startDirectCall,
+        startGroupCall,
+        joinGroupCall,
+        acceptIncoming,
+        declineIncoming,
+        leave,
+        toggleMute,
+        toggleDeafen,
+        toggleCamera,
+        toggleScreenShare,
+      }}
+    >
+      {children}
+    </CallContext.Provider>
+  )
+}
+
+export function useCall() {
+  const ctx = useContext(CallContext)
+  if (!ctx) {
+    throw new Error("useCall precisa estar dentro de um CallProvider")
+  }
+  return ctx
+}

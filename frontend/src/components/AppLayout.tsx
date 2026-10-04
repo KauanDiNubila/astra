@@ -5,7 +5,9 @@ import { useChat } from "@/context/ChatContext"
 import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
 import { cn } from "@/lib/utils"
 import { AppSidebar } from "@/components/AppSidebar"
+import { CallOverlay } from "@/components/CallOverlay"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
+import { IncomingCallDialog } from "@/components/IncomingCallDialog"
 import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { PomodoroMiniWidget } from "@/components/PomodoroMiniWidget"
@@ -72,6 +74,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </SidebarProvider>
       <GlobalPomodoroFocus />
       <PomodoroMiniWidget />
+      <CallOverlay />
+      <IncomingCallDialog />
     </TooltipProvider>
   )
 }

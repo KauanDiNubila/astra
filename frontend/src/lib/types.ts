@@ -285,3 +285,30 @@ export type GitHubStepEvidence = {
   connected: boolean
   matchedRepositories: GitHubRepositoryInsight[]
 }
+
+export type CallParticipant = {
+  userId: string
+  clientId: string
+  name: string
+}
+
+export type CallEvent = {
+  type: "started" | "incoming" | "state" | "joined" | "left" | "declined" | "dismissed" | "ended" | "signal" | "error"
+  callId?: string
+  groupId?: string
+  groupName?: string
+  userId?: string
+  userName?: string
+  clientId?: string
+  reason?: string
+  message?: string
+  signalType?: "offer" | "answer" | "ice" | "meta"
+  data?: string
+  participants?: CallParticipant[]
+}
+
+export type ActiveCall = {
+  callId: string
+  groupId: string
+  participantCount: number
+}

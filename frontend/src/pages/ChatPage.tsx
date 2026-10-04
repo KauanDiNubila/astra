@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronLeft, ImagePlus, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
+import { ChevronLeft, ImagePlus, Phone, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { useAuth } from "@/context/AuthContext"
+import { useCall } from "@/context/CallContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
 import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
+import { GroupCallBanner } from "@/components/GroupCallBanner"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
 import { GroupAvatar } from "@/components/GroupAvatar"
@@ -137,7 +139,9 @@ export function ChatPage() {
     groupMembersById,
     chatSoundEnabled,
     setChatSoundEnabled,
+    connected,
   } = useChat()
+  const { phase: callPhase, startDirectCall, startGroupCall } = useCall()
   const ready = conversationsLoaded && groupConversationsLoaded
   const [draft, setDraft] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
@@ -610,7 +614,25 @@ export function ChatPage() {
                   </span>
                 </button>
               )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Ligar"
+                aria-label="Ligar"
+                disabled={callPhase !== "idle" || !connected || (isGroup ? !activeGroup : !activeFriend)}
+                className="mr-2 max-sm:size-10"
+                onClick={() => {
+                  if (isGroup && activeGroup) void startGroupCall(activeGroup.groupId, activeGroup.groupName)
+                  else if (activeFriend) void startDirectCall(activeFriend.friendUserId, activeFriend.friendName)
+                }}
+              >
+                <Phone className="size-4" />
+              </Button>
             </div>
+            {isGroup && groupId && activeGroup && (
+              <GroupCallBanner groupId={groupId} groupName={activeGroup.groupName} />
+            )}
             {isGroup ? (
               <GroupInfoModal
                 group={activeGroup ?? null}

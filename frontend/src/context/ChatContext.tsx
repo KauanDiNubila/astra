@@ -8,6 +8,7 @@ import { playMessagePing } from "@/lib/sound"
 import { useAuth } from "@/context/AuthContext"
 import { useFriends } from "@/context/FriendsContext"
 import type {
+  CallEvent,
   ConversationSummary,
   Friendship,
   GroupConversationSummary,
@@ -79,6 +80,9 @@ type ChatContextValue = {
 
   chatSoundEnabled: boolean
   setChatSoundEnabled: (enabled: boolean) => void
+
+  publishStomp: (destination: string, body: unknown) => boolean
+  subscribeCallEvents: (listener: (event: CallEvent) => void) => () => void
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined)
@@ -99,6 +103,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [groupMembersById, setGroupMembersById] = useState<Record<string, GroupMember[]>>({})
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
+  const callListenersRef = useRef(new Set<(event: CallEvent) => void>())
   const activeFriendIdRef = useRef<string | null>(null)
   const conversationsRef = useRef<ConversationSummary[]>([])
   const friendsRef = useRef<Friendship[]>([])
@@ -317,6 +322,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       client.subscribe("/user/queue/messages", (frame) => {
         handleIncoming(JSON.parse(frame.body) as Message)
       })
+      client.subscribe("/user/queue/call", (frame) => {
+        const event = JSON.parse(frame.body) as CallEvent
+        callListenersRef.current.forEach((listener) => listener(event))
+      })
     }
     client.onDisconnect = () => setConnected(false)
     client.activate()
@@ -330,6 +339,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
+
+  function publishStomp(destination: string, body: unknown) {
+    const client = clientRef.current
+    if (!client || !client.connected) return false
+    client.publish({ destination, body: JSON.stringify(body) })
+    return true
+  }
+
+  function subscribeCallEvents(listener: (event: CallEvent) => void) {
+    callListenersRef.current.add(listener)
+    return () => {
+      callListenersRef.current.delete(listener)
+    }
+  }
 
   function messagesFor(friendId: string) {
     return messagesByFriend[friendId] ?? []
@@ -413,6 +436,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         totalGroupUnread,
         chatSoundEnabled,
         setChatSoundEnabled,
+        publishStomp,
+        subscribeCallEvents,
       }}
     >
       {children}

@@ -191,6 +191,13 @@ public class ChatGroupService {
         return chatGroupMemberRepository.findUserIdsByGroupId(groupId);
     }
 
+    @Transactional(readOnly = true)
+    public String groupName(UUID groupId) {
+        return chatGroupRepository.findById(groupId)
+                .map(ChatGroup::getName)
+                .orElseThrow(() -> new NotFoundException("Grupo não encontrado"));
+    }
+
     void requireMember(UUID groupId, UUID userId) {
         if (!chatGroupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
             throw new NotFoundException("Grupo não encontrado");
