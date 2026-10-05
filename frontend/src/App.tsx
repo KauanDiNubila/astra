@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
+import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { Toaster } from "@/components/ui/sonner"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
@@ -38,6 +39,7 @@ function App() {
   return (
     <>
       <DesktopTitleBar />
+      <OverlayScrollbar />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />

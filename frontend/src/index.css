@@ -146,6 +146,23 @@ html.has-titlebar body {
     min-height: calc(100svh - var(--titlebar-h));
 }
 
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 28%, transparent) transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    html,
+    .overlay-scroll {
+        scrollbar-width: none;
+    }
+
+    html::-webkit-scrollbar,
+    .overlay-scroll::-webkit-scrollbar {
+        display: none;
+    }
+}
+
 @keyframes astra-focus-breathe {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 0.8; transform: scale(1.04); }
@@ -165,6 +182,5 @@ html.has-titlebar body {
     }
   html {
     @apply font-sans;
-    scrollbar-gutter: stable;
     }
 }
