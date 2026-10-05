@@ -108,16 +108,9 @@ function WindowControls() {
         className={button}
         onClick={controls.toggleMaximize}
       >
-        {maximized ? (
-          <Glyph>
-            <path d="M2.5 2.5V0.5h7v7h-2" />
-            <rect x="0.5" y="2.5" width="7" height="7" />
-          </Glyph>
-        ) : (
-          <Glyph>
-            <rect x="1.5" y="1.5" width="7" height="7" />
-          </Glyph>
-        )}
+        <Glyph>
+          <rect x="1.5" y="1.5" width="7" height="7" />
+        </Glyph>
       </button>
       <button
         type="button"
