@@ -65,6 +65,9 @@ export type CallContextValue = {
   toggleDeafen: () => void
   toggleCamera: () => Promise<void>
   toggleScreenShare: () => Promise<void>
+  screenPickerSources: AstraScreenSource[] | null
+  confirmScreenShare: (sourceId: string, withAudio: boolean) => Promise<void>
+  cancelScreenShare: () => void
 }
 
 const CallContext = createContext<CallContextValue | undefined>(undefined)
@@ -97,6 +100,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
   const [minimized, setMinimized] = useState(false)
+  const [screenPickerSources, setScreenPickerSources] = useState<AstraScreenSource[] | null>(null)
   const [devices, setDevices] = useState<DeviceLists>({ mics: [], cameras: [], speakers: [] })
   const [devicePrefs, setDevicePrefs] = useState<DevicePrefs>(loadDevicePrefs)
 
@@ -523,19 +527,45 @@ export function CallProvider({ children }: { children: ReactNode }) {
       stopScreen()
       return
     }
+    const desktop = window.astraDesktop
+    if (desktop) {
+      try {
+        setScreenPickerSources(await desktop.listScreenSources())
+      } catch {
+        toast.error("Não consegui listar as telas para compartilhar.")
+      }
+      return
+    }
+    await startScreenShare(true)
+  }
+
+  function cancelScreenShare() {
+    setScreenPickerSources(null)
+  }
+
+  async function confirmScreenShare(sourceId: string, withAudio: boolean) {
+    setScreenPickerSources(null)
+    const desktop = window.astraDesktop
+    if (!desktop || !(await desktop.selectScreenSource(sourceId, withAudio))) return
+    await startScreenShare(withAudio)
+  }
+
+  async function startScreenShare(withAudio: boolean) {
     const mesh = meshRef.current
     if (!mesh || !navigator.mediaDevices?.getDisplayMedia) return
     try {
       const screen = await navigator.mediaDevices.getDisplayMedia({
         video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 60, max: 60 } },
-        audio: {
-          suppressLocalAudioPlayback: true,
-          restrictOwnAudio: true,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-        systemAudio: "include",
+        audio: withAudio
+          ? {
+              suppressLocalAudioPlayback: true,
+              restrictOwnAudio: true,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            }
+          : false,
+        systemAudio: withAudio ? "include" : "exclude",
       } as DisplayMediaStreamOptions)
       if (!meshRef.current) {
         screen.getTracks().forEach((t) => t.stop())
@@ -786,6 +816,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
         toggleDeafen,
         toggleCamera,
         toggleScreenShare,
+        screenPickerSources,
+        confirmScreenShare,
+        cancelScreenShare,
       }}
     >
       {children}

@@ -4,9 +4,18 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string
 }
 
+interface AstraScreenSource {
+  id: string
+  name: string
+  kind: "screen" | "window"
+  thumbnail: string
+}
+
 interface AstraDesktopBridge {
   isDesktop: true
   getVersion: () => Promise<string | null>
+  listScreenSources: () => Promise<AstraScreenSource[]>
+  selectScreenSource: (sourceId: string, withAudio: boolean) => Promise<boolean>
   setInCall: (inCall: boolean) => void
 }
 

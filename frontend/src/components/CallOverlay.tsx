@@ -21,6 +21,7 @@ import type { CallContextValue } from "@/context/CallContext"
 import { useDelayedUnmount, useFrozen } from "@/hooks/useDelayedUnmount"
 import { cn } from "@/lib/utils"
 import { deviceLabel, supportsSpeakerSelection } from "@/lib/callDevices"
+import { ScreenSourcePicker } from "@/components/ScreenSourcePicker"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -635,6 +636,7 @@ export function CallOverlay() {
         })}
       {showFull && <FullCall view={view} visible={fullVisible} />}
       {showMini && <MiniCall view={view} visible={miniVisible} />}
+      {active && <ScreenSourcePicker />}
     </>
   )
 }
