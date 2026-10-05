@@ -25,4 +25,6 @@ public interface RoadmapStepCompletionRepository
     @Query("select c from RoadmapStepCompletion c where c.userId = :userId and c.stepId in :stepIds")
     List<RoadmapStepCompletion> findStatusesForUser(@Param("userId") UUID userId,
                                                       @Param("stepIds") Collection<UUID> stepIds);
+
+    List<RoadmapStepCompletion> findByUserId(UUID userId);
 }

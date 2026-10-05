@@ -1,5 +1,6 @@
 package com.astra.chat.service;
 
+import com.astra.shared.ExportRow;
 import com.astra.shared.crypto.EncryptionService;
 import com.astra.chat.dto.CreateGroupRequest;
 import com.astra.chat.dto.GroupConversationSummary;
@@ -220,5 +221,18 @@ public class ChatGroupService {
         }
         return userRepository.findNameBioByIdIn(ids).stream()
                 .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        return chatGroupMemberRepository.findByUserId(userId).stream()
+                .map(member -> {
+                    ChatGroup group = chatGroupRepository.findById(member.getGroupId()).orElse(null);
+                    return ExportRow.of("groupId", member.getGroupId(),
+                            "name", group == null ? null : group.getName(),
+                            "createdByMe", group != null && userId.equals(group.getCreatedBy()),
+                            "joinedAt", member.getJoinedAt());
+                })
+                .toList();
     }
 }

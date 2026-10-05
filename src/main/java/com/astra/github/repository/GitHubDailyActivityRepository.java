@@ -16,4 +16,6 @@ public interface GitHubDailyActivityRepository extends JpaRepository<GitHubDaily
     Optional<GitHubDailyActivity> findByUserIdAndActivityDate(UUID userId, LocalDate activityDate);
 
     void deleteByUserId(UUID userId);
+
+    List<GitHubDailyActivity> findByUserIdOrderByActivityDate(UUID userId);
 }

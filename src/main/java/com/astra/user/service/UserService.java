@@ -8,14 +8,18 @@ import com.astra.shared.exception.UnauthorizedException;
 import com.astra.user.dto.AdminUserResponse;
 import com.astra.user.dto.AuthInfo;
 import com.astra.user.dto.AvatarData;
+import com.astra.user.TermsPolicy;
 import com.astra.user.dto.ChangePasswordRequest;
+import com.astra.user.dto.DeleteAccountRequest;
 import com.astra.user.dto.LoginRequest;
 import com.astra.user.dto.RegisterRequest;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.Base64;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,6 +71,9 @@ public class UserService {
         }
         String tag = userTagGenerator.generate(request.name());
         User user = new User(request.name(), request.email(), passwordEncoder.encode(request.password()), tag);
+        if (Boolean.TRUE.equals(request.acceptTerms())) {
+            user.acceptTerms(TermsPolicy.CURRENT_VERSION);
+        }
         User saved = userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId()));
         return toDto(saved);
@@ -82,7 +89,9 @@ public class UserService {
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             String tag = userTagGenerator.generate(name);
-            User created = userRepository.save(User.createFromOAuth(name, email, tag));
+            User fromOAuth = User.createFromOAuth(name, email, tag);
+            fromOAuth.acceptTerms(TermsPolicy.CURRENT_VERSION);
+            User created = userRepository.save(fromOAuth);
             eventPublisher.publishEvent(new UserRegisteredEvent(created.getId()));
             return created;
         });
@@ -106,7 +115,8 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse get(UUID userId) {
         return userRepository.findSummaryById(userId)
-                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole(), v.getTag()))
+                .map(v -> new UserResponse(v.getId(), v.getName(), v.getEmail(), v.getBio(), v.getRole(), v.getTag(),
+                        v.getHasPassword(), TermsPolicy.CURRENT_VERSION.equals(v.getTermsVersion())))
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
     }
 
@@ -136,6 +146,56 @@ public class UserService {
         user.setName(newName);
         user.setBio(request.bio());
         return toDto(user);
+    }
+
+    @Transactional
+    public UserResponse acceptTerms() {
+        User user = loadActor();
+        user.acceptTerms(TermsPolicy.CURRENT_VERSION);
+        return toDto(user);
+    }
+
+    @Transactional
+    public void deleteOwnAccount(DeleteAccountRequest request) {
+        User user = loadActor();
+        if (User.ROLE_OWNER.equals(user.getRole())) {
+            throw new ConflictException("A conta owner não pode ser excluída por aqui");
+        }
+        if (user.getPasswordHash() != null) {
+            if (request.password() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+                throw new ConflictException("Senha incorreta");
+            }
+        } else if (request.confirmation() == null
+                || !request.confirmation().trim().equalsIgnoreCase(user.getEmail())) {
+            throw new ConflictException("Digite o e-mail da sua conta para confirmar");
+        }
+        userRepository.delete(user);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> exportData(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("id", user.getId());
+        profile.put("name", user.getName());
+        profile.put("email", user.getEmail());
+        profile.put("tag", user.getTag());
+        profile.put("bio", user.getBio());
+        profile.put("role", user.getRole());
+        profile.put("createdAt", user.getCreatedAt());
+        profile.put("hasPassword", user.getPasswordHash() != null);
+        profile.put("termsAcceptedAt", user.getTermsAcceptedAt());
+        profile.put("termsVersion", user.getTermsVersion());
+        profile.put("loginProviders", oAuthConnectionRepository.findByUserId(userId).stream()
+                .map(connection -> Map.of("provider", connection.getProvider(),
+                        "connectedAt", connection.getCreatedAt()))
+                .toList());
+        if (user.getAvatar() != null) {
+            profile.put("avatar", Map.of("contentType", user.getAvatarContentType(),
+                    "base64", Base64.getEncoder().encodeToString(user.getAvatar())));
+        }
+        return profile;
     }
 
     @Transactional
@@ -274,6 +334,7 @@ public class UserService {
 
     private UserResponse toDto(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getBio(), user.getRole(),
-                user.getTag());
+                user.getTag(), user.getPasswordHash() != null,
+                TermsPolicy.CURRENT_VERSION.equals(user.getTermsVersion()));
     }
 }

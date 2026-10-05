@@ -1,5 +1,7 @@
 package com.astra.chat.service;
 
+import com.astra.shared.ExportRow;
+import java.util.Base64;
 import com.astra.shared.crypto.EncryptionService;
 import com.astra.chat.dto.AttachmentData;
 import com.astra.chat.dto.ConversationSummary;
@@ -350,5 +352,35 @@ public class ChatService {
         return new MessageResponse(message.getId(), message.getSenderId(), message.getRecipientId(),
                 message.getGroupId(), chatEncryptionService.decrypt(message.getContent()), message.getCreatedAt(),
                 message.isRead(), attachmentId, replyTo);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        List<Message> messages = messageRepository.findAllForExport(userId);
+        List<UUID> ids = messages.stream().map(Message::getId).toList();
+        Map<UUID, MessageAttachment> attachments = ids.isEmpty() ? Map.of()
+                : messageAttachmentRepository.findByMessageIdIn(ids).stream()
+                        .collect(Collectors.toMap(MessageAttachment::getMessageId, a -> a));
+        return messages.stream()
+                .map(message -> {
+                    boolean mine = message.getSenderId().equals(userId);
+                    MessageAttachment attachment = attachments.get(message.getId());
+                    Map<String, Object> image = null;
+                    if (attachment != null) {
+                        image = ExportRow.of("contentType", attachment.getContentType());
+                        if (mine) {
+                            image.put("base64", Base64.getEncoder()
+                                    .encodeToString(chatEncryptionService.decryptBytes(attachment.getData())));
+                        }
+                    }
+                    return ExportRow.of("id", message.getId(), "sentByMe", mine,
+                            "senderId", message.getSenderId(), "recipientId", message.getRecipientId(),
+                            "groupId", message.getGroupId(),
+                            "content", chatEncryptionService.decrypt(message.getContent()),
+                            "replyToMessageId", message.getReplyToMessageId(),
+                            "image", image,
+                            "createdAt", message.getCreatedAt(), "readAt", message.getReadAt());
+                })
+                .toList();
     }
 }

@@ -12,4 +12,6 @@ public interface CourseStepLinkRepository extends JpaRepository<CourseStepLink, 
     Optional<CourseStepLink> findByStepIdAndCourseId(UUID stepId, UUID courseId);
 
     List<CourseStepLink> findByStepIdInAndCourseIdIn(Collection<UUID> stepIds, Collection<UUID> courseIds);
+
+    List<CourseStepLink> findByCourseIdIn(Collection<UUID> courseIds);
 }

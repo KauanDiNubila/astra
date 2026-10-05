@@ -82,4 +82,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
         // OffsetDateTime aqui (funciona em @Query JPQL, não em nativeQuery).
         Instant getCreatedAt();
     }
+
+    @Query("select m from Message m where m.senderId = :userId or m.recipientId = :userId order by m.createdAt")
+    List<Message> findAllForExport(@Param("userId") UUID userId);
 }

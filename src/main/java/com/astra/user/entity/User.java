@@ -67,6 +67,12 @@ public class User {
     @Column(nullable = false, length = 4)
     private String tag;
 
+    @Column(name = "terms_accepted_at")
+    private OffsetDateTime termsAcceptedAt;
+
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion;
+
     public User(String name, String email, String passwordHash, String tag) {
         this.name = name;
         this.email = email;
@@ -80,6 +86,11 @@ public class User {
         user.email = email;
         user.tag = tag;
         return user;
+    }
+
+    public void acceptTerms(String version) {
+        this.termsAcceptedAt = OffsetDateTime.now();
+        this.termsVersion = version;
     }
 
     public boolean isBanned() {

@@ -27,7 +27,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<AuthInfoView> findAuthInfoById(@Param("id") UUID id);
 
     // Usado por /auth/refresh, /me e o construtor de UserResponse em geral.
-    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role, u.tag as tag from User u where u.id = :id")
+    @Query("select u.id as id, u.name as name, u.email as email, u.bio as bio, u.role as role, u.tag as tag, "
+            + "case when u.passwordHash is null then false else true end as hasPassword, "
+            + "u.termsVersion as termsVersion from User u where u.id = :id")
     Optional<UserSummaryView> findSummaryById(@Param("id") UUID id);
 
     // Usado em lote por amigos/chat/ranking pra evitar 1 findById por pessoa.
@@ -58,6 +60,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         String getRole();
 
         String getTag();
+
+        boolean getHasPassword();
+
+        String getTermsVersion();
     }
 
     interface NameBioView {

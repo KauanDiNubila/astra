@@ -1,5 +1,7 @@
 package com.astra.tracking.category.service;
 
+import com.astra.shared.ExportRow;
+import java.util.Map;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.event.UserRegisteredEvent;
 import com.astra.shared.exception.ConflictException;
@@ -70,5 +72,13 @@ public class CategoryService {
 
     private CategoryResponse toDto(Category category) {
         return new CategoryResponse(category.getId(), category.getName(), category.getColor());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        return categoryRepository.findByUserId(userId).stream()
+                .map(category -> ExportRow.of("id", category.getId(), "name", category.getName(),
+                        "color", category.getColor()))
+                .toList();
     }
 }

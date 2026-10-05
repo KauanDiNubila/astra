@@ -1,5 +1,7 @@
 package com.astra.tracking.session.service;
 
+import com.astra.shared.ExportRow;
+import java.util.Map;
 import com.astra.github.repository.GitHubRepositoryRepository;
 import com.astra.learning.service.CourseService;
 import com.astra.shared.CurrentUserProvider;
@@ -113,5 +115,19 @@ public class SessionService {
                 session.getStartedAt(),
                 session.getNote(),
                 session.getCreatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        return sessionRepository.findByUserId(userId, Pageable.unpaged()).stream()
+                .map(session -> ExportRow.of("id", session.getId(),
+                        "categoryId", session.getCategory() == null ? null : session.getCategory().getId(),
+                        "courseId", session.getCourseId(),
+                        "githubRepositoryId", session.getGithubRepositoryId(),
+                        "focusedMinutes", session.getFocusedMinutes(),
+                        "startedAt", session.getStartedAt(),
+                        "note", session.getNote(),
+                        "createdAt", session.getCreatedAt()))
+                .toList();
     }
 }

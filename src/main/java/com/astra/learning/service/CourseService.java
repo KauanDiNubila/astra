@@ -1,5 +1,6 @@
 package com.astra.learning.service;
 
+import com.astra.shared.ExportRow;
 import com.astra.learning.dto.CourseDetailResponse;
 import com.astra.learning.dto.CourseResponse;
 import com.astra.learning.dto.CreateCourseRequest;
@@ -299,5 +300,34 @@ public class CourseService {
 
     private double progress(long total, long completed) {
         return total == 0 ? 0.0 : (double) completed / total;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        List<Course> courses = courseRepository.findByUserId(userId);
+        List<UUID> courseIds = courses.stream().map(Course::getId).toList();
+        List<CourseModule> modules = courseIds.isEmpty() ? List.of() : moduleRepository.findByCourseIdIn(courseIds);
+        List<UUID> moduleIds = modules.stream().map(CourseModule::getId).toList();
+        Map<UUID, List<Map<String, Object>>> lessonsByModule = (moduleIds.isEmpty()
+                ? List.<Lesson>of()
+                : lessonRepository.findByModuleIdInOrderByPosition(moduleIds)).stream()
+                .collect(Collectors.groupingBy(lesson -> lesson.getModule().getId(),
+                        Collectors.mapping(lesson -> ExportRow.of("title", lesson.getTitle(),
+                                "position", lesson.getPosition(), "completed", lesson.isCompleted()),
+                                Collectors.toList())));
+        Map<UUID, List<Map<String, Object>>> modulesByCourse = modules.stream()
+                .sorted(java.util.Comparator.comparingInt(CourseModule::getPosition))
+                .collect(Collectors.groupingBy(module -> module.getCourse().getId(),
+                        Collectors.mapping(module -> ExportRow.of("id", module.getId(), "title", module.getTitle(),
+                                "position", module.getPosition(),
+                                "lessons", lessonsByModule.getOrDefault(module.getId(), List.of())),
+                                Collectors.toList())));
+        return courses.stream()
+                .map(course -> ExportRow.of("id", course.getId(), "title", course.getTitle(),
+                        "platform", course.getPlatform(), "status", course.getStatus(),
+                        "modules", modulesByCourse.getOrDefault(course.getId(), List.of()),
+                        "githubRepositoryIds", courseGithubRepoRepository.findByCourseId(course.getId()).stream()
+                                .map(link -> link.getRepositoryId()).toList()))
+                .toList();
     }
 }

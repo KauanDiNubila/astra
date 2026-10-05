@@ -1,5 +1,6 @@
 package com.astra.social.service;
 
+import com.astra.shared.ExportRow;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
@@ -140,5 +141,26 @@ public class FriendshipService {
         boolean incoming = f.getAddresseeId().equals(viewerId);
         return new FriendshipResponse(f.getId(), otherId, otherName, otherBio, otherAdmin, f.getStatus(), incoming,
                 f.getCreatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        List<Friendship> friendships = friendshipRepository.findAllForUser(userId);
+        List<UUID> otherIds = friendships.stream()
+                .map(f -> f.getRequesterId().equals(userId) ? f.getAddresseeId() : f.getRequesterId())
+                .toList();
+        Map<UUID, UserRepository.NameBioView> people = otherIds.isEmpty() ? Map.of()
+                : userRepository.findNameBioByIdIn(otherIds).stream()
+                        .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
+        return friendships.stream()
+                .map(f -> {
+                    UUID otherId = f.getRequesterId().equals(userId) ? f.getAddresseeId() : f.getRequesterId();
+                    UserRepository.NameBioView other = people.get(otherId);
+                    return ExportRow.of("userId", otherId,
+                            "name", other == null ? null : other.getName() + "#" + other.getTag(),
+                            "status", f.getStatus(), "sentByMe", f.getRequesterId().equals(userId),
+                            "createdAt", f.getCreatedAt());
+                })
+                .toList();
     }
 }

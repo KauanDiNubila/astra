@@ -1,5 +1,7 @@
 package com.astra.learning.service;
 
+import com.astra.shared.ExportRow;
+import java.util.Map;
 import com.astra.learning.dto.GoalResponse;
 import com.astra.learning.dto.SetGoalRequest;
 import com.astra.shared.CurrentUserProvider;
@@ -44,6 +46,13 @@ public class GoalService {
     public List<GoalView> goalsForUser(UUID userId) {
         return goalRepository.findByUserId(userId).stream()
                 .map(g -> new GoalView(g.getType(), g.getTargetHours()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        return goalRepository.findByUserId(userId).stream()
+                .map(goal -> ExportRow.of("type", goal.getType(), "targetHours", goal.getTargetHours()))
                 .toList();
     }
 }

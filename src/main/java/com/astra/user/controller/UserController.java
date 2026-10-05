@@ -1,6 +1,9 @@
 package com.astra.user.controller;
 
 import com.astra.user.dto.ChangePasswordRequest;
+import com.astra.user.dto.DeleteAccountRequest;
+import com.astra.user.service.RefreshTokenService;
+import jakarta.servlet.http.HttpServletResponse;
 import com.astra.user.dto.UpdateProfileRequest;
 import com.astra.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -10,6 +13,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,9 +30,11 @@ import com.astra.user.service.UserService;
 public class UserController {
 
     private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, RefreshTokenService refreshTokenService) {
         this.userService = userService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @GetMapping("/me")
@@ -39,6 +45,18 @@ public class UserController {
     @PutMapping("/me")
     public UserResponse updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         return userService.updateProfile(request);
+    }
+
+    @PostMapping("/me/terms")
+    public UserResponse acceptTerms() {
+        return userService.acceptTerms();
+    }
+
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAccount(@Valid @RequestBody DeleteAccountRequest request, HttpServletResponse response) {
+        userService.deleteOwnAccount(request);
+        refreshTokenService.clearCookie(response);
     }
 
     @PutMapping("/me/password")

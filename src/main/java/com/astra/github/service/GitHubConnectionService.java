@@ -1,5 +1,7 @@
 package com.astra.github.service;
 
+import com.astra.shared.ExportRow;
+import java.util.List;
 import com.astra.github.dto.GitHubConnectionStatus;
 import com.astra.github.dto.GitHubTokenResponse;
 import com.astra.shared.CurrentUserProvider;
@@ -183,5 +185,36 @@ public class GitHubConnectionService {
             c.setLastSyncedAt(syncedAt);
             c.setLastSyncError(error);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> exportData(UUID userId) {
+        return connectionRepository.findByUserId(userId)
+                .map(connection -> ExportRow.of(
+                        "login", connection.getGithubLogin(),
+                        "avatarUrl", connection.getGithubAvatarUrl(),
+                        "connectedAt", connection.getConnectedAt(),
+                        "lastSyncedAt", connection.getLastSyncedAt(),
+                        "visibleToFriends", connection.isVisibleToFriends(),
+                        "activitySummaries", activitySummaryRepository.findByUserId(userId).stream()
+                                .map(summary -> ExportRow.of("period", summary.getPeriod(),
+                                        "commits", summary.getCommitCount(),
+                                        "pullRequestsOpened", summary.getPullRequestOpenedCount(),
+                                        "pullRequestsMerged", summary.getPullRequestMergedCount(),
+                                        "issuesClosed", summary.getIssueClosedCount(),
+                                        "activeRepositories", summary.getActiveRepoCount()))
+                                .toList(),
+                        "dailyContributions", dailyActivityRepository.findByUserIdOrderByActivityDate(userId).stream()
+                                .map(day -> ExportRow.of("date", day.getActivityDate(),
+                                        "contributions", day.getContributionCount()))
+                                .toList(),
+                        "repositories", repositoryRepository.findByUserIdOrderByRecentCommitCountDesc(userId).stream()
+                                .map(repo -> ExportRow.of("id", repo.getId(), "fullName", repo.getFullName(),
+                                        "description", repo.getDescription(), "language", repo.getPrimaryLanguage(),
+                                        "url", repo.getHtmlUrl(), "private", repo.isPrivate(),
+                                        "stars", repo.getStarCount(), "forks", repo.getForkCount(),
+                                        "pushedAt", repo.getPushedAt(), "recentCommits", repo.getRecentCommitCount()))
+                                .toList()))
+                .orElse(null);
     }
 }

@@ -30,4 +30,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
               and (f.requesterId = :userId or f.addresseeId = :userId)
             """)
     List<Friendship> findPendingForUser(@Param("userId") UUID userId);
+
+    @Query("select f from Friendship f where f.requesterId = :userId or f.addresseeId = :userId")
+    List<Friendship> findAllForUser(@Param("userId") UUID userId);
 }

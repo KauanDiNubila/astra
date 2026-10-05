@@ -1,5 +1,6 @@
 package com.astra.roadmap.service;
 
+import com.astra.shared.ExportRow;
 import com.astra.roadmap.dto.CreateRoadmapRequest;
 import com.astra.roadmap.dto.CreateStepRequest;
 import com.astra.roadmap.dto.ResourceResponse;
@@ -152,5 +153,24 @@ public class RoadmapService {
     private ResourceResponse toResourceResponse(RoadmapStepResource resource) {
         return new ResourceResponse(resource.getId(), resource.getLabel(), resource.getUrl(),
                 resource.getPosition());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> exportData(UUID userId) {
+        List<Map<String, Object>> own = roadmapRepository.findByOwnerIdIsNullOrOwnerId(userId).stream()
+                .filter(roadmap -> userId.equals(roadmap.getOwnerId()))
+                .map(roadmap -> ExportRow.of("id", roadmap.getId(), "title", roadmap.getTitle(),
+                        "source", roadmap.getSource(),
+                        "steps", stepRepository.findByRoadmapIdOrderByPosition(roadmap.getId()).stream()
+                                .map(step -> ExportRow.of("id", step.getId(), "title", step.getTitle(),
+                                        "position", step.getPosition(), "parentStepId", step.getParentStepId(),
+                                        "description", step.getDescription()))
+                                .toList()))
+                .toList();
+        List<Map<String, Object>> progress = completionRepository.findByUserId(userId).stream()
+                .map(completion -> ExportRow.of("stepId", completion.getStepId(), "status", completion.getStatus(),
+                        "completedAt", completion.getCompletedAt()))
+                .toList();
+        return ExportRow.of("ownRoadmaps", own, "stepProgress", progress);
     }
 }

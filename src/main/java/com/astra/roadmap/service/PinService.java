@@ -1,5 +1,6 @@
 package com.astra.roadmap.service;
 
+import com.astra.shared.ExportRow;
 import com.astra.learning.service.CourseService;
 import com.astra.roadmap.dto.PinRequest;
 import com.astra.roadmap.dto.PinResponse;
@@ -109,5 +110,17 @@ public class PinService {
     private PinResponse toDto(CourseStepLink link) {
         return new PinResponse(link.getId(), link.getCourseId(), link.getStep().getId(),
                 link.getStatus(), link.getRating());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> exportData(UUID userId) {
+        List<UUID> courseIds = courseService.courseIdsForUser(userId);
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+        return linkRepository.findByCourseIdIn(courseIds).stream()
+                .map(link -> ExportRow.of("courseId", link.getCourseId(), "stepId", link.getStep().getId(),
+                        "status", link.getStatus(), "rating", link.getRating()))
+                .toList();
     }
 }
