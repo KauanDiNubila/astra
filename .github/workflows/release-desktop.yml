@@ -29,6 +29,12 @@ jobs:
             echo "A tag $GITHUB_REF_NAME nao bate com a versao $version do desktop/package.json"
             exit 1
           fi
+      - name: Criar o release antes dos uploads
+        shell: bash
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Astra para Windows $GITHUB_REF_NAME" --notes "Instalador do Astra para Windows."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
       - run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
