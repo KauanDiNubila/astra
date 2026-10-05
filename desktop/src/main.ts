@@ -1,5 +1,5 @@
 import path from "node:path"
-import { app, BrowserWindow, ipcMain, powerSaveBlocker, shell } from "electron"
+import { app, BrowserWindow, desktopCapturer, ipcMain, powerSaveBlocker, session, shell } from "electron"
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
 
 const SITE = process.env.ASTRA_URL ?? "https://astra-app.dev"
@@ -28,6 +28,56 @@ ipcMain.on("astra:set-in-call", (event, inCall: unknown) => {
 })
 
 ipcMain.handle("astra:get-version", (event) => (isFromAstra(event) ? app.getVersion() : null))
+
+interface ShareChoice {
+  sourceId: string
+  withAudio: boolean
+}
+
+let pendingShare: ShareChoice | null = null
+
+ipcMain.handle("astra:list-screen-sources", async (event) => {
+  if (!isFromAstra(event)) return []
+  const sources = await desktopCapturer.getSources({
+    types: ["screen", "window"],
+    thumbnailSize: { width: 320, height: 180 },
+    fetchWindowIcons: false,
+  })
+  return sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    kind: source.id.startsWith("screen:") ? "screen" : "window",
+    thumbnail: source.thumbnail.toDataURL(),
+  }))
+})
+
+ipcMain.handle("astra:select-screen-source", (event, sourceId: unknown, withAudio: unknown) => {
+  if (!isFromAstra(event) || typeof sourceId !== "string") return false
+  pendingShare = { sourceId, withAudio: withAudio === true }
+  return true
+})
+
+function installDisplayMediaHandler() {
+  session.defaultSession.setDisplayMediaRequestHandler(
+    async (request, callback) => {
+      const choice = pendingShare
+      pendingShare = null
+      const frameUrl = request.frame?.url
+      if (!choice || !frameUrl || new URL(frameUrl).origin !== SITE_ORIGIN) {
+        callback({})
+        return
+      }
+      const sources = await desktopCapturer.getSources({ types: ["screen", "window"] })
+      const video = sources.find((source) => source.id === choice.sourceId)
+      if (!video) {
+        callback({})
+        return
+      }
+      callback(choice.withAudio ? { video, audio: "loopback" } : { video })
+    },
+    { useSystemPicker: false },
+  )
+}
 
 function openExternal(url: string) {
   if (url.startsWith("https://")) void shell.openExternal(url)
@@ -80,5 +130,8 @@ if (!app.requestSingleInstanceLock()) {
     win.focus()
   })
   app.on("window-all-closed", () => app.quit())
-  void app.whenReady().then(createWindow)
+  void app.whenReady().then(() => {
+    installDisplayMediaHandler()
+    createWindow()
+  })
 }
