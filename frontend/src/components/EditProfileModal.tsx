@@ -6,6 +6,7 @@ import { ModalScroller } from "@/components/ModalScroller"
 import { Check, ChevronDown, Copy, GitBranch, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { GithubAvatar } from "@/components/GithubAvatar"
+import { ProfilePrivacySection } from "@/components/ProfilePrivacySection"
 import { useAuth } from "@/context/AuthContext"
 import { useGitHub } from "@/context/GitHubContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
@@ -493,6 +494,8 @@ export function EditProfileModal({ open, onClose }: Props) {
                     </div>
                   </div>
                 </div>
+
+                <ProfilePrivacySection onAccountDeleted={onClose} />
 
                 <div className="flex flex-col-reverse items-center justify-end gap-3 px-6 py-5 sm:flex-row">
                   {error && <p className="mr-auto text-sm text-destructive">{error}</p>}

@@ -22,6 +22,7 @@ export function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -30,7 +31,7 @@ export function RegisterPage() {
     setError(null)
     setLoading(true)
     try {
-      await register(name, email, password)
+      await register(name, email, password, acceptedTerms)
       navigate("/dashboard")
     } catch (err) {
       setError(getErrorMessage(err, "Não foi possível criar a conta. Tente novamente."))
@@ -91,6 +92,26 @@ export function RegisterPage() {
                   required
                 />
               </div>
+              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  required
+                  className="mt-0.5 size-4 shrink-0 accent-primary"
+                />
+                <span>
+                  Li e aceito os{" "}
+                  <Link to="/termos" className="text-foreground underline underline-offset-4">
+                    Termos de Uso
+                  </Link>{" "}
+                  e a{" "}
+                  <Link to="/privacidade" className="text-foreground underline underline-offset-4">
+                    Política de Privacidade
+                  </Link>
+                  .
+                </span>
+              </label>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" disabled={loading}>
                 {loading ? "Criando..." : "Criar conta"}

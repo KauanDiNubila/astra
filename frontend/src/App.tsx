@@ -27,6 +27,8 @@ const RoadmapDetailPage = lazy(() =>
   import("@/pages/RoadmapDetailPage").then((m) => ({ default: m.RoadmapDetailPage })),
 )
 const RoadmapsPage = lazy(() => import("@/pages/RoadmapsPage").then((m) => ({ default: m.RoadmapsPage })))
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage").then((m) => ({ default: m.PrivacyPage })))
+const TermsPage = lazy(() => import("@/pages/TermsPage").then((m) => ({ default: m.TermsPage })))
 const SessionsPage = lazy(() => import("@/pages/SessionsPage").then((m) => ({ default: m.SessionsPage })))
 
 function RouteFallback() {
@@ -45,6 +47,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/privacidade" element={<PrivacyPage />} />
+          <Route path="/termos" element={<TermsPage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/sessions" element={<SessionsPage />} />

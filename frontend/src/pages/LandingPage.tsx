@@ -191,6 +191,14 @@ export function LandingPage() {
           <Code2 className="size-4" />
           Código-fonte
         </a>
+        <span aria-hidden>·</span>
+        <Link to="/termos" className="hover:text-foreground">
+          Termos
+        </Link>
+        <span aria-hidden>·</span>
+        <Link to="/privacidade" className="hover:text-foreground">
+          Privacidade
+        </Link>
       </footer>
     </div>
   )

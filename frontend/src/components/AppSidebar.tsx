@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react"
 import { motion } from "motion/react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
@@ -184,6 +184,14 @@ export function AppSidebar() {
             </div>
           </PopoverContent>
         </Popover>
+        <p className="flex justify-center gap-3 text-[11px] text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+          <Link to="/termos" className="hover:text-foreground">
+            Termos
+          </Link>
+          <Link to="/privacidade" className="hover:text-foreground">
+            Privacidade
+          </Link>
+        </p>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

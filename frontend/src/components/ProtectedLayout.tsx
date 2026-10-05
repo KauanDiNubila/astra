@@ -6,6 +6,7 @@ import { FriendsProvider } from "@/context/FriendsContext"
 import { GitHubProvider } from "@/context/GitHubContext"
 import { PomodoroProvider } from "@/context/PomodoroContext"
 import { AppLayout } from "@/components/AppLayout"
+import { TermsGate } from "@/components/TermsGate"
 
 export function ProtectedLayout() {
   const { user, loading } = useAuth()
@@ -31,6 +32,7 @@ export function ProtectedLayout() {
               <AppLayout>
                 <Outlet />
               </AppLayout>
+              <TermsGate />
             </GitHubProvider>
           </CallProvider>
         </ChatProvider>

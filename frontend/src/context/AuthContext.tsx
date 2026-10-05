@@ -8,9 +8,11 @@ type AuthContextValue = {
   loading: boolean
   avatarVersion: number
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string, acceptTerms: boolean) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  acceptTerms: () => Promise<void>
+  deleteAccount: (confirmation: { password?: string; confirmation?: string }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -33,8 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.data.user)
   }
 
-  async function register(name: string, email: string, password: string) {
-    await api.post("/auth/register", { name, email, password })
+  async function register(name: string, email: string, password: string, acceptTerms: boolean) {
+    await api.post("/auth/register", { name, email, password, acceptTerms })
     await login(email, password)
   }
 
@@ -48,6 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  async function acceptTerms() {
+    const res = await api.post<User>("/me/terms")
+    setUser(res.data)
+  }
+
+  async function deleteAccount(confirmation: { password?: string; confirmation?: string }) {
+    await api.delete("/me", { data: confirmation })
+    clearAccessToken()
+    setUser(null)
+  }
+
   async function refreshUser() {
     const res = await api.get<User>("/me")
     setUser(res.data)
@@ -55,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, avatarVersion, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, avatarVersion, login, register, logout, refreshUser, acceptTerms, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   )

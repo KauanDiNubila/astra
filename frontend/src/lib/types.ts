@@ -5,6 +5,8 @@ export type User = {
   bio: string | null
   role: "USER" | "ADMIN" | "OWNER"
   tag: string
+  hasPassword?: boolean
+  termsAccepted?: boolean
 }
 
 export type AdminUser = {

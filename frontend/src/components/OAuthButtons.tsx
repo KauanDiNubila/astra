@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { baseURL } from "@/lib/api"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,17 @@ export function OAuthButtons() {
         <GitHubIcon className="size-4" />
         Continuar com GitHub
       </Button>
+      <p className="mt-1 text-center text-xs text-muted-foreground">
+        Ao continuar com Google ou GitHub, você concorda com os{" "}
+        <Link to="/termos" className="underline underline-offset-4 hover:text-foreground">
+          Termos de Uso
+        </Link>{" "}
+        e a{" "}
+        <Link to="/privacidade" className="underline underline-offset-4 hover:text-foreground">
+          Política de Privacidade
+        </Link>
+        .
+      </p>
       {waitingBrowser && (
         <p role="status" className="text-center text-sm text-muted-foreground">
           Conclua o login no navegador. Quando terminar, o Astra abre sozinho.
