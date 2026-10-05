@@ -738,6 +738,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
+  useEffect(() => {
+    window.astraDesktop?.setInCall(phase !== "idle")
+    return () => window.astraDesktop?.setInCall(false)
+  }, [phase])
+
   const screenShareSupported =
     typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function"
 
