@@ -4,7 +4,8 @@
 
 App web para organizar estudos e trabalho: sessões de foco (Pomodoro ou manual),
 categorias, cursos com módulos, metas e roadmaps de aprendizado. Tem uma camada
-social (amigos, chat em tempo real, ranking) e integração com GitHub, que
+social (amigos, chat em tempo real, chamadas de voz e vídeo com compartilhamento
+de tela, ranking), um app para Windows e integração com GitHub, que
 sincroniza atividade real (commits, PRs, issues, repositórios) e cruza com o
 tempo estudado. A unidade fundamental é a **sessão**: todo tempo focado vira uma
 sessão registrada, e tudo o mais — ranking, heatmap, streak, estatísticas e
@@ -43,12 +44,26 @@ e depois em **Executar assim mesmo**. O app se atualiza sozinho. Detalhes em
 - **Chat** — mensagens em tempo real entre amigos via WebSocket (STOMP), com
   anexo de imagem, grupos, responder mensagem (duplo-clique no desktop, swipe
   no mobile) e mensagens cifradas em repouso (AES-256-GCM).
+- **Chamadas** — voz e vídeo entre amigos, 1:1 ou em grupo (até 5 pessoas),
+  direto entre os navegadores (WebRTC ponto a ponto, sem servidor de mídia):
+  câmera, compartilhamento de tela com o som do sistema, toque e notificação de
+  chamada recebida, mudo, fone desligado, indicador de quem está falando,
+  escolha de microfone/câmera/saída de som, cancelamento de eco e supressão de
+  ruído. Dá pra entrar sem microfone (só ouvindo) e conectar um depois; quem
+  está sem microfone aparece marcado pros outros.
+- **App para Windows** — janela própria (Electron) que carrega o site: a call
+  não é pausada em segundo plano, o Windows não suspende durante a chamada, a
+  tela compartilhada com som não devolve a voz da call (eco), barra de título
+  integrada ao app, login com Google/GitHub pelo navegador do sistema e
+  atualização automática.
 - **Ranking** — placar diário/semanal/mensal, global ou só entre amigos (reseta à meia-noite de Brasília).
 - **Integração com GitHub** — conectar a conta via OAuth2 e sincronizar sob
   demanda: atividade (commits, PRs, issues) por período, heatmap combinado,
   repositórios/linguagens mais usados, evidência de GitHub num passo de
   roadmap concluído, sugestão automática de repositório pra uma sessão, e o
-  login do GitHub visível no perfil pros amigos — só se o dono autorizar.
+  login do GitHub visível no perfil pros amigos — só se o dono autorizar (o
+  perfil do amigo mostra também repositórios públicos, seguidores e desde quando
+  ele está no GitHub).
 - **Administração** — painel pra listar, banir (reversível) ou excluir (cascata) contas; acesso restrito a `ADMIN`/`OWNER`.
 
 > Princípio central: nada de "total", "streak" ou "ranking" é armazenado — tudo é **agregação sobre `session`**.
@@ -74,6 +89,15 @@ e depois em **Executar assim mesmo**. O app se atualiza sozinho. Detalhes em
 - Sem SQL Injection (100% Spring Data JPA parametrizado, incluindo a única
   query nativa do projeto).
 - `HTTPS` de ponta a ponta (Let's Encrypt na origem, Cloudflare na borda).
+- Chamadas: a mídia vai direto entre os participantes (DTLS-SRTP do WebRTC). O
+  relay TURN usa credenciais efêmeras (HMAC, válidas por 1h) geradas pelo
+  backend, nunca uma senha fixa no front; o relay recusa repassar tráfego para
+  IPs internos. A sinalização só aceita quem está na chamada e tem limite de
+  taxa.
+- App para Windows: a página não acessa o Node.js (`contextIsolation`,
+  `sandbox`), só o domínio do Astra carrega na janela e a ponte com o app
+  confere a origem de cada pedido. O login social no app usa um código de uso
+  único amarrado a um desafio (no estilo PKCE), trocado de dentro do app.
 
 Detalhes completos (modelo de ameaças, decisões e trade-offs documentados) na
 pasta de notas do projeto — não faz parte deste repositório público.
@@ -91,7 +115,7 @@ pasta de notas do projeto — não faz parte deste repositório público.
 | Migrations | Flyway |
 | Persistência | Spring Data JPA / Hibernate |
 | Segurança | Spring Security + JWT (jjwt) + refresh token |
-| Tempo real | WebSocket + STOMP (chat) |
+| Tempo real | WebSocket + STOMP (chat e sinalização das chamadas) |
 | Validação | Bean Validation |
 | Docs de API | SpringDoc OpenAPI (Swagger UI, só em dev) |
 | Testes | JUnit 5, Testcontainers (Postgres real) |
@@ -111,7 +135,16 @@ pasta de notas do projeto — não faz parte deste repositório público.
 | HTTP | Axios |
 | Ícones | Lucide |
 | Notificações | Sonner |
+| Chamadas | WebRTC (malha ponto a ponto) |
 | Lint | oxlint |
+
+**App desktop** (`desktop/`)
+
+| Camada | Tecnologia |
+|---|---|
+| Casca | Electron 44 (TypeScript) |
+| Instalador | electron-builder (NSIS, por usuário, sem admin) |
+| Atualização | electron-updater (GitHub Releases) |
 
 **Produção**
 
@@ -120,6 +153,8 @@ pasta de notas do projeto — não faz parte deste repositório público.
 | Frontend | Vercel (deploy automático a cada push) |
 | Backend | VM Oracle Cloud (Docker Compose + Caddy) |
 | Banco | Neon (Postgres serverless) |
+| Relay das chamadas | coturn (TURN) na mesma VM Oracle |
+| App Windows | GitHub Releases (workflow a cada tag `v*`) |
 | Borda | Cloudflare (proxy, HTTPS, rate limit) |
 | Domínio | `astra-app.dev` |
 
@@ -159,6 +194,17 @@ npm run dev
 
 Backend e frontend rodam como dois processos separados — não há orquestração única entre eles.
 
+**App desktop** (opcional, Windows)
+
+```bash
+cd desktop
+npm install
+ASTRA_URL=http://localhost:5173 ASTRA_API_URL=http://localhost:8080 npm start
+```
+
+Sem as variáveis, o app abre o site de produção. Gerar instalador e publicar
+versão: ver [`desktop/README.md`](desktop/README.md).
+
 ## Configuração (variáveis de ambiente)
 
 **Backend** (dev usa `application.properties`, produção ativa o profile `prod`
@@ -170,6 +216,8 @@ têm valor default**, a aplicação falha na subida se faltar alguma)
 | `ASTRA_JWT_SECRET` | um segredo de dev (commitado) | Chave HMAC que assina o JWT. **Em produção, defina um valor aleatório forte** (≥ 32 bytes) — quem tem o segredo forja qualquer token. |
 | `ASTRA_CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origens liberadas no CORS (front-end). |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | — (só produção) | Conexão com o Postgres de produção. |
+| `ASTRA_TURN_SECRET` | um segredo de dev (commitado) | Segredo compartilhado com o coturn para gerar as credenciais temporárias do relay das chamadas. **Em produção, use um valor aleatório forte**, igual ao `static-auth-secret` do coturn. |
+| `ASTRA_TURN_URLS` | vazio (só STUN) | Endereços do relay TURN, separados por vírgula (ex.: `turn:<ip>:3478?transport=udp`). |
 
 Ajuste fino em `application.properties`: `astra.jwt.expiration-minutes`
 (default `15`), `astra.jwt.refresh-expiration-days` (default `30`).
@@ -180,12 +228,20 @@ Ajuste fino em `application.properties`: `astra.jwt.expiration-minutes`
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8080` | Base URL da API. |
 
+**App desktop** (só para desenvolvimento)
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `ASTRA_URL` | `https://astra-app.dev` | Site que o app carrega. |
+| `ASTRA_API_URL` | `https://api.astra-app.dev` | API usada na troca do login social. |
+| `ASTRA_UPDATE_URL` | — | Feed de atualização de teste (nunca instala sozinho). |
+
 ## API
 
 Documentação interativa completa no **Swagger UI** (`/swagger-ui.html`,
 disponível só em dev — desativado em produção). Grupos principais:
 
-- **Auth:** `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /oauth2/authorization/{google|github}` (login sem senha)
+- **Auth:** `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /oauth2/authorization/{google|github}` (login sem senha), `GET /auth/desktop/login` + `POST /auth/desktop/exchange` (login social do app desktop)
 - **User:** `GET`/`PUT /me`, `POST /me/avatar`, `GET /users/{id}/avatar`
 - **Tracking:** `POST`/`GET /sessions`, `POST`/`GET /categories`
 - **Stats:** `GET /dashboard`, `GET /heatmap`, `GET /ranking?period=DAILY|WEEKLY|MONTHLY&scope=GLOBAL|FRIENDS`
@@ -193,6 +249,7 @@ disponível só em dev — desativado em produção). Grupos principais:
 - **Roadmap:** `POST`/`GET /roadmaps`, `GET /roadmaps/{id}`, `POST .../steps`, `PATCH .../steps/{id}`, `POST`/`GET`/`DELETE /steps/{id}/pins`
 - **Social:** `POST`/`GET /friends`, `GET /friends/requests`, `POST /friends/{id}/accept`, `DELETE /friends/{id}`
 - **Chat:** `GET /chat/conversations`, `GET /chat/{friendId}/messages`, `POST /chat/{friendId}/read`, WebSocket `/ws` (STOMP)
+- **Chamadas:** `GET /call/ice-servers` (STUN/TURN com credenciais temporárias); sinalização pelo mesmo `/ws` — envio em `/app/call.start|join|decline|leave|signal`, eventos em `/user/queue/call`
 - **GitHub:** `GET /github/connect/authorize-url`, `GET /github/status`, `POST /github/sync`, `DELETE /github/connection`, `PATCH /github/visibility`, `GET /github/activity`, `GET /github/insights`
 - **Admin:** `GET /admin/users`, `POST /admin/users/{id}/ban|unban`, `DELETE /admin/users/{id}` — exige `ADMIN`/`OWNER`
 
@@ -216,6 +273,7 @@ com.astra
 ├── roadmap    → Roadmap, RoadmapStep, CourseStepLink (o "pin")
 ├── social     → Friendship (pedidos de amizade)
 ├── chat       → Message, WebSocket/STOMP
+├── call       → chamadas: estado em memória, sinalização WebRTC, credenciais TURN
 ├── github     → conexão OAuth2, sincronização e insights do GitHub
 ├── stats      → dashboard, heatmap, streak, ranking (só leitura sobre os domínios)
 └── shared     → config, security, exceptions, base
@@ -223,11 +281,20 @@ com.astra
 
 **Frontend** — SPA em `frontend/`, uma página por rota sob `src/pages`, componentes
 de UI reutilizáveis (shadcn) em `src/components/ui`, e componentes de domínio
-(diagrama de roadmap, timer Pomodoro, heatmap etc.) em `src/components`.
+(diagrama de roadmap, timer Pomodoro, heatmap, tela de chamada etc.) em
+`src/components`. A lógica das chamadas (conexões WebRTC, áudio, dispositivos)
+fica em `src/lib/call*.ts` e `src/context/CallContext.tsx`.
+
+**App desktop** — casca Electron em `desktop/`: não empacota o front, só abre
+o site (que segue atualizando pela Vercel). O processo principal cuida da
+janela, do seletor de tela, do bloqueio de suspensão durante a call, do login
+social e da atualização; a página fala com ele por uma ponte pequena
+(`preload.ts`).
 
 ## Status
 
 **Em produção.** Backend e frontend completos e implantados de ponta a ponta —
 sessões, dashboard, heatmap, cursos/módulos, metas, roadmaps (com diagrama
-interativo), amigos, chat em tempo real, ranking, integração com GitHub e
-administração. Em polimento contínuo de UX e correções.
+interativo), amigos, chat em tempo real, chamadas de voz e vídeo com
+compartilhamento de tela, ranking, integração com GitHub, administração e app
+para Windows. Em polimento contínuo de UX e correções.
