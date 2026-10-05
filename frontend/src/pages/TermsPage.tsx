@@ -1,15 +1,15 @@
-import { Link } from "react-router-dom"
+import { LegalLink } from "@/context/LegalContext"
 import { LegalLayout } from "@/components/LegalLayout"
 import { LEGAL_CONTACT_EMAIL, LEGAL_CONTROLLER } from "@/lib/legal"
 
-export function TermsPage() {
+export function TermsContent() {
   return (
-    <LegalLayout title="Termos de Uso">
+    <>
       <section>
         <p>
           Estes termos valem para quem usa o Astra (astra-app.dev), no site ou no app para Windows. Ao criar uma
           conta ou entrar com Google ou GitHub, você concorda com eles e com a{" "}
-          <Link to="/privacidade">Política de Privacidade</Link>. O Astra é mantido por {LEGAL_CONTROLLER}.
+          <LegalLink doc="privacy">Política de Privacidade</LegalLink>. O Astra é mantido por {LEGAL_CONTROLLER}.
         </p>
       </section>
 
@@ -111,6 +111,14 @@ export function TermsPage() {
           Estes termos seguem as leis do Brasil. Dúvidas: <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.
         </p>
       </section>
+        </>
+  )
+}
+
+export function TermsPage() {
+  return (
+    <LegalLayout title="Termos de Uso">
+      <TermsContent />
     </LegalLayout>
   )
 }

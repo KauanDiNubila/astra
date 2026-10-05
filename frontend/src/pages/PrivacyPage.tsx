@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom"
+import { LegalLink } from "@/context/LegalContext"
 import { LegalLayout } from "@/components/LegalLayout"
 import { LEGAL_CONTACT_EMAIL, LEGAL_CONTROLLER } from "@/lib/legal"
 
-export function PrivacyPage() {
+export function PrivacyContent() {
   return (
-    <LegalLayout title="Política de Privacidade">
+    <>
       <section>
         <p>
           Esta política explica quais dados pessoais o Astra coleta, para que usa, com quem compartilha e quais são
@@ -92,7 +92,7 @@ export function PrivacyPage() {
           <li>Seu GitHub só aparece para seus amigos se você autorizar.</li>
           <li>
             Os administradores do Astra podem ver a lista de contas (nome e e-mail) para moderação, e banir ou
-            excluir contas que violem os <Link to="/termos">Termos de Uso</Link>.
+            excluir contas que violem os <LegalLink doc="terms">Termos de Uso</LegalLink>.
           </li>
         </ul>
       </section>
@@ -183,6 +183,14 @@ export function PrivacyPage() {
           mudança importante.
         </p>
       </section>
+        </>
+  )
+}
+
+export function PrivacyPage() {
+  return (
+    <LegalLayout title="Política de Privacidade">
+      <PrivacyContent />
     </LegalLayout>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { createPortal } from "react-dom"
-import { Link } from "react-router-dom"
+import { LegalLink } from "@/context/LegalContext"
 import { useAuth } from "@/context/AuthContext"
 import { getErrorMessage } from "@/lib/api"
 import { ModalScroller } from "@/components/ModalScroller"
@@ -38,13 +38,13 @@ export function TermsGate() {
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Publicamos os{" "}
-          <Link to="/termos" className="text-foreground underline underline-offset-4">
+          <LegalLink doc="terms" className="text-foreground underline underline-offset-4">
             Termos de Uso
-          </Link>{" "}
+          </LegalLink>{" "}
           e a{" "}
-          <Link to="/privacidade" className="text-foreground underline underline-offset-4">
+          <LegalLink doc="privacy" className="text-foreground underline underline-offset-4">
             Política de Privacidade
-          </Link>{" "}
+          </LegalLink>{" "}
           do Astra, que explicam as regras de uso e como cuidamos dos seus dados. Para continuar usando o app, leia e
           aceite os dois.
         </p>

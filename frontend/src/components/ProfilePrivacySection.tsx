@@ -2,7 +2,7 @@ import { useState } from "react"
 import type { KeyboardEvent } from "react"
 import { ChevronDown, Download, ShieldCheck } from "lucide-react"
 import { useReducedMotion } from "motion/react"
-import { Link } from "react-router-dom"
+import { LegalLink } from "@/context/LegalContext"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { api, getErrorMessage } from "@/lib/api"
@@ -132,13 +132,13 @@ export function ProfilePrivacySection({ onAccountDeleted }: { onAccountDeleted: 
 
               <p className="text-xs text-muted-foreground">
                 Veja como cuidamos dos seus dados na{" "}
-                <Link to="/privacidade" className="underline underline-offset-4 hover:text-foreground" tabIndex={tabIndex}>
+                <LegalLink doc="privacy" className="underline underline-offset-4 hover:text-foreground" tabIndex={tabIndex}>
                   Política de Privacidade
-                </Link>{" "}
+                </LegalLink>{" "}
                 e as regras nos{" "}
-                <Link to="/termos" className="underline underline-offset-4 hover:text-foreground" tabIndex={tabIndex}>
+                <LegalLink doc="terms" className="underline underline-offset-4 hover:text-foreground" tabIndex={tabIndex}>
                   Termos de Uso
-                </Link>
+                </LegalLink>
                 .
               </p>
 

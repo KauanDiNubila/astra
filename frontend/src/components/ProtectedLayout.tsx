@@ -4,6 +4,7 @@ import { CallProvider } from "@/context/CallContext"
 import { ChatProvider } from "@/context/ChatContext"
 import { FriendsProvider } from "@/context/FriendsContext"
 import { GitHubProvider } from "@/context/GitHubContext"
+import { LegalProvider } from "@/context/LegalContext"
 import { PomodoroProvider } from "@/context/PomodoroContext"
 import { AppLayout } from "@/components/AppLayout"
 import { TermsGate } from "@/components/TermsGate"
@@ -24,6 +25,7 @@ export function ProtectedLayout() {
   }
 
   return (
+    <LegalProvider>
     <PomodoroProvider>
       <FriendsProvider>
         <ChatProvider>
@@ -38,5 +40,6 @@ export function ProtectedLayout() {
         </ChatProvider>
       </FriendsProvider>
     </PomodoroProvider>
+    </LegalProvider>
   )
 }
