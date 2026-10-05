@@ -13,6 +13,12 @@ como tabela.
 
 **🔗 No ar:** [astra-app.dev](https://astra-app.dev)
 
+**🖥️ App para Windows:** [baixar o instalador](https://github.com/KauanDiNubila/astra/releases/latest)
+(`Astra-Setup-<versão>.exe`). O instalador não é assinado, então na primeira
+vez o Windows mostra "O Windows protegeu seu PC": clique em **Mais informações**
+e depois em **Executar assim mesmo**. O app se atualiza sozinho. Detalhes em
+[`desktop/README.md`](desktop/README.md).
+
 > Projeto de portfólio. Interface em português, código em inglês.
 
 ## Funcionalidades
