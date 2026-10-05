@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Copy, Minus, Square, X } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useTheme } from "@/context/ThemeContext"
 import { pageTitleFor } from "@/lib/pageTitles"
@@ -64,6 +64,14 @@ function NavButton({
   )
 }
 
+function Glyph({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
+      {children}
+    </svg>
+  )
+}
+
 function WindowControls() {
   const controls = window.astraDesktop?.windowControls
   const [maximized, setMaximized] = useState(false)
@@ -90,7 +98,9 @@ function WindowControls() {
   return (
     <div className="ml-auto flex h-full items-stretch">
       <button type="button" aria-label="Minimizar" className={button} onClick={controls.minimize}>
-        <Minus className="size-3.5" strokeWidth={1.5} />
+        <Glyph>
+          <path d="M0.5 5.5h9" />
+        </Glyph>
       </button>
       <button
         type="button"
@@ -98,7 +108,16 @@ function WindowControls() {
         className={button}
         onClick={controls.toggleMaximize}
       >
-        {maximized ? <Copy className="size-3" strokeWidth={1.5} /> : <Square className="size-3" strokeWidth={1.5} />}
+        {maximized ? (
+          <Glyph>
+            <path d="M2.5 2.5V0.5h7v7h-2" />
+            <rect x="0.5" y="2.5" width="7" height="7" />
+          </Glyph>
+        ) : (
+          <Glyph>
+            <rect x="1.5" y="1.5" width="7" height="7" />
+          </Glyph>
+        )}
       </button>
       <button
         type="button"
@@ -106,7 +125,9 @@ function WindowControls() {
         className={cn(button, "hover:bg-red-600 hover:text-white")}
         onClick={controls.close}
       >
-        <X className="size-3.5" strokeWidth={1.5} />
+        <Glyph>
+          <path d="M0.5 0.5l9 9M9.5 0.5l-9 9" />
+        </Glyph>
       </button>
     </div>
   )
