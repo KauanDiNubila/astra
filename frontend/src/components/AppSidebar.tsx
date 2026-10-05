@@ -7,6 +7,7 @@ import {
   Map,
   MessageCircle,
   ShieldCheck,
+  Sparkle,
   Trophy,
   Users,
 } from "lucide-react"
@@ -19,7 +20,6 @@ import { baseURL } from "@/lib/api"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { AdminBadge } from "@/components/AdminBadge"
-import { AstraLogo } from "@/components/AstraLogo"
 import { EditProfileModal } from "@/components/EditProfileModal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -85,7 +85,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="default" tooltip="Astra">
               <NavLink to="/dashboard">
-                <AstraLogo className="!size-5 shrink-0" />
+                <Sparkle className="fill-current" />
                 <span className="text-base font-semibold">Astra</span>
               </NavLink>
             </SidebarMenuButton>
