@@ -3,16 +3,22 @@ package com.astra.shared.config;
 import com.astra.shared.security.StompAuthChannelInterceptor;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private static final int MAX_MESSAGE_BYTES = 128 * 1024;
 
     private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
     private final List<String> allowedOrigins;
@@ -33,6 +39,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.enableSimpleBroker("/queue");
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration.setMessageSizeLimit(MAX_MESSAGE_BYTES);
+        registration.setSendBufferSizeLimit(4 * MAX_MESSAGE_BYTES);
+    }
+
+    @Bean
+    WebServerFactoryCustomizer<TomcatServletWebServerFactory> webSocketBufferCustomizer() {
+        return factory -> factory.addContextCustomizers(context -> {
+            context.addParameter("org.apache.tomcat.websocket.textBufferSize", String.valueOf(MAX_MESSAGE_BYTES));
+            context.addParameter("org.apache.tomcat.websocket.binaryBufferSize", String.valueOf(MAX_MESSAGE_BYTES));
+        });
     }
 
     @Override

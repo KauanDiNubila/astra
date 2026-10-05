@@ -9,6 +9,6 @@ public record SignalRequest(
         @NotNull UUID callId,
         @NotBlank @Size(max = 64) String toClient,
         @NotBlank @Size(max = 16) String type,
-        @NotBlank @Size(max = 32000) String data
+        @NotBlank @Size(max = 60000) String data
 ) {
 }
