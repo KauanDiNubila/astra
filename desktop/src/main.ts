@@ -138,6 +138,7 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.on("window-all-closed", () => app.quit())
   void app.whenReady().then(() => {
+    if (app.isPackaged) app.setAsDefaultProtocolClient("astra")
     installDisplayMediaHandler()
     createWindow()
     startAutoUpdate()
