@@ -31,6 +31,9 @@ e depois em **Executar assim mesmo**. O app se atualiza sozinho. Detalhes em
   GitHub)**, sem senha.
 - **Perfil** — nome, bio curta e avatar. Hierarquia de papel `USER < ADMIN <
   OWNER`.
+- **Privacidade (LGPD)** — Termos de Uso e Política de Privacidade com aceite
+  registrado (no cadastro, no login social e, para contas antigas, num aviso
+  único), baixar uma cópia dos próprios dados em JSON e excluir a própria conta.
 - **Sessões** — registrar tempo focado (Pomodoro ou manual → minutos) e listar.
 - **Categorias** — separar o tempo por tipo (estudo, trabalho, leitura…).
 - **Dashboard** — horas de hoje/semana/total, streak e progresso das metas.
@@ -242,7 +245,8 @@ Documentação interativa completa no **Swagger UI** (`/swagger-ui.html`,
 disponível só em dev — desativado em produção). Grupos principais:
 
 - **Auth:** `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /oauth2/authorization/{google|github}` (login sem senha), `GET /auth/desktop/login` + `POST /auth/desktop/exchange` (login social do app desktop)
-- **User:** `GET`/`PUT /me`, `POST /me/avatar`, `GET /users/{id}/avatar`
+- **User:** `GET`/`PUT /me`, `POST /me/avatar`, `GET /users/{id}/avatar`, `POST /me/terms` (aceite dos termos), `DELETE /me` (excluir a própria conta)
+- **Privacidade:** `GET /me/export` (cópia dos dados do usuário em JSON)
 - **Tracking:** `POST`/`GET /sessions`, `POST`/`GET /categories`
 - **Stats:** `GET /dashboard`, `GET /heatmap`, `GET /ranking?period=DAILY|WEEKLY|MONTHLY&scope=GLOBAL|FRIENDS`
 - **Learning:** `POST`/`GET /courses`, `GET /courses/{id}`, `POST .../modules`, `PATCH .../modules/{id}`, `PUT`/`GET /goals`
@@ -276,6 +280,7 @@ com.astra
 ├── call       → chamadas: estado em memória, sinalização WebRTC, credenciais TURN
 ├── github     → conexão OAuth2, sincronização e insights do GitHub
 ├── stats      → dashboard, heatmap, streak, ranking (só leitura sobre os domínios)
+├── privacy    → exportação dos dados do usuário (LGPD), juntando o que cada módulo expõe
 └── shared     → config, security, exceptions, base
 ```
 
