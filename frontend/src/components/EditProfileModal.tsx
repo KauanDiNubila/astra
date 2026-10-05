@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { ModalScroller } from "@/components/ModalScroller"
 import { Check, ChevronDown, Copy, GitBranch, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
+import { GithubAvatar } from "@/components/GithubAvatar"
 import { useAuth } from "@/context/AuthContext"
 import { useGitHub } from "@/context/GitHubContext"
 import { api, baseURL, getErrorMessage } from "@/lib/api"
@@ -197,8 +198,8 @@ export function EditProfileModal({ open, onClose }: Props) {
                   </button>
                 </div>
 
-                <div className="flex flex-col rounded-xl border border-border bg-card md:flex-row">
-                  <div className="flex-1 space-y-4 p-6">
+                <div className="flex flex-col gap-6 px-6 pb-6 md:flex-row">
+                  <div className="flex-1 space-y-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="profile-name">Nome</Label>
                       <Input
@@ -244,9 +245,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                     </div>
                   </div>
 
-                  <div className="w-full border-t border-dashed border-border md:w-px md:border-t-0 md:border-l" />
-
-                  <div className="flex flex-1 flex-col items-center justify-center p-6">
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl bg-muted/30 p-6">
                     <span className="mb-4 text-sm font-medium text-muted-foreground">Preview</span>
                     <div className="relative mb-4">
                       {showImg ? (
@@ -285,8 +284,8 @@ export function EditProfileModal({ open, onClose }: Props) {
                   </div>
                 </div>
 
-                <div className="border-t border-border px-6 py-4">
-                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="px-6">
+                  <div>
                     <button
                       type="button"
                       onClick={() =>
@@ -300,7 +299,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                         })
                       }
                       aria-expanded={changingPassword}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                      className="-mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/50"
                     >
                       <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <KeyRound size={16} className="text-muted-foreground" />
@@ -332,7 +331,7 @@ export function EditProfileModal({ open, onClose }: Props) {
                       style={{ transitionProperty: "grid-template-rows" }}
                     >
                       <div className="overflow-hidden">
-                        <div className="space-y-3 border-t border-border px-4 pb-4 pt-3">
+                        <div className="space-y-3 pb-4 pt-1">
                           <div className="space-y-1.5">
                             <Label htmlFor="current-password">Senha atual</Label>
                             <Input
@@ -372,13 +371,13 @@ export function EditProfileModal({ open, onClose }: Props) {
                   </div>
                 </div>
 
-                <div className="border-t border-border px-6 py-4">
-                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="px-6 pb-2">
+                  <div className="border-t border-border/50">
                     <button
                       type="button"
                       onClick={() => setGithubSectionOpen((v) => !v)}
                       aria-expanded={githubSectionOpen}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                      className="-mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/50"
                     >
                       <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <GitBranch size={16} className="text-muted-foreground" />
@@ -410,15 +409,15 @@ export function EditProfileModal({ open, onClose }: Props) {
                       style={{ transitionProperty: "grid-template-rows" }}
                     >
                       <div className="overflow-hidden">
-                        <div className="space-y-3 border-t border-border px-4 pb-4 pt-3">
+                        <div className="space-y-3 pb-4 pt-1">
                           {githubStatus?.connected ? (
                             <>
                               <div className="flex items-center gap-3">
-                                {githubStatus.avatarUrl && (
-                                  <img
+                                {githubStatus.login && (
+                                  <GithubAvatar
+                                    login={githubStatus.login}
                                     src={githubStatus.avatarUrl}
-                                    alt=""
-                                    className="size-8 rounded-full ring-1 ring-border"
+                                    className="size-8 ring-1 ring-border"
                                   />
                                 )}
                                 <div className="flex flex-col">
