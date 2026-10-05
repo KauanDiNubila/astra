@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
+import { ModalScroller } from "@/components/ModalScroller"
 import { Pencil, UserPlus, X } from "lucide-react"
 import { api, getErrorMessage } from "@/lib/api"
 import { useFriends } from "@/context/FriendsContext"
@@ -96,12 +97,7 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
   }
 
   return createPortal(
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: open ? 1 : 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-100 flex items-center justify-center overflow-y-auto p-4"
-    >
+    <ModalScroller open={open}>
       <div onClick={onClose} className="fixed inset-0 bg-black/20 backdrop-blur-[1px] dark:bg-black/60" />
 
       <div className="pointer-events-none relative z-101 my-auto w-full max-w-sm">
@@ -194,7 +190,7 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
           </div>
         </motion.div>
       </div>
-    </motion.div>,
+    </ModalScroller>,
     document.body,
   )
 }

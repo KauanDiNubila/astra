@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { createPortal } from "react-dom"
 import { motion, useReducedMotion } from "motion/react"
+import { ModalScroller } from "@/components/ModalScroller"
 import { Check, ChevronDown, Copy, GitBranch, KeyRound, Pencil, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useAuth } from "@/context/AuthContext"
@@ -169,12 +170,7 @@ export function EditProfileModal({ open, onClose }: Props) {
   const showImg = avatarSrc && !imgError
 
   return createPortal(
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: open ? 1 : 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-100 flex items-center justify-center overflow-y-auto p-4"
-    >
+    <ModalScroller open={open}>
       <div onClick={onClose} className="fixed inset-0 bg-black/20 backdrop-blur-[1px] dark:bg-black/60" />
 
       <div className="pointer-events-none relative z-101 my-auto w-full max-w-2xl">
@@ -511,7 +507,7 @@ export function EditProfileModal({ open, onClose }: Props) {
               </form>
             </motion.div>
           </div>
-    </motion.div>,
+    </ModalScroller>,
     document.body,
   )
 }
