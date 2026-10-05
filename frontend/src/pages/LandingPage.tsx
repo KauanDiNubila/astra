@@ -54,7 +54,7 @@ export function LandingPage() {
   const { onMouseMove } = useSpotlight()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  if (!loading && user) {
+  if (window.astraDesktop || (!loading && user)) {
     return <Navigate to="/dashboard" replace />
   }
 
