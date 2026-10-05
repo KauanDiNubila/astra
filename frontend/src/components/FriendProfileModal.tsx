@@ -5,8 +5,23 @@ import { ModalScroller } from "@/components/ModalScroller"
 import { Check, Copy, ExternalLink, X } from "lucide-react"
 import { AdminBadge } from "@/components/AdminBadge"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
+import { GithubAvatar } from "@/components/GithubAvatar"
+import { fetchGithubProfile } from "@/lib/githubProfile"
+import type { GithubProfileSummary } from "@/lib/githubProfile"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
+import { cn } from "@/lib/utils"
+
+function GithubStat({ value, label, plain }: { value?: number; label: string; plain?: boolean }) {
+  return (
+    <div className="rounded-lg bg-muted/30 px-2 py-2">
+      <p className="text-base font-semibold text-foreground">
+        {value === undefined ? "–" : plain ? value : value.toLocaleString("pt-BR")}
+      </p>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+    </div>
+  )
+}
 
 type Props = {
   friend: ConversationSummary | null
@@ -18,6 +33,20 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
   const reducedMotion = useReducedMotion()
   const [rendered, setRendered] = useState(open)
   const [copied, setCopied] = useState(false)
+  const [githubProfile, setGithubProfile] = useState<GithubProfileSummary | null>(null)
+  const githubLogin = friend?.friendGithubLogin ?? null
+
+  useEffect(() => {
+    setGithubProfile(null)
+    if (!open || !githubLogin) return
+    let active = true
+    void fetchGithubProfile(githubLogin).then((profile) => {
+      if (active) setGithubProfile(profile)
+    })
+    return () => {
+      active = false
+    }
+  }, [open, githubLogin])
 
   async function copyHandle() {
     if (!friend) return
@@ -86,7 +115,8 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
             </button>
           </div>
 
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-6 py-8">
+          <div className="px-6 pb-6">
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/30 px-6 py-8">
             <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
             {friend.friendGithubLogin ? (
               <a
@@ -125,37 +155,46 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
               )}
             </button>
 
-            {friend.friendGithubLogin && (
-              <div className="mt-5 w-full border-t border-border pt-4">
-                <span className="text-xs font-medium text-muted-foreground">Conexões</span>
-                <a
-                  href={`https://github.com/${friend.friendGithubLogin}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group mt-2 flex items-center gap-2.5 rounded-lg bg-muted/60 px-3 py-2 transition-colors hover:bg-muted"
-                >
-                  <span className="relative shrink-0">
-                    {friend.friendGithubAvatarUrl ? (
-                      <img
-                        src={friend.friendGithubAvatarUrl}
-                        alt=""
-                        className="size-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <GitHubIcon className="size-8 rounded-full bg-foreground/10 p-1.5 text-foreground" />
-                    )}
-                    <GitHubIcon className="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-background bg-foreground p-0.5 text-background" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                    {friend.friendGithubLogin}
-                  </span>
-                  <ExternalLink
-                    size={14}
-                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+          </div>
+
+          {friend.friendGithubLogin && (
+            <div className="mt-4">
+              <a
+                href={`https://github.com/${friend.friendGithubLogin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group -mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50"
+              >
+                <span className="relative shrink-0">
+                  <GithubAvatar
+                    login={friend.friendGithubLogin}
+                    src={friend.friendGithubAvatarUrl}
+                    className="size-9"
                   />
-                </a>
+                  <GitHubIcon className="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-popover bg-foreground p-0.5 text-popover" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">@{friend.friendGithubLogin}</span>
+                  <span className="block text-xs text-muted-foreground">GitHub conectado</span>
+                </span>
+                <ExternalLink
+                  size={14}
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </a>
+              <div
+                className={cn(
+                  "mt-2 grid grid-cols-3 gap-2 text-center transition-opacity duration-300",
+                  githubProfile ? "opacity-100" : "opacity-0",
+                )}
+                aria-hidden={!githubProfile}
+              >
+                <GithubStat value={githubProfile?.publicRepos} label="Repositórios" />
+                <GithubStat value={githubProfile?.followers} label="Seguidores" />
+                <GithubStat value={githubProfile?.since} label="No GitHub desde" plain />
               </div>
-            )}
+            </div>
+          )}
           </div>
         </motion.div>
       </div>
