@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron"
 
 contextBridge.exposeInMainWorld("astraDesktop", {
   isDesktop: true,
+  customTitleBar: true,
+  setTitleBarTheme: (theme: "light" | "dark"): void => ipcRenderer.send("astra:set-title-bar-theme", theme),
   getVersion: (): Promise<string | null> => ipcRenderer.invoke("astra:get-version"),
   listScreenSources: (): Promise<unknown[]> => ipcRenderer.invoke("astra:list-screen-sources"),
   selectScreenSource: (sourceId: string, withAudio: boolean): Promise<boolean> =>

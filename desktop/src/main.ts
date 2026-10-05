@@ -84,6 +84,25 @@ function installDisplayMediaHandler() {
   )
 }
 
+const TITLE_BAR_HEIGHT = 32
+
+const TITLE_BAR_THEMES = {
+  dark: { color: "#171717", symbolColor: "#fafafa" },
+  light: { color: "#fafafa", symbolColor: "#0a0a0a" },
+} as const
+
+type TitleBarTheme = keyof typeof TITLE_BAR_THEMES
+
+function isTitleBarTheme(value: unknown): value is TitleBarTheme {
+  return value === "dark" || value === "light"
+}
+
+ipcMain.on("astra:set-title-bar-theme", (event, theme: unknown) => {
+  if (!isFromAstra(event) || !isTitleBarTheme(theme)) return
+  const win = BrowserWindow.fromWebContents(event.sender)
+  win?.setTitleBarOverlay({ ...TITLE_BAR_THEMES[theme], height: TITLE_BAR_HEIGHT })
+})
+
 function openExternal(url: string) {
   if (url.startsWith("https://")) void shell.openExternal(url)
 }
@@ -98,6 +117,8 @@ function createWindow() {
     title: "Astra",
     backgroundColor: "#0a0a0a",
     autoHideMenuBar: true,
+    titleBarStyle: "hidden",
+    titleBarOverlay: { ...TITLE_BAR_THEMES.dark, height: TITLE_BAR_HEIGHT },
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
