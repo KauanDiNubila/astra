@@ -3,7 +3,18 @@ import { contextBridge, ipcRenderer } from "electron"
 contextBridge.exposeInMainWorld("astraDesktop", {
   isDesktop: true,
   customTitleBar: true,
-  setTitleBarTheme: (theme: "light" | "dark"): void => ipcRenderer.send("astra:set-title-bar-theme", theme),
+  titleBarHeight: 24,
+  windowControls: {
+    minimize: (): void => ipcRenderer.send("astra:window-action", "minimize"),
+    toggleMaximize: (): void => ipcRenderer.send("astra:window-action", "toggle-maximize"),
+    close: (): void => ipcRenderer.send("astra:window-action", "close"),
+    isMaximized: (): Promise<boolean> => ipcRenderer.invoke("astra:window-is-maximized"),
+    onMaximizedChange: (callback: (maximized: boolean) => void): (() => void) => {
+      const listener = (_event: unknown, maximized: boolean) => callback(maximized)
+      ipcRenderer.on("astra:window-maximized", listener)
+      return () => ipcRenderer.removeListener("astra:window-maximized", listener)
+    },
+  },
   getVersion: (): Promise<string | null> => ipcRenderer.invoke("astra:get-version"),
   listScreenSources: (): Promise<unknown[]> => ipcRenderer.invoke("astra:list-screen-sources"),
   selectScreenSource: (sourceId: string, withAudio: boolean): Promise<boolean> =>

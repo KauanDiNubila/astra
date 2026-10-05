@@ -84,24 +84,18 @@ function installDisplayMediaHandler() {
   )
 }
 
-const TITLE_BAR_HEIGHT = 32
-
-const TITLE_BAR_THEMES = {
-  dark: { color: "#171717", symbolColor: "#fafafa" },
-  light: { color: "#fafafa", symbolColor: "#0a0a0a" },
-} as const
-
-type TitleBarTheme = keyof typeof TITLE_BAR_THEMES
-
-function isTitleBarTheme(value: unknown): value is TitleBarTheme {
-  return value === "dark" || value === "light"
-}
-
-ipcMain.on("astra:set-title-bar-theme", (event, theme: unknown) => {
-  if (!isFromAstra(event) || !isTitleBarTheme(theme)) return
+ipcMain.on("astra:window-action", (event, action: unknown) => {
+  if (!isFromAstra(event)) return
   const win = BrowserWindow.fromWebContents(event.sender)
-  win?.setTitleBarOverlay({ ...TITLE_BAR_THEMES[theme], height: TITLE_BAR_HEIGHT })
+  if (!win) return
+  if (action === "minimize") win.minimize()
+  else if (action === "toggle-maximize") win.isMaximized() ? win.unmaximize() : win.maximize()
+  else if (action === "close") win.close()
 })
+
+ipcMain.handle("astra:window-is-maximized", (event) =>
+  isFromAstra(event) ? (BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false) : false,
+)
 
 function openExternal(url: string) {
   if (url.startsWith("https://")) void shell.openExternal(url)
@@ -118,7 +112,6 @@ function createWindow() {
     backgroundColor: "#0a0a0a",
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
-    titleBarOverlay: { ...TITLE_BAR_THEMES.dark, height: TITLE_BAR_HEIGHT },
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -130,6 +123,8 @@ function createWindow() {
 
   win.once("ready-to-show", () => win.show())
   win.on("closed", () => setInCall(false))
+  win.on("maximize", () => win.webContents.send("astra:window-maximized", true))
+  win.on("unmaximize", () => win.webContents.send("astra:window-maximized", false))
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     openExternal(url)
