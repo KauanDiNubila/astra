@@ -8,6 +8,8 @@ import App from './App.tsx'
 
 if (window.astraDesktop?.customTitleBar) {
   document.documentElement.classList.add('has-titlebar')
+  const height = window.astraDesktop.titleBarHeight
+  if (height) document.documentElement.style.setProperty('--titlebar-h', `${height}px`)
 }
 
 window.addEventListener('vite:preloadError', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Copy, Minus, Square, X } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useTheme } from "@/context/ThemeContext"
 import { pageTitleFor } from "@/lib/pageTitles"
@@ -54,13 +54,61 @@ function NavButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors",
+        "flex size-5 items-center justify-center rounded text-muted-foreground transition-colors",
         "hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:pointer-events-none disabled:opacity-35",
         NO_DRAG,
       )}
     >
       {children}
     </button>
+  )
+}
+
+function WindowControls() {
+  const controls = window.astraDesktop?.windowControls
+  const [maximized, setMaximized] = useState(false)
+
+  useEffect(() => {
+    if (!controls) return
+    let active = true
+    void controls.isMaximized().then((value) => {
+      if (active) setMaximized(value)
+    })
+    const stop = controls.onMaximizedChange(setMaximized)
+    return () => {
+      active = false
+      stop()
+    }
+  }, [controls])
+
+  if (!controls) return null
+
+  const button =
+    "flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground " +
+    NO_DRAG
+
+  return (
+    <div className="ml-auto flex h-full items-stretch">
+      <button type="button" aria-label="Minimizar" className={button} onClick={controls.minimize}>
+        <Minus className="size-3.5" strokeWidth={1.5} />
+      </button>
+      <button
+        type="button"
+        aria-label={maximized ? "Restaurar" : "Maximizar"}
+        className={button}
+        onClick={controls.toggleMaximize}
+      >
+        {maximized ? <Copy className="size-3" strokeWidth={1.5} /> : <Square className="size-3" strokeWidth={1.5} />}
+      </button>
+      <button
+        type="button"
+        aria-label="Fechar"
+        className={cn(button, "hover:bg-red-600 hover:text-white")}
+        onClick={controls.close}
+      >
+        <X className="size-3.5" strokeWidth={1.5} />
+      </button>
+    </div>
   )
 }
 
@@ -79,20 +127,21 @@ function TitleBar() {
       className="fixed inset-x-0 top-0 z-[200] h-(--titlebar-h) bg-sidebar text-sidebar-foreground select-none [-webkit-app-region:drag]"
     >
       <div
-        className="relative flex h-full items-center px-2"
+        className="relative flex h-full items-center pl-2"
         style={{ marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" }}
       >
         <div className="flex items-center gap-0.5">
           <NavButton label="Voltar" disabled={!canGoBack} onClick={() => window.history.back()}>
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-3.5" />
           </NavButton>
           <NavButton label="Avançar" disabled={!canGoForward} onClick={() => window.history.forward()}>
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-3.5" />
           </NavButton>
         </div>
-        <p className="pointer-events-none absolute inset-x-0 text-center text-xs font-medium text-muted-foreground">
+        <p className="pointer-events-none absolute inset-x-0 text-center text-[11px] font-medium text-muted-foreground">
           {pageTitleFor(pathname) ?? "Astra"}
         </p>
+        <WindowControls />
       </div>
     </div>
   )

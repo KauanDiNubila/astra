@@ -14,7 +14,15 @@ interface AstraScreenSource {
 interface AstraDesktopBridge {
   isDesktop: true
   customTitleBar?: boolean
+  titleBarHeight?: number
   setTitleBarTheme?: (theme: "light" | "dark") => void
+  windowControls?: {
+    minimize: () => void
+    toggleMaximize: () => void
+    close: () => void
+    isMaximized: () => Promise<boolean>
+    onMaximizedChange: (callback: (maximized: boolean) => void) => () => void
+  }
   getVersion: () => Promise<string | null>
   listScreenSources: () => Promise<AstraScreenSource[]>
   selectScreenSource: (sourceId: string, withAudio: boolean) => Promise<boolean>
