@@ -10,10 +10,12 @@ type MeshHandlers = {
   onChange: () => void
 }
 
-const SCREEN_BITRATE_BY_PEERS = [8_000_000, 4_000_000, 2_500_000]
-const CAMERA_BITRATE_BY_PEERS = [4_000_000, 2_000_000, 1_200_000]
-const MIC_MAX_BITRATE = 64_000
-const SCREEN_AUDIO_MAX_BITRATE = 128_000
+const SCREEN_BITRATE_BY_PEERS = [20_000_000, 10_000_000, 6_000_000]
+const CAMERA_BITRATE_BY_PEERS = [8_000_000, 4_000_000, 2_500_000]
+const MIC_MAX_BITRATE = 96_000
+const SCREEN_AUDIO_MAX_BITRATE = 192_000
+const SCREEN_MAX_FRAMERATE = 60
+const CAMERA_MAX_FRAMERATE = 30
 
 function bitrateFor(table: number[], peers: number) {
   return table[Math.min(Math.max(peers, 1), table.length) - 1]
@@ -169,13 +171,17 @@ class PeerLink {
       if (!params.encodings || params.encodings.length === 0) continue
       const isScreen = this.mesh.isScreenTrack(trackId)
       let max: number
+      let maxFramerate: number | undefined
       if (kind === "video") {
         max = bitrateFor(isScreen ? SCREEN_BITRATE_BY_PEERS : CAMERA_BITRATE_BY_PEERS, peers)
+        maxFramerate = isScreen ? SCREEN_MAX_FRAMERATE : CAMERA_MAX_FRAMERATE
       } else {
         max = isScreen ? SCREEN_AUDIO_MAX_BITRATE : MIC_MAX_BITRATE
       }
-      if (params.encodings[0].maxBitrate === max) continue
-      params.encodings[0].maxBitrate = max
+      const encoding = params.encodings[0]
+      if (encoding.maxBitrate === max && encoding.maxFramerate === maxFramerate) continue
+      encoding.maxBitrate = max
+      if (maxFramerate !== undefined) encoding.maxFramerate = maxFramerate
       sender.setParameters(params).catch(() => {})
     }
   }
