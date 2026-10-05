@@ -34,8 +34,6 @@ function useHistoryState() {
   return state
 }
 
-const NO_DRAG = "[-webkit-app-region:no-drag]"
-
 function NavButton({
   label,
   disabled,
@@ -56,7 +54,6 @@ function NavButton({
       className={cn(
         "flex size-5 items-center justify-center rounded text-muted-foreground transition-colors",
         "hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:pointer-events-none disabled:opacity-35",
-        NO_DRAG,
       )}
     >
       {children}
@@ -92,12 +89,11 @@ function WindowControls() {
   if (!controls) return null
 
   const button =
-    "flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground " +
-    NO_DRAG
+    "flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
 
   return (
-    <div className="ml-auto flex h-full items-stretch">
-      <button type="button" aria-label="Minimizar" className={button} onClick={controls.minimize}>
+    <div className="flex h-full items-stretch">
+      <button type="button" aria-label="Minimizar" className={button} onClick={() => controls.minimize()}>
         <Glyph>
           <path d="M0.5 5.5h9" />
         </Glyph>
@@ -106,7 +102,7 @@ function WindowControls() {
         type="button"
         aria-label={maximized ? "Restaurar" : "Maximizar"}
         className={button}
-        onClick={controls.toggleMaximize}
+        onClick={() => controls.toggleMaximize()}
       >
         <Glyph>
           <rect x="1.5" y="1.5" width="7" height="7" />
@@ -116,7 +112,7 @@ function WindowControls() {
         type="button"
         aria-label="Fechar"
         className={cn(button, "hover:bg-red-600 hover:text-white")}
-        onClick={controls.close}
+        onClick={() => controls.close()}
       >
         <Glyph>
           <path d="M0.5 0.5l9 9M9.5 0.5l-9 9" />
@@ -138,13 +134,13 @@ function TitleBar() {
   return (
     <div
       data-slot="desktop-title-bar"
-      className="fixed inset-x-0 top-0 z-[200] h-(--titlebar-h) bg-sidebar text-sidebar-foreground select-none [-webkit-app-region:drag]"
+      className="fixed inset-x-0 top-0 z-[200] h-(--titlebar-h) bg-sidebar text-sidebar-foreground select-none"
     >
       <div
-        className="relative flex h-full items-center pl-2"
+        className="relative flex h-full items-center"
         style={{ marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" }}
       >
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 px-2">
           <NavButton label="Voltar" disabled={!canGoBack} onClick={() => window.history.back()}>
             <ChevronLeft className="size-3.5" />
           </NavButton>
@@ -152,6 +148,7 @@ function TitleBar() {
             <ChevronRight className="size-3.5" />
           </NavButton>
         </div>
+        <div data-slot="title-bar-drag" className="h-full flex-1 [-webkit-app-region:drag]" />
         <p className="pointer-events-none absolute inset-x-0 text-center text-[11px] font-medium text-muted-foreground">
           {pageTitleFor(pathname) ?? "Astra"}
         </p>
