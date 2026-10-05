@@ -1,6 +1,7 @@
 import path from "node:path"
 import { app, BrowserWindow, desktopCapturer, ipcMain, powerSaveBlocker, session, shell } from "electron"
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
+import { findDeepLink, handleDeepLink, startSocialLogin } from "./desktop-login"
 import { startAutoUpdate } from "./updater"
 
 const SITE = process.env.ASTRA_URL ?? "https://astra-app.dev"
@@ -28,6 +29,8 @@ function isFromAstra(event: IpcMainEvent | IpcMainInvokeEvent) {
 ipcMain.on("astra:set-in-call", (event, inCall: unknown) => {
   if (isFromAstra(event)) setInCall(inCall === true)
 })
+
+ipcMain.handle("astra:social-login", (event, provider: unknown) => isFromAstra(event) && startSocialLogin(provider))
 
 ipcMain.handle("astra:get-version", (event) => (isFromAstra(event) ? app.getVersion() : null))
 
@@ -125,11 +128,13 @@ function createWindow() {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  app.on("second-instance", () => {
+  app.on("second-instance", (_event, commandLine) => {
     const win = BrowserWindow.getAllWindows()[0]
     if (!win) return
     if (win.isMinimized()) win.restore()
     win.focus()
+    const link = findDeepLink(commandLine)
+    if (link) void handleDeepLink(link, win, SITE)
   })
   app.on("window-all-closed", () => app.quit())
   void app.whenReady().then(() => {
