@@ -3,14 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "description": "Astra para Windows",
+  "productName": "Astra",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "tsc && electron ."
+    "start": "tsc && electron .",
+    "dist": "tsc && electron-builder --win --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.9.0"
-  }
+  },
+  "author": "Astra",
+  "homepage": "https://astra-app.dev"
 }

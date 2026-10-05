@@ -5,6 +5,7 @@ import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
 const SITE = process.env.ASTRA_URL ?? "https://astra-app.dev"
 const SITE_ORIGIN = new URL(SITE).origin
 
+app.setAppUserModelId("dev.astra.app")
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion")
 
 let sleepBlockerId: number | null = null

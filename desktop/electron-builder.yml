@@ -1,0 +1,35 @@
+appId: dev.astra.app
+productName: Astra
+copyright: Astra
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - package.json
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Astra
+  deleteAppDataOnUninstall: false
+  artifactName: Astra-Setup-${version}.${ext}
+
+protocols:
+  - name: Astra
+    schemes:
+      - astra
