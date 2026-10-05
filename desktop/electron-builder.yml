@@ -33,3 +33,9 @@ protocols:
   - name: Astra
     schemes:
       - astra
+
+publish:
+  provider: github
+  owner: KauanDiNubila
+  repo: astra
+  releaseType: release

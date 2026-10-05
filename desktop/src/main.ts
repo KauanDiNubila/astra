@@ -1,6 +1,7 @@
 import path from "node:path"
 import { app, BrowserWindow, desktopCapturer, ipcMain, powerSaveBlocker, session, shell } from "electron"
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
+import { startAutoUpdate } from "./updater"
 
 const SITE = process.env.ASTRA_URL ?? "https://astra-app.dev"
 const SITE_ORIGIN = new URL(SITE).origin
@@ -134,5 +135,6 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     installDisplayMediaHandler()
     createWindow()
+    startAutoUpdate()
   })
 }
