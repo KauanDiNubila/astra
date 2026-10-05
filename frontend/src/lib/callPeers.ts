@@ -29,6 +29,7 @@ class PeerLink {
   readonly streams = new Map<string, MediaStream>()
   readonly senders = new Map<string, RTCRtpSender>()
   screenStreamId: string | null = null
+  noMic = false
 
   private queue: Promise<void> = Promise.resolve()
   private pendingCandidates: RTCIceCandidateInit[] = []
@@ -137,6 +138,12 @@ class PeerLink {
     }
   }
 
+  expectAudio() {
+    if (this.closed) return
+    const hasAudio = this.pc.getTransceivers().some((t) => t.receiver.track.kind === "audio")
+    if (!hasAudio) this.pc.addTransceiver("audio", { direction: "recvonly" })
+  }
+
   addLocalTrack(track: MediaStreamTrack, stream: MediaStream) {
     if (this.closed || this.senders.has(track.id)) return
     this.senders.set(track.id, this.pc.addTrack(track, stream))
@@ -223,6 +230,8 @@ export class PeerMesh {
   private readonly localTracks = new Map<string, { track: MediaStreamTrack; stream: MediaStream }>()
   private readonly screenTrackIds = new Set<string>()
   private screenStreamId: string | null = null
+  private noMic = false
+  private readonly pendingMeta = new Map<string, string>()
 
   constructor(selfClientId: string, iceServers: RTCIceServer[], handlers: MeshHandlers) {
     this.selfClientId = selfClientId
@@ -254,7 +263,13 @@ export class PeerMesh {
     if (this.links.has(clientId)) return
     const link = new PeerLink(clientId, this.selfClientId, this.iceServers, this)
     this.links.set(clientId, link)
-    if (this.screenStreamId) this.signal(clientId, "meta", JSON.stringify({ screenStreamId: this.screenStreamId }))
+    const early = this.pendingMeta.get(clientId)
+    if (early) {
+      this.pendingMeta.delete(clientId)
+      this.applyMeta(link, early)
+    }
+    if (this.screenStreamId || this.noMic) this.signal(clientId, "meta", this.metaPayload())
+    if (!this.hasLocalMic()) link.expectAudio()
     for (const { track, stream } of this.localTracks.values()) link.addLocalTrack(track, stream)
     this.reapplyEncodings()
     this.changed()
@@ -276,14 +291,22 @@ export class PeerMesh {
   async handleSignal(fromClient: string, type: SignalType, data: string) {
     if (type === "meta") {
       const link = this.links.get(fromClient)
-      if (!link) return
-      const meta = JSON.parse(data) as { screenStreamId: string | null }
-      link.screenStreamId = meta.screenStreamId
+      if (!link) {
+        this.pendingMeta.set(fromClient, data)
+        return
+      }
+      this.applyMeta(link, data)
       this.changed()
       return
     }
     this.addPeer(fromClient)
     await this.links.get(fromClient)?.handleDescriptionOrCandidate(type, data)
+  }
+
+  private applyMeta(link: PeerLink, data: string) {
+    const meta = JSON.parse(data) as { screenStreamId?: string | null; noMic?: boolean }
+    link.screenStreamId = meta.screenStreamId ?? null
+    link.noMic = meta.noMic === true
   }
 
   publishTrack(track: MediaStreamTrack, stream: MediaStream, isScreen = false) {
@@ -311,7 +334,32 @@ export class PeerMesh {
 
   private setScreenStream(streamId: string | null) {
     this.screenStreamId = streamId
-    const payload = JSON.stringify({ screenStreamId: streamId })
+    this.broadcastMeta()
+  }
+
+  setNoMic(noMic: boolean) {
+    if (this.noMic === noMic) return
+    this.noMic = noMic
+    this.broadcastMeta()
+  }
+
+  peerNoMic(clientId: string) {
+    return this.links.get(clientId)?.noMic ?? false
+  }
+
+  private hasLocalMic() {
+    for (const { track } of this.localTracks.values()) {
+      if (track.kind === "audio" && !this.screenTrackIds.has(track.id)) return true
+    }
+    return false
+  }
+
+  private metaPayload() {
+    return JSON.stringify({ screenStreamId: this.screenStreamId, noMic: this.noMic })
+  }
+
+  private broadcastMeta() {
+    const payload = this.metaPayload()
     for (const clientId of this.links.keys()) this.signal(clientId, "meta", payload)
   }
 
@@ -328,5 +376,6 @@ export class PeerMesh {
     this.links.clear()
     this.localTracks.clear()
     this.screenTrackIds.clear()
+    this.pendingMeta.clear()
   }
 }

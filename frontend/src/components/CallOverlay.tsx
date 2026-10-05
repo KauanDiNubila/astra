@@ -35,6 +35,7 @@ type Tile = {
   stream: MediaStream | null
   isSelf: boolean
   speaking: boolean
+  noMic: boolean
   connection: RTCPeerConnectionState | null
 }
 
@@ -131,6 +132,11 @@ function CallTile({
         <span className="truncate">
           {tile.kind === "screen" ? (tile.isSelf ? "Sua tela" : `Tela de ${tile.name}`) : tile.name}
         </span>
+        {tile.noMic && tile.kind === "person" && (
+          <MicOff className="size-3.5 shrink-0 text-red-400" aria-label="Sem microfone" role="img">
+            <title>Sem microfone</title>
+          </MicOff>
+        )}
       </span>
       {connecting && (
         <span className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
@@ -269,7 +275,8 @@ function DeviceSettings({ buttonClass }: { buttonClass: string }) {
 
 function CallControls() {
   const {
-    muted,
+    muted: mutedState,
+    micMissing,
     deafened,
     cameraOn,
     screenSharing,
@@ -281,6 +288,8 @@ function CallControls() {
     leave,
   } = useCall()
 
+  const muted = mutedState || micMissing
+  const micLabel = micMissing ? "Sem microfone. Clique para tentar de novo" : muted ? "Ativar microfone" : "Silenciar microfone"
   const base = "size-12 rounded-full max-sm:size-12"
 
   return (
@@ -291,8 +300,8 @@ function CallControls() {
         variant={muted ? "destructive" : "secondary"}
         className={base}
         onClick={toggleMute}
-        title={muted ? "Ativar microfone" : "Silenciar microfone"}
-        aria-label={muted ? "Ativar microfone" : "Silenciar microfone"}
+        title={micLabel}
+        aria-label={micLabel}
         aria-pressed={muted}
       >
         {muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
@@ -377,6 +386,7 @@ function buildView(call: CallContextValue, userId: string): CallView {
       stream: call.cameraOn ? call.localStream : null,
       isSelf: true,
       speaking: !!call.speaking.self,
+      noMic: call.micMissing,
       connection: null,
     },
   ]
@@ -389,6 +399,7 @@ function buildView(call: CallContextValue, userId: string): CallView {
       stream: call.localScreen,
       isSelf: true,
       speaking: false,
+      noMic: false,
       connection: null,
     })
   }
@@ -402,6 +413,7 @@ function buildView(call: CallContextValue, userId: string): CallView {
       stream: media.camera,
       isSelf: false,
       speaking: !!call.speaking[peer.clientId],
+      noMic: call.peerNoMic(peer.clientId),
       connection: call.connectionOf(peer.clientId),
     })
     if (media.screen) {
@@ -413,6 +425,7 @@ function buildView(call: CallContextValue, userId: string): CallView {
         stream: media.screen,
         isSelf: false,
         speaking: false,
+        noMic: false,
         connection: null,
       })
     }
@@ -541,7 +554,8 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
 }
 
 function MiniCall({ view, visible }: { view: CallView; visible: boolean }) {
-  const { muted, toggleMute, setMinimized, leave } = useCall()
+  const { muted: mutedState, micMissing, toggleMute, setMinimized, leave } = useCall()
+  const muted = mutedState || micMissing
   return (
     <Presence
       visible={visible}

@@ -42,6 +42,8 @@ export type CallContextValue = {
   localScreen: MediaStream | null
   speaking: Record<string, boolean>
   muted: boolean
+  micMissing: boolean
+  peerNoMic: (clientId: string) => boolean
   deafened: boolean
   cameraOn: boolean
   screenSharing: boolean
@@ -96,6 +98,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [mediaVersion, setMediaVersion] = useState(0)
   const [speaking, setSpeaking] = useState<Record<string, boolean>>({})
   const [muted, setMuted] = useState(false)
+  const [micMissing, setMicMissing] = useState(false)
   const [deafened, setDeafened] = useState(false)
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
@@ -111,6 +114,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const clientIdRef = useRef<string | null>(null)
   const meshRef = useRef<PeerMesh | null>(null)
   const micRef = useRef<MediaStream | null>(null)
+  const micMissingRef = useRef(false)
+  const deafenedRef = useRef(false)
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null)
   const screenRef = useRef<MediaStream | null>(null)
   const pendingRef = useRef<{ title: string; groupId: string | null } | null>(null)
@@ -178,6 +183,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     meshRef.current = null
     micRef.current?.getTracks().forEach((t) => t.stop())
     micRef.current = null
+    markMicMissing(false)
     cameraTrackRef.current?.stop()
     cameraTrackRef.current = null
     screenRef.current?.getTracks().forEach((t) => t.stop())
@@ -242,18 +248,17 @@ export function CallProvider({ children }: { children: ReactNode }) {
       toast.error("Seu navegador não suporta chamadas de voz.")
       return false
     }
-    let mic: MediaStream
+    let mic: MediaStream | null = null
     try {
       mic = await openMic(devicePrefsRef.current.micId)
     } catch {
-      toast.error("Não consegui acessar o microfone. Verifique a permissão do navegador.")
-      return false
+      mic = null
     }
     const servers = await loadIceServers()
 
     const clientId = crypto.randomUUID()
     clientIdRef.current = clientId
-    micRef.current = mic
+    micRef.current = mic ?? new MediaStream()
     const mesh = new PeerMesh(clientId, servers, {
       sendSignal: (toClient, type: SignalType, data) => {
         const callId = callRef.current?.callId
@@ -262,10 +267,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
       onChange: bump,
     })
     meshRef.current = mesh
-    const micTrack = mic.getAudioTracks()[0]
-    micTrack.onended = handleMicLost
-    mesh.publishTrack(micTrack, mic)
-    watchSelf(mic)
+    const micTrack = mic?.getAudioTracks()[0]
+    if (mic && micTrack) {
+      micTrack.onended = handleMicLost
+      mesh.publishTrack(micTrack, mic)
+      watchSelf(mic)
+      markMicMissing(false)
+    } else {
+      markMicMissing(true)
+    }
     setMuted(false)
     setDeafened(false)
     setCameraOn(false)
@@ -367,7 +377,43 @@ export function CallProvider({ children }: { children: ReactNode }) {
     teardown()
   }
 
+  function markMicMissing(missing: boolean) {
+    micMissingRef.current = missing
+    setMicMissing(missing)
+    meshRef.current?.setNoMic(missing)
+  }
+
+  async function acquireMic() {
+    const mic = micRef.current
+    const mesh = meshRef.current
+    if (!mic || !mesh || !micMissingRef.current) return false
+    try {
+      const stream = await openMic(devicePrefsRef.current.micId)
+      const track = stream.getAudioTracks()[0]
+      if (micRef.current !== mic || !micMissingRef.current) {
+        track.stop()
+        return false
+      }
+      track.enabled = !deafenedRef.current
+      track.onended = handleMicLost
+      mic.addTrack(track)
+      mesh.publishTrack(track, mic)
+      markMicMissing(false)
+      setMuted(deafenedRef.current)
+      watchSelf(mic)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   function toggleMute() {
+    if (micMissingRef.current) {
+      void acquireMic().then((ok) => {
+        if (!ok) toast.error("Não encontrei um microfone para usar.")
+      })
+      return
+    }
     const track = micRef.current?.getAudioTracks()[0]
     if (!track) return
     if (deafened) {
@@ -418,6 +464,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const mic = micRef.current
     const mesh = meshRef.current
     const previous = mic?.getAudioTracks()[0]
+    if (micMissingRef.current) {
+      await acquireMic()
+      return
+    }
     if (!mic || !mesh || !previous) return
     const wasEnabled = previous.enabled
     previous.onended = null
@@ -436,7 +486,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
       mic.removeTrack(previous)
       watchSelf(mic)
     } catch {
-      toast.error("Não consegui trocar o microfone.")
+      if (micRef.current !== mic) return
+      mic.removeTrack(previous)
+      mesh.unpublishTrack(previous)
+      selfWatcherRef.current?.()
+      selfWatcherRef.current = null
+      setSpeaking((prev) => ({ ...prev, self: false }))
+      markMicMissing(true)
     }
   }
 
@@ -762,11 +818,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (phase !== "active" || !navigator.mediaDevices) return
     void refreshDevices()
-    const onChange = () => void refreshDevices()
+    const onChange = async () => {
+      await refreshDevices()
+      if (!micMissingRef.current) return
+      const list = await navigator.mediaDevices.enumerateDevices().catch(() => [])
+      if (list.some((device) => device.kind === "audioinput")) await acquireMic()
+    }
     navigator.mediaDevices.addEventListener("devicechange", onChange)
     return () => navigator.mediaDevices.removeEventListener("devicechange", onChange)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
+
+  useEffect(() => {
+    deafenedRef.current = deafened
+  }, [deafened])
 
   useEffect(() => {
     window.astraDesktop?.setInCall(phase !== "idle")
@@ -793,6 +858,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
         localScreen: screenRef.current,
         speaking,
         muted,
+        micMissing,
+        peerNoMic: (clientId) => meshRef.current?.peerNoMic(clientId) ?? false,
         deafened,
         cameraOn,
         screenSharing,
