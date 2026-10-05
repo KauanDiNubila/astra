@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { baseURL } from "@/lib/api"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import { Button } from "@/components/ui/button"
@@ -25,29 +26,35 @@ function GoogleIcon() {
   )
 }
 
+type Provider = "google" | "github"
+
 export function OAuthButtons() {
+  const [waitingBrowser, setWaitingBrowser] = useState(false)
+
+  async function startLogin(provider: Provider) {
+    const desktop = window.astraDesktop
+    if (!desktop) {
+      window.location.href = `${baseURL}/oauth2/authorization/${provider}`
+      return
+    }
+    setWaitingBrowser(await desktop.loginWithProvider(provider))
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => {
-          window.location.href = `${baseURL}/oauth2/authorization/google`
-        }}
-      >
+      <Button type="button" variant="outline" onClick={() => void startLogin("google")}>
         <GoogleIcon />
         Continuar com Google
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => {
-          window.location.href = `${baseURL}/oauth2/authorization/github`
-        }}
-      >
+      <Button type="button" variant="outline" onClick={() => void startLogin("github")}>
         <GitHubIcon className="size-4" />
         Continuar com GitHub
       </Button>
+      {waitingBrowser && (
+        <p role="status" className="text-center text-sm text-muted-foreground">
+          Conclua o login no navegador. Quando terminar, o Astra abre sozinho.
+        </p>
+      )}
     </div>
   )
 }

@@ -16,6 +16,7 @@ interface AstraDesktopBridge {
   getVersion: () => Promise<string | null>
   listScreenSources: () => Promise<AstraScreenSource[]>
   selectScreenSource: (sourceId: string, withAudio: boolean) => Promise<boolean>
+  loginWithProvider: (provider: "google" | "github") => Promise<boolean>
   setInCall: (inCall: boolean) => void
 }
 
