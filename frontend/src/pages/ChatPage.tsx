@@ -11,6 +11,7 @@ import type { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
 import { GroupCallBanner } from "@/components/GroupCallBanner"
+import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
 import { GroupAvatar } from "@/components/GroupAvatar"
@@ -156,6 +157,7 @@ export function ChatPage() {
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const conversationListRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
   const pinnedRef = useRef(true)
   const programmaticScrollRef = useRef(false)
@@ -437,10 +439,13 @@ export function ChatPage() {
       )}
     >
       <h1 className="sr-only">Chat</h1>
+      <OverlayScrollbar target={conversationListRef} />
+      <OverlayScrollbar target={scrollContainerRef} />
       <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-xl">
       <div
+        ref={conversationListRef}
         className={cn(
-          "flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-64",
+          "overlay-scroll flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-64",
           (friendId || groupId) && "hidden sm:flex",
         )}
       >
@@ -646,7 +651,7 @@ export function ChatPage() {
                 onClose={() => setProfileModalOpen(false)}
               />
             )}
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-3">
+            <div ref={scrollContainerRef} className="overlay-scroll flex-1 overflow-y-auto px-4 py-3">
               <div ref={messagesContentRef} className="flex flex-col">
                 {conversationIsEmpty && (
                   <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>

@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { CheckCircle2, Clock, ImagePlus, Maximize, Minimize, Palette, Sparkles, Target, X, Zap } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { useBatteryStatus } from "@/hooks/useBatteryStatus"
 import { useCountUp } from "@/hooks/use-count-up"
 import { useTheme } from "@/context/ThemeContext"
@@ -399,6 +400,7 @@ export function FocusModeOverlay({
   children,
 }: Props) {
   const reducedMotion = useReducedMotion()
+  const scrollRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
   const [particlesEnabled, setParticlesEnabled] = useState(loadParticlesEnabled)
   const [focusTheme, setFocusTheme] = useState<FocusTheme>(loadFocusTheme)
@@ -529,23 +531,15 @@ export function FocusModeOverlay({
   })()
   const particleColor = activeTheme?.particleColor ?? (theme === "dark" ? "#ffffff" : "#000000")
 
-  // html tem scrollbar-gutter: stable (index.css) pra evitar salto de layout
-  // nas outras páginas. Aqui dentro não existe scroll nenhum (overflow some
-  // logo abaixo), então essa reserva de espaço só sobra como uma faixa em
-  // branco à direita quando a página entra em tela cheia — desligamos os
-  // dois junto com o overflow enquanto o modo foco estiver aberto.
   useEffect(() => {
     if (!open) return
     const previousBodyOverflow = document.body.style.overflow
     const previousHtmlOverflow = document.documentElement.style.overflow
-    const previousGutter = document.documentElement.style.scrollbarGutter
     document.body.style.overflow = "hidden"
     document.documentElement.style.overflow = "hidden"
-    document.documentElement.style.scrollbarGutter = "auto"
     return () => {
       document.body.style.overflow = previousBodyOverflow
       document.documentElement.style.overflow = previousHtmlOverflow
-      document.documentElement.style.scrollbarGutter = previousGutter
     }
   }, [open])
 
@@ -562,12 +556,14 @@ export function FocusModeOverlay({
     <AnimatePresence>
       {open && (
         <motion.div
+          ref={scrollRef}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[100] overflow-y-auto bg-background"
+          className="overlay-scroll fixed inset-0 z-[100] overflow-y-auto bg-background"
         >
+          <OverlayScrollbar target={scrollRef} zIndex={105} />
           <div
             className={cn(
               "transition-opacity duration-200 ease-out",
