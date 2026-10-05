@@ -252,7 +252,7 @@ function DailyGoalPanel({
           : { opacity: open ? 1 : 0, scale: open ? 1 : 0.96, y: open ? 0 : -8 }
       }
       transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
-      className="fixed right-4 top-[calc(7rem+var(--titlebar-h))] z-10 w-80 rounded-2xl border border-border bg-popover p-5 shadow-lg"
+      className="absolute right-4 top-28 z-20 w-80 rounded-2xl border border-border bg-popover p-5 shadow-lg"
     >
       <h3 className="text-sm font-medium text-popover-foreground">{goal ? "Meta diária" : "Tempo de foco"}</h3>
       {goal ? (
@@ -556,17 +556,15 @@ export function FocusModeOverlay({
     <AnimatePresence>
       {open && (
         <motion.div
-          ref={scrollRef}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="overlay-scroll fixed inset-x-0 top-(--titlebar-h) bottom-0 z-[100] overflow-y-auto bg-background"
+          className="fixed inset-x-0 top-(--titlebar-h) bottom-0 z-[100] overflow-hidden bg-background"
         >
-          <OverlayScrollbar target={scrollRef} zIndex={105} />
           <div
             className={cn(
-              "transition-opacity duration-200 ease-out",
+              "relative h-full transition-opacity duration-200 ease-out",
               fullscreenTransitioning ? "opacity-0" : "opacity-100",
             )}
           >
@@ -593,14 +591,14 @@ export function FocusModeOverlay({
               )}
             </AnimatePresence>
 
-            <div className="fixed left-4 top-[calc(1rem+var(--titlebar-h))] z-10 flex items-center gap-3">
+            <div className="absolute left-4 top-4 z-20 flex items-center gap-3">
               <LiveClock />
               <div className="hidden sm:block">
                 <BatteryIndicator />
               </div>
             </div>
 
-            <div className="fixed right-4 top-[calc(1rem+var(--titlebar-h))] z-10 flex flex-col items-end gap-1">
+            <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-1">
               <div className="flex items-center gap-1">
                 <ThemePicker
                   theme={focusTheme}
@@ -676,9 +674,12 @@ export function FocusModeOverlay({
               )}
             </div>
 
-            <div className="relative z-10 mx-auto flex min-h-app w-full max-w-2xl flex-col px-4 py-16 sm:px-8">
-              {children}
+            <div ref={scrollRef} className="overlay-scroll relative z-10 h-full overflow-y-auto">
+              <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-16 sm:px-8">
+                {children}
+              </div>
             </div>
+            <OverlayScrollbar target={scrollRef} zIndex={105} />
           </div>
         </motion.div>
       )}
