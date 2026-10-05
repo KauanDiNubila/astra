@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { useLocation } from "react-router-dom"
 import { useChat } from "@/context/ChatContext"
 import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
+import { pageTitleFor } from "@/lib/pageTitles"
 import { cn } from "@/lib/utils"
 import { AppSidebar } from "@/components/AppSidebar"
 import { CallOverlay } from "@/components/CallOverlay"
@@ -15,18 +16,6 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-const PAGE_TITLES: Record<string, string> = {
-  dashboard: "Dashboard",
-  sessions: "Sessões",
-  courses: "Cursos",
-  roadmaps: "Roadmaps",
-  friends: "Amigos",
-  chat: "Chat",
-  ranking: "Ranking",
-  github: "GitHub Insights",
-  admin: "Admin",
-}
-
 function getInitialSidebarOpen() {
   const match = document.cookie.match(/(?:^|; )sidebar_state=([^;]+)/)
   return match ? match[1] === "true" : true
@@ -35,7 +24,7 @@ function getInitialSidebarOpen() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { totalUnread, totalGroupUnread } = useChat()
-  useUnreadTabIndicator(totalUnread + totalGroupUnread, PAGE_TITLES[pathname.split("/")[1] ?? ""])
+  useUnreadTabIndicator(totalUnread + totalGroupUnread, pageTitleFor(pathname))
   // Chat se beneficia de ocupar a largura toda, igual apps de mensagem
   // dedicados — as outras páginas (texto/formulário) ficam melhor contidas.
   const isChatRoute = pathname.startsWith("/chat")

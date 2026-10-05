@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
+import { DesktopTitleBar } from "@/components/DesktopTitleBar"
 import { Toaster } from "@/components/ui/sonner"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
@@ -29,13 +30,14 @@ const SessionsPage = lazy(() => import("@/pages/SessionsPage").then((m) => ({ de
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-svh items-center justify-center text-muted-foreground">Carregando...</div>
+    <div className="flex min-h-app items-center justify-center text-muted-foreground">Carregando...</div>
   )
 }
 
 function App() {
   return (
     <>
+      <DesktopTitleBar />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />

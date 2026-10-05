@@ -13,6 +13,8 @@ interface AstraScreenSource {
 
 interface AstraDesktopBridge {
   isDesktop: true
+  customTitleBar?: boolean
+  setTitleBarTheme?: (theme: "light" | "dark") => void
   getVersion: () => Promise<string | null>
   listScreenSources: () => Promise<AstraScreenSource[]>
   selectScreenSource: (sourceId: string, withAudio: boolean) => Promise<boolean>

@@ -126,6 +126,26 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+    --titlebar-h: 0px;
+}
+
+html.has-titlebar {
+    --titlebar-h: 2rem;
+}
+
+html.has-titlebar body {
+    padding-top: var(--titlebar-h);
+}
+
+@utility h-app {
+    height: calc(100svh - var(--titlebar-h));
+}
+
+@utility min-h-app {
+    min-height: calc(100svh - var(--titlebar-h));
+}
+
 @keyframes astra-focus-breathe {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 0.8; transform: scale(1.04); }

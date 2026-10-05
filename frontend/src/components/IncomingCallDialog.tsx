@@ -59,7 +59,7 @@ export function IncomingCallDialog() {
       animate={visible ? shown : hidden}
       transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[60] flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-xl sm:left-auto sm:right-4 sm:w-96",
+        "fixed inset-x-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+var(--titlebar-h))] z-[60] flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-xl sm:left-auto sm:right-4 sm:w-96",
         !visible && "pointer-events-none",
       )}
     >

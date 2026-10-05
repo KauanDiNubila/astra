@@ -480,7 +480,7 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
       from={{ scale: 0.985 }}
       role="dialog"
       aria-label={`Chamada com ${view.title}`}
-      className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]"
+      className="fixed inset-x-0 top-(--titlebar-h) bottom-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]"
     >
       <div className="flex items-center gap-3 border-b px-4 py-3">
         <div className="min-w-0 flex-1">

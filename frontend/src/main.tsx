@@ -6,6 +6,10 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import './index.css'
 import App from './App.tsx'
 
+if (window.astraDesktop?.customTitleBar) {
+  document.documentElement.classList.add('has-titlebar')
+}
+
 window.addEventListener('vite:preloadError', () => {
   const key = 'astra:preload-reload'
   if (sessionStorage.getItem(key)) return

@@ -80,7 +80,7 @@ export function ImageLightbox({ messageId, onClose }: Props) {
         type="button"
         title="Fechar"
         onClick={onClose}
-        className="fixed top-4 right-4 z-20 rounded-full bg-background/90 p-2 text-foreground shadow-lg transition-colors hover:bg-background"
+        className="fixed top-[calc(1rem+var(--titlebar-h))] right-4 z-20 rounded-full bg-background/90 p-2 text-foreground shadow-lg transition-colors hover:bg-background"
       >
         <X size={20} />
       </button>

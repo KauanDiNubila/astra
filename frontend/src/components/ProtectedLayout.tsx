@@ -12,7 +12,7 @@ export function ProtectedLayout() {
 
   if (loading) {
     return (
-      <div className="flex min-h-svh items-center justify-center text-muted-foreground">
+      <div className="flex min-h-app items-center justify-center text-muted-foreground">
         Carregando...
       </div>
     )

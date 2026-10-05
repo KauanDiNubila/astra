@@ -61,7 +61,7 @@ export function LandingPage() {
   return (
     <div
       ref={scrollContainerRef}
-      className={cn("flex h-svh flex-col overflow-y-auto bg-background text-foreground", SCROLLBAR_HIDE_CLASS)}
+      className={cn("flex h-app flex-col overflow-y-auto bg-background text-foreground", SCROLLBAR_HIDE_CLASS)}
     >
       <header className="flex items-center justify-between px-6 py-5">
         <span className="text-lg font-semibold">Astra</span>

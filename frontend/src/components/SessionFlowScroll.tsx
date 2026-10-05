@@ -247,7 +247,7 @@ export function SessionFlowVertical({ scrollContainerRef }: Props) {
         aprendizado, conexão com outras pessoas e integração com o GitHub.
       </p>
       <section ref={sectionRef} className="relative h-[240vh] w-full">
-        <div className="sticky top-0 flex h-svh w-full items-center justify-center overflow-hidden">
+        <div className="sticky top-0 flex h-app w-full items-center justify-center overflow-hidden">
           <svg
             viewBox={`0 0 ${V_WIDTH} ${verticalLayout.height + 16}`}
             className="h-[78svh] w-auto max-w-[92vw]"
@@ -302,7 +302,7 @@ export function SessionFlowScroll({ scrollContainerRef }: Props) {
 
   return (
     <section ref={sectionRef} className="relative h-[260vh] w-full">
-      <div className="sticky top-0 flex h-svh w-full items-center justify-center overflow-hidden">
+      <div className="sticky top-0 flex h-app w-full items-center justify-center overflow-hidden">
         <div
           aria-hidden
           className="absolute right-6 top-1/2 h-40 w-0.5 -translate-y-1/2 overflow-hidden rounded-full bg-muted lg:right-10"
