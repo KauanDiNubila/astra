@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { startRingback, watchSpeaking } from "@/lib/callAudio"
 import { loadDevicePrefs, listDevices, saveDevicePrefs } from "@/lib/callDevices"
-import type { DeviceLists, DevicePrefs } from "@/lib/callDevices"
+import type { DeviceLists, DevicePrefs, ShareQuality } from "@/lib/callDevices"
 import { PeerMesh } from "@/lib/callPeers"
 import type { PeerMedia, SignalType } from "@/lib/callPeers"
 import { useAuth } from "@/context/AuthContext"
@@ -68,7 +68,7 @@ export type CallContextValue = {
   toggleCamera: () => Promise<void>
   toggleScreenShare: () => Promise<void>
   screenPickerSources: AstraScreenSource[] | null
-  confirmScreenShare: (sourceId: string, withAudio: boolean) => Promise<void>
+  confirmScreenShare: (sourceId: string | null, withAudio: boolean, quality: ShareQuality) => Promise<void>
   cancelScreenShare: () => void
 }
 
@@ -592,26 +592,33 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
       return
     }
-    await startScreenShare(true)
+    setScreenPickerSources([])
   }
 
   function cancelScreenShare() {
     setScreenPickerSources(null)
   }
 
-  async function confirmScreenShare(sourceId: string, withAudio: boolean) {
+  async function confirmScreenShare(sourceId: string | null, withAudio: boolean, quality: ShareQuality) {
     setScreenPickerSources(null)
+    updateDevicePrefs({ shareQuality: quality })
     const desktop = window.astraDesktop
-    if (!desktop || !(await desktop.selectScreenSource(sourceId, withAudio))) return
-    await startScreenShare(withAudio)
+    if (desktop) {
+      if (!sourceId || !(await desktop.selectScreenSource(sourceId, withAudio))) return
+    }
+    await startScreenShare(withAudio, quality)
   }
 
-  async function startScreenShare(withAudio: boolean) {
+  async function startScreenShare(withAudio: boolean, quality: ShareQuality) {
     const mesh = meshRef.current
     if (!mesh || !navigator.mediaDevices?.getDisplayMedia) return
+    const size =
+      quality === "motion"
+        ? { width: { ideal: 1920 }, height: { ideal: 1080 } }
+        : { width: { ideal: 3840 }, height: { ideal: 2160 } }
     try {
       const screen = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 60, max: 60 } },
+        video: { ...size, frameRate: { ideal: 60, max: 60 } },
         audio: withAudio
           ? {
               suppressLocalAudioPlayback: true,
@@ -629,6 +636,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
       screenRef.current = screen
       const video = screen.getVideoTracks()[0]
+      video.contentHint = quality
       video.onended = stopScreen
       mesh.publishTrack(video, screen, true)
       screen.getAudioTracks().forEach((track) => mesh.publishTrack(track, screen, true))

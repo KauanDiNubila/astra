@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { AppWindow, Monitor } from "lucide-react"
+import { AppWindow, Gauge, Monitor, Type } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 import { useCall } from "@/context/CallContext"
+import type { ShareQuality } from "@/lib/callDevices"
 import { useDelayedUnmount, useFrozen } from "@/hooks/useDelayedUnmount"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -40,18 +41,56 @@ function SourceCard({
   )
 }
 
+const QUALITY_OPTIONS: { value: ShareQuality; label: string; hint: string; icon: typeof Type }[] = [
+  { value: "detail", label: "Nitidez", hint: "Texto e código bem legíveis", icon: Type },
+  { value: "motion", label: "Fluidez", hint: "1080p a 60 fps para vídeo e jogo", icon: Gauge },
+]
+
+function QualityPicker({ value, onChange }: { value: ShareQuality; onChange: (value: ShareQuality) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Qualidade da transmissão" className="grid grid-cols-2 gap-2">
+      {QUALITY_OPTIONS.map((option) => {
+        const Icon = option.icon
+        const selected = option.value === value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "flex items-start gap-2.5 rounded-lg border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              selected ? "border-primary bg-primary/10" : "hover:bg-muted/60",
+            )}
+          >
+            <Icon className="mt-0.5 size-4 shrink-0" />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">{option.label}</span>
+              <span className="text-xs text-muted-foreground">{option.hint}</span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function ScreenSourcePicker() {
-  const { screenPickerSources, confirmScreenShare, cancelScreenShare } = useCall()
+  const { screenPickerSources, confirmScreenShare, cancelScreenShare, devicePrefs } = useCall()
   const reducedMotion = useReducedMotion()
   const visible = screenPickerSources !== null
   const rendered = useDelayedUnmount(visible)
   const sources = useFrozen(screenPickerSources ?? [], !visible)
+  const browserMode = !window.astraDesktop
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [withAudio, setWithAudio] = useState(true)
+  const [quality, setQuality] = useState<ShareQuality>(devicePrefs.shareQuality)
 
   useEffect(() => {
     if (!visible) return
     setSelectedId(sources[0]?.id ?? null)
+    setQuality(devicePrefs.shareQuality)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible])
 
@@ -90,14 +129,25 @@ export function ScreenSourcePicker() {
         animate={visible ? shown : hidden}
         transition={{ duration: reducedMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-full w-full max-w-3xl flex-col gap-4 rounded-2xl border bg-card p-4 shadow-xl"
+        className={cn(
+          "flex max-h-full w-full flex-col gap-4 rounded-2xl border bg-card p-4 shadow-xl",
+          browserMode ? "max-w-md" : "max-w-3xl",
+        )}
       >
         <div>
-          <h2 className="text-lg font-semibold">O que você quer compartilhar?</h2>
-          <p className="text-sm text-muted-foreground">Escolha uma tela inteira ou uma janela.</p>
+          <h2 className="text-lg font-semibold">
+            {browserMode ? "Compartilhar tela" : "O que você quer compartilhar?"}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {browserMode
+              ? "Escolha a qualidade. Em seguida o navegador pergunta o que compartilhar."
+              : "Escolha uma tela inteira ou uma janela."}
+          </p>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <QualityPicker value={quality} onChange={setQuality} />
+
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto", browserMode && "hidden")}>
           {screens.length > 0 && (
             <section className="flex flex-col gap-2">
               <h3 className="text-xs font-medium text-muted-foreground">Telas</h3>
@@ -120,23 +170,30 @@ export function ScreenSourcePicker() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-          <div className="flex items-center gap-2">
-            <Switch id="share-system-audio" checked={withAudio} onCheckedChange={setWithAudio} />
-            <Label htmlFor="share-system-audio" className="text-sm">
-              Compartilhar o som do computador
-            </Label>
-          </div>
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-3 border-t pt-3",
+            browserMode ? "justify-end" : "justify-between",
+          )}
+        >
+          {!browserMode && (
+            <div className="flex items-center gap-2">
+              <Switch id="share-system-audio" checked={withAudio} onCheckedChange={setWithAudio} />
+              <Label htmlFor="share-system-audio" className="text-sm">
+                Compartilhar o som do computador
+              </Label>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={cancelScreenShare}>
               Cancelar
             </Button>
             <Button
               type="button"
-              disabled={!selectedId}
-              onClick={() => selectedId && void confirmScreenShare(selectedId, withAudio)}
+              disabled={!browserMode && !selectedId}
+              onClick={() => void confirmScreenShare(browserMode ? null : selectedId, browserMode || withAudio, quality)}
             >
-              Compartilhar
+              {browserMode ? "Continuar" : "Compartilhar"}
             </Button>
           </div>
         </div>

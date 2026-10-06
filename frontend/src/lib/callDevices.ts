@@ -1,11 +1,14 @@
 const STORAGE_KEY = "astra:call-devices"
 
+export type ShareQuality = "detail" | "motion"
+
 export type DevicePrefs = {
   micId: string
   cameraId: string
   speakerId: string
   echoCancellation: boolean
   noiseSuppression: boolean
+  shareQuality: ShareQuality
 }
 
 export type DeviceLists = {
@@ -21,6 +24,7 @@ export function loadDevicePrefs(): DevicePrefs {
     speakerId: "",
     echoCancellation: true,
     noiseSuppression: true,
+    shareQuality: "detail",
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)

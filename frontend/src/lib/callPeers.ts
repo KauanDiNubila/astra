@@ -179,16 +179,28 @@ class PeerLink {
       const isScreen = this.mesh.isScreenTrack(trackId)
       let max: number
       let maxFramerate: number | undefined
+      let degradation: RTCDegradationPreference | undefined
       if (kind === "video") {
         max = bitrateFor(isScreen ? SCREEN_BITRATE_BY_PEERS : CAMERA_BITRATE_BY_PEERS, peers)
         maxFramerate = isScreen ? SCREEN_MAX_FRAMERATE : CAMERA_MAX_FRAMERATE
+        if (isScreen) {
+          degradation = sender.track?.contentHint === "motion" ? "maintain-framerate" : "maintain-resolution"
+        }
       } else {
         max = isScreen ? SCREEN_AUDIO_MAX_BITRATE : MIC_MAX_BITRATE
       }
+      const withDegradation = params as RTCRtpSendParameters & { degradationPreference?: RTCDegradationPreference }
       const encoding = params.encodings[0]
-      if (encoding.maxBitrate === max && encoding.maxFramerate === maxFramerate) continue
+      if (
+        encoding.maxBitrate === max &&
+        encoding.maxFramerate === maxFramerate &&
+        withDegradation.degradationPreference === degradation
+      ) {
+        continue
+      }
       encoding.maxBitrate = max
       if (maxFramerate !== undefined) encoding.maxFramerate = maxFramerate
+      if (degradation) withDegradation.degradationPreference = degradation
       sender.setParameters(params).catch(() => {})
     }
   }
