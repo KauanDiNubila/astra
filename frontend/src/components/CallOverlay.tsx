@@ -532,7 +532,7 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
               <CallTile tile={stage} onClick={() => togglePin(stage.key)} />
             </div>
             {strip.length > 0 && (
-              <div className="flex h-24 shrink-0 gap-2 overflow-x-auto sm:h-32">
+              <div className="-m-0.5 flex h-25 shrink-0 gap-2 overflow-x-auto p-0.5 sm:h-33">
                 {strip.map((t) => (
                   <CallTile key={t.key} tile={t} compact onClick={() => togglePin(t.key)} />
                 ))}
