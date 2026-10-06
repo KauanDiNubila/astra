@@ -34,7 +34,7 @@ public class CallService {
 
     static final int MAX_PARTICIPANTS = 5;
     static final long RING_TIMEOUT_SECONDS = 45;
-    static final long DISCONNECT_GRACE_SECONDS = 10;
+    static final long DISCONNECT_GRACE_SECONDS = 30;
     static final int MAX_SIGNALS_PER_WINDOW = 400;
     static final long SIGNAL_WINDOW_MILLIS = 10_000;
     static final Set<String> SIGNAL_TYPES = Set.of("offer", "answer", "ice", "meta");

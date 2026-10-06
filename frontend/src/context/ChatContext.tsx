@@ -328,6 +328,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       })
     }
     client.onDisconnect = () => setConnected(false)
+    client.onWebSocketClose = () => setConnected(false)
     client.activate()
     clientRef.current = client
     loadConversations().finally(() => setConversationsLoaded(true))

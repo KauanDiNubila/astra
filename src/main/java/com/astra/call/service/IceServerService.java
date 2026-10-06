@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class IceServerService {
 
-    private static final Duration CREDENTIAL_TTL = Duration.ofHours(1);
+    private static final Duration CREDENTIAL_TTL = Duration.ofHours(12);
     private static final String PUBLIC_STUN = "stun:stun.l.google.com:19302";
 
     private final String turnSecret;

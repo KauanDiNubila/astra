@@ -141,7 +141,7 @@ class CallIntegrationTest {
         String credential = JsonPath.read(body, "$.iceServers[1].credential");
         long expiresAt = Long.parseLong(username.split(":")[0]);
         assertThat(username).endsWith(":" + user.id());
-        assertThat(expiresAt - System.currentTimeMillis() / 1000).isBetween(3500L, 3601L);
+        assertThat(expiresAt - System.currentTimeMillis() / 1000).isBetween(43100L, 43201L);
 
         Mac mac = Mac.getInstance("HmacSHA1");
         mac.init(new SecretKeySpec(turnSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
