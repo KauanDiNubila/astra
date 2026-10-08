@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
+import { ScrollToTop } from "@/components/ScrollToTop"
 import { Toaster } from "@/components/ui/sonner"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
@@ -40,6 +41,7 @@ function RouteFallback() {
 function App() {
   return (
     <>
+      <ScrollToTop />
       <DesktopTitleBar />
       <OverlayScrollbar />
       <Suspense fallback={<RouteFallback />}>
