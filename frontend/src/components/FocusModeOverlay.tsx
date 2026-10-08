@@ -163,6 +163,7 @@ type Props = {
   completedPomodoros: number
   pomodorosUntilLongBreak: number
   disableBreaks: boolean
+  onBreak: boolean
   sessionCaption: string
   children: ReactNode
 }
@@ -216,6 +217,7 @@ function DailyGoalPanel({
   completedPomodoros,
   pomodorosUntilLongBreak,
   disableBreaks,
+  onBreak,
   sessionCaption,
   reducedMotion,
 }: {
@@ -226,6 +228,7 @@ function DailyGoalPanel({
   completedPomodoros: number
   pomodorosUntilLongBreak: number
   disableBreaks: boolean
+  onBreak: boolean
   sessionCaption: string
   reducedMotion: boolean
 }) {
@@ -240,8 +243,13 @@ function DailyGoalPanel({
   // pausa longa — reaproveita a mesma barra segmentada, só trocando o alvo.
   const showCycleProgress = !goal && !disableBreaks && pomodorosUntilLongBreak > 0
   const cycleTargetMinutes = pomodorosUntilLongBreak * pomodoroMinutes
-  const cycleAchievedMinutes = Math.min(cycleTargetMinutes, focusedMinutes - completedPomodoros * pomodoroMinutes) +
-    (completedPomodoros % pomodorosUntilLongBreak) * pomodoroMinutes
+  const cycleDone = onBreak
+    ? ((Math.max(completedPomodoros, 1) - 1) % pomodorosUntilLongBreak) + 1
+    : completedPomodoros % pomodorosUntilLongBreak
+  const cycleCurrent = onBreak
+    ? 0
+    : Math.min(pomodoroMinutes, Math.max(0, focusedMinutes - completedPomodoros * pomodoroMinutes))
+  const cycleAchievedMinutes = Math.min(cycleTargetMinutes, cycleDone * pomodoroMinutes + cycleCurrent)
 
   return (
     <motion.div
@@ -396,6 +404,7 @@ export function FocusModeOverlay({
   completedPomodoros,
   pomodorosUntilLongBreak,
   disableBreaks,
+  onBreak,
   sessionCaption,
   children,
 }: Props) {
@@ -668,6 +677,7 @@ export function FocusModeOverlay({
                   completedPomodoros={completedPomodoros}
                   pomodorosUntilLongBreak={pomodorosUntilLongBreak}
                   disableBreaks={disableBreaks}
+                  onBreak={onBreak}
                   sessionCaption={sessionCaption}
                   reducedMotion={!!reducedMotion}
                 />

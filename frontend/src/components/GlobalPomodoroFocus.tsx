@@ -63,6 +63,7 @@ export function GlobalPomodoroFocus() {
       completedPomodoros={completedPomodoros}
       pomodorosUntilLongBreak={sessionsUntilLongBreak}
       disableBreaks={settings.disableBreaks}
+      onBreak={mode === "break"}
       sessionCaption={sessionCaption}
     >
       <PomodoroFocusView
