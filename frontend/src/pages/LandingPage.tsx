@@ -77,8 +77,10 @@ const FEATURES = [
   },
 ]
 
-const PRIMARY_CTA = "h-12 rounded-full px-6 text-[15px] max-sm:h-12"
-const SECONDARY_CTA = "h-12 rounded-full px-6 text-[15px] max-sm:h-12"
+const PRIMARY_CTA =
+  "h-12 rounded-full px-6 text-[15px] max-sm:h-12 has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5"
+const SECONDARY_CTA =
+  "h-12 rounded-full px-6 text-[15px] max-sm:h-12 has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5"
 
 function Nav() {
   const { theme, toggleTheme } = useTheme()
