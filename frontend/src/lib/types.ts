@@ -176,6 +176,8 @@ export type Message = {
   read: boolean
   attachmentId: string | null
   replyTo: ReplyPreview | null
+  pinnedAt: string | null
+  pinnedBy: string | null
 }
 
 export type ConversationSummary = {

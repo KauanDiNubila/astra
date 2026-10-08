@@ -89,6 +89,11 @@ public class ChatGroupController {
         return chatService.historyForGroup(groupId, Math.min(limit, 200));
     }
 
+    @GetMapping("/{groupId}/pins")
+    public List<MessageResponse> pins(@PathVariable UUID groupId) {
+        return chatService.pinnedInGroup(groupId);
+    }
+
     @PostMapping("/{groupId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markRead(@PathVariable UUID groupId) {

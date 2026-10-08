@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronLeft, ImagePlus, Phone, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
+import { ChevronLeft, ImagePlus, Phone, Pin, PinOff, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
+import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
@@ -141,6 +142,11 @@ export function ChatPage() {
     chatSoundEnabled,
     setChatSoundEnabled,
     connected,
+    pinsFor,
+    loadPins,
+    groupPinsFor,
+    loadGroupPins,
+    setMessagePinned,
   } = useChat()
   const { phase: callPhase, startDirectCall, startGroupCall } = useCall()
   const ready = conversationsLoaded && groupConversationsLoaded
@@ -156,6 +162,7 @@ export function ChatPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false)
   const [highlight, setHighlight] = useState<{ id: string; nonce: number } | null>(null)
+  const [pinIndex, setPinIndex] = useState(0)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const conversationListRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
@@ -183,12 +190,15 @@ export function ChatPage() {
     setDraft("")
     setReplyingTo(null)
     setPendingImage(null)
+    setPinIndex(0)
     if (isGroup && groupId) {
       loadGroupHistory(groupId)
       loadGroupMembers(groupId)
+      loadGroupPins(groupId)
       markGroupRead(groupId)
     } else if (friendId) {
       loadHistory(friendId)
+      loadPins(friendId)
       markRead(friendId)
     }
     if (friendId || groupId) {
@@ -217,6 +227,8 @@ export function ChatPage() {
   }, [friendId, groupId])
 
   const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
+  const pins = isGroup ? (groupId ? groupPinsFor(groupId) : []) : friendId ? pinsFor(friendId) : []
+  const currentPin = pins.length > 0 ? pins[Math.min(pinIndex, pins.length - 1)] : null
   const activeConversationLastMessageAt = isGroup
     ? groupConversations.find((c) => c.groupId === groupId)?.lastMessageAt
     : conversations.find((c) => c.friendUserId === friendId)?.lastMessageAt
@@ -274,7 +286,7 @@ export function ChatPage() {
   useEffect(() => {
     settleScroll(2000)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, ready, activeGroupMemberCount])
+  }, [messages.length, ready, activeGroupMemberCount, pins.length > 0])
 
   function stickToBottom() {
     const container = scrollContainerRef.current
@@ -337,9 +349,16 @@ export function ChatPage() {
 
   function jumpToMessage(id: string) {
     const el = document.getElementById(`message-${id}`)
-    if (!el) return
+    if (!el) return false
     el.scrollIntoView({ behavior: "smooth", block: "center" })
     setHighlight({ id, nonce: Date.now() })
+    return true
+  }
+
+  function showPinnedMessage() {
+    if (!currentPin) return
+    if (!jumpToMessage(currentPin.id)) toast("Essa mensagem é antiga e não está carregada na conversa.")
+    if (pins.length > 1) setPinIndex((i) => (Math.min(i, pins.length - 1) + 1) % pins.length)
   }
 
   function submitDraft() {
@@ -422,6 +441,11 @@ export function ChatPage() {
 
   function memberName(userId: string) {
     return activeGroupMembers.find((m) => m.userId === userId)?.name ?? ""
+  }
+
+  function authorLabel(senderId: string) {
+    if (senderId === user?.id) return "Você"
+    return isGroup ? memberName(senderId) : (activeFriend?.friendName ?? "")
   }
 
   function replyAuthorLabel(m: Message) {
@@ -651,6 +675,52 @@ export function ChatPage() {
                 onClose={() => setProfileModalOpen(false)}
               />
             )}
+            {currentPin && (
+              <div className="flex items-center gap-1 border-b bg-muted/30 pr-2">
+                <button
+                  type="button"
+                  onClick={showPinnedMessage}
+                  title={pins.length > 1 ? "Ir para a mensagem e mostrar a próxima fixada" : "Ir para a mensagem"}
+                  className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/50"
+                >
+                  {pins.length > 1 ? (
+                    <span className="flex w-0.5 shrink-0 flex-col gap-0.5 self-stretch py-0.5" aria-hidden>
+                      {pins.map((p) => (
+                        <span
+                          key={p.id}
+                          className={cn(
+                            "min-h-1 flex-1 rounded-full transition-colors",
+                            p.id === currentPin.id ? "bg-primary" : "bg-muted-foreground/30",
+                          )}
+                        />
+                      ))}
+                    </span>
+                  ) : null}
+                  <Pin className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-muted-foreground">
+                      Mensagem fixada
+                      {pins.length > 1 && ` · ${pins.findIndex((p) => p.id === currentPin.id) + 1} de ${pins.length}`}
+                    </span>
+                    <span className="block truncate text-sm">
+                      <span className="font-medium">{authorLabel(currentPin.senderId)}:</span>{" "}
+                      {currentPin.content ?? "📷 Foto"}
+                    </span>
+                  </span>
+                </button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Desafixar"
+                  aria-label="Desafixar mensagem"
+                  className="shrink-0 max-sm:size-10"
+                  onClick={() => void setMessagePinned(currentPin, false)}
+                >
+                  <PinOff className="size-4" />
+                </Button>
+              </div>
+            )}
             <div ref={scrollContainerRef} className="overlay-scroll flex-1 overflow-y-auto px-4 py-3">
               <div ref={messagesContentRef} className="flex flex-col">
                 {conversationIsEmpty && (
@@ -669,14 +739,22 @@ export function ChatPage() {
                     !!next &&
                     next.senderId === m.senderId &&
                     new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() < GROUP_WINDOW_MS
+                  const actionClass =
+                    "shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
                   const replyButton = (
+                    <button type="button" title="Responder" onClick={() => startReply(m)} className={actionClass}>
+                      <Reply className="size-3.5" />
+                    </button>
+                  )
+                  const pinButton = (
                     <button
                       type="button"
-                      title="Responder"
-                      onClick={() => startReply(m)}
-                      className="shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+                      title={m.pinnedAt ? "Desafixar" : "Fixar"}
+                      aria-label={m.pinnedAt ? "Desafixar mensagem" : "Fixar mensagem"}
+                      onClick={() => void setMessagePinned(m, !m.pinnedAt)}
+                      className={actionClass}
                     >
-                      <Reply className="size-3.5" />
+                      {m.pinnedAt ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
                     </button>
                   )
                   return (
@@ -700,6 +778,7 @@ export function ChatPage() {
                         groupedWithPrev ? "mt-0.5" : "mt-3 first:mt-0",
                       )}
                     >
+                      {mine && pinButton}
                       {mine && replyButton}
                       <SwipeableMessage onReply={() => startReply(m)}>
                       <div
@@ -755,16 +834,18 @@ export function ChatPage() {
                             <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
                           )}
                           <p
-                            className={`mt-1 text-[10px] ${
+                            className={`mt-1 flex items-center gap-1 text-[10px] ${
                               mine ? "text-primary-foreground/70" : "text-muted-foreground"
                             }`}
                           >
+                            {m.pinnedAt && <Pin className="size-2.5" aria-label="Fixada" role="img" />}
                             {formatRelativeTime(m.createdAt)}
                           </p>
                         </div>
                       </div>
                       </SwipeableMessage>
                       {!mine && replyButton}
+                      {!mine && pinButton}
                     </motion.div>
                   )
                 })}

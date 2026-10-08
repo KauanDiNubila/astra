@@ -53,6 +53,12 @@ public class Message {
     @Column(name = "read_at")
     private OffsetDateTime readAt;
 
+    @Column(name = "pinned_at")
+    private OffsetDateTime pinnedAt;
+
+    @Column(name = "pinned_by")
+    private UUID pinnedBy;
+
     public Message(UUID senderId, UUID recipientId, String content) {
         this.senderId = senderId;
         this.recipientId = recipientId;

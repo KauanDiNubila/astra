@@ -30,6 +30,18 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             """)
     List<Message> findConversation(@Param("a") UUID a, @Param("b") UUID b, Pageable pageable);
 
+    @Query("""
+            select m from Message m
+            where least(m.senderId, m.recipientId) = least(:a, :b)
+              and greatest(m.senderId, m.recipientId) = greatest(:a, :b)
+              and m.groupId is null
+              and m.pinnedAt is not null
+            order by m.pinnedAt desc
+            """)
+    List<Message> findPinnedInConversation(@Param("a") UUID a, @Param("b") UUID b);
+
+    List<Message> findByGroupIdAndPinnedAtIsNotNullOrderByPinnedAtDesc(UUID groupId);
+
     long countBySenderIdAndRecipientIdAndReadAtIsNull(UUID senderId, UUID recipientId);
 
     long countByRecipientIdAndReadAtIsNull(UUID recipientId);

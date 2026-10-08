@@ -36,6 +36,14 @@ import com.astra.chat.repository.MessageRepository;
 @Service
 public class ChatService {
 
+    public static final int MAX_PINNED_PER_CONVERSATION = 3;
+
+    private static final Comparator<MessageResponse> PINNED_FIRST =
+            Comparator.comparing(MessageResponse::pinnedAt).reversed();
+
+    public record PinChange(MessageResponse message, List<UUID> audience) {
+    }
+
     private final MessageRepository messageRepository;
     private final MessageAttachmentRepository messageAttachmentRepository;
     private final UserRepository userRepository;
@@ -184,6 +192,60 @@ public class ChatService {
         requireFriends(me, friendId);
         List<Message> messages = messageRepository.findConversation(me, friendId, PageRequest.of(0, limit));
         return toDtos(messages);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> pinned(UUID friendId) {
+        UUID me = currentUserProvider.currentUserId();
+        requireFriends(me, friendId);
+        return toDtos(messageRepository.findPinnedInConversation(me, friendId)).stream()
+                .sorted(PINNED_FIRST).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> pinnedInGroup(UUID groupId) {
+        UUID me = currentUserProvider.currentUserId();
+        requireMember(groupId, me);
+        return toDtos(messageRepository.findByGroupIdAndPinnedAtIsNotNullOrderByPinnedAtDesc(groupId)).stream()
+                .sorted(PINNED_FIRST).toList();
+    }
+
+    @Transactional
+    public PinChange setPinned(UUID messageId, boolean pinned) {
+        UUID me = currentUserProvider.currentUserId();
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Mensagem não encontrada"));
+        List<UUID> audience;
+        List<Message> current;
+        if (message.getGroupId() != null) {
+            requireMember(message.getGroupId(), me);
+            audience = chatGroupMemberRepository.findByGroupId(message.getGroupId()).stream()
+                    .map(ChatGroupMember::getUserId)
+                    .toList();
+            current = messageRepository.findByGroupIdAndPinnedAtIsNotNullOrderByPinnedAtDesc(message.getGroupId());
+        } else {
+            boolean party = me.equals(message.getSenderId()) || me.equals(message.getRecipientId());
+            if (!party) {
+                throw new NotFoundException("Mensagem não encontrada");
+            }
+            UUID other = me.equals(message.getSenderId()) ? message.getRecipientId() : message.getSenderId();
+            requireFriends(me, other);
+            audience = List.of(message.getSenderId(), message.getRecipientId());
+            current = messageRepository.findPinnedInConversation(me, other);
+        }
+
+        if (pinned && message.getPinnedAt() == null) {
+            if (current.size() >= MAX_PINNED_PER_CONVERSATION) {
+                throw new ConflictException("Dá pra fixar até " + MAX_PINNED_PER_CONVERSATION
+                        + " mensagens por conversa. Desafixe uma antes.");
+            }
+            message.setPinnedAt(OffsetDateTime.now());
+            message.setPinnedBy(me);
+        } else if (!pinned) {
+            message.setPinnedAt(null);
+            message.setPinnedBy(null);
+        }
+        return new PinChange(toDto(messageRepository.saveAndFlush(message)), audience.stream().distinct().toList());
     }
 
     private List<MessageResponse> toDtos(List<Message> messages) {
@@ -351,7 +413,7 @@ public class ChatService {
     private MessageResponse toDto(Message message, UUID attachmentId, MessageResponse.ReplyPreview replyTo) {
         return new MessageResponse(message.getId(), message.getSenderId(), message.getRecipientId(),
                 message.getGroupId(), chatEncryptionService.decrypt(message.getContent()), message.getCreatedAt(),
-                message.isRead(), attachmentId, replyTo);
+                message.isRead(), attachmentId, replyTo, message.getPinnedAt(), message.getPinnedBy());
     }
 
     @Transactional(readOnly = true)
@@ -378,6 +440,7 @@ public class ChatService {
                             "groupId", message.getGroupId(),
                             "content", chatEncryptionService.decrypt(message.getContent()),
                             "replyToMessageId", message.getReplyToMessageId(),
+                            "pinnedAt", message.getPinnedAt(),
                             "image", image,
                             "createdAt", message.getCreatedAt(), "readAt", message.getReadAt());
                 })

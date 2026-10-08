@@ -12,7 +12,9 @@ public record MessageResponse(
         OffsetDateTime createdAt,
         boolean read,
         UUID attachmentId,
-        ReplyPreview replyTo) {
+        ReplyPreview replyTo,
+        OffsetDateTime pinnedAt,
+        UUID pinnedBy) {
 
     public record ReplyPreview(UUID id, UUID senderId, String contentPreview) {
     }

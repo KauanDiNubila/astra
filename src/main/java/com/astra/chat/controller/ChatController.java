@@ -11,9 +11,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -41,6 +43,28 @@ public class ChatController {
     @GetMapping("/{friendId}/messages")
     public List<MessageResponse> history(@PathVariable UUID friendId, @RequestParam(defaultValue = "50") int limit) {
         return chatService.history(friendId, Math.min(limit, 200));
+    }
+
+    @GetMapping("/{friendId}/pins")
+    public List<MessageResponse> pins(@PathVariable UUID friendId) {
+        return chatService.pinned(friendId);
+    }
+
+    @PutMapping("/messages/{messageId}/pin")
+    public MessageResponse pin(@PathVariable UUID messageId) {
+        return broadcastPin(chatService.setPinned(messageId, true));
+    }
+
+    @DeleteMapping("/messages/{messageId}/pin")
+    public MessageResponse unpin(@PathVariable UUID messageId) {
+        return broadcastPin(chatService.setPinned(messageId, false));
+    }
+
+    private MessageResponse broadcastPin(ChatService.PinChange change) {
+        for (UUID userId : change.audience()) {
+            messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/message-updates", change.message());
+        }
+        return change.message();
     }
 
     @PostMapping("/{friendId}/read")

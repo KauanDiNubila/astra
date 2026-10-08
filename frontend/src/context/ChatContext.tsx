@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { toast } from "sonner"
-import { api } from "@/lib/api"
+import { api, getErrorMessage } from "@/lib/api"
 import { createChatClient } from "@/lib/chatSocket"
 import { loadChatSoundEnabled, saveChatSoundEnabled } from "@/lib/chatSoundPreference"
 import { playMessagePing } from "@/lib/sound"
@@ -56,6 +56,11 @@ type ChatContextValue = {
   sendImageMessage: (friendId: string, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
   markRead: (friendId: string) => Promise<void>
   totalUnread: number
+  pinsFor: (friendId: string) => Message[]
+  loadPins: (friendId: string) => Promise<void>
+  groupPinsFor: (groupId: string) => Message[]
+  loadGroupPins: (groupId: string) => Promise<void>
+  setMessagePinned: (message: Message, pinned: boolean) => Promise<void>
 
   activeGroupId: string | null
   setActiveGroupId: (id: string | null) => void
@@ -101,6 +106,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [groupConversationsLoaded, setGroupConversationsLoaded] = useState(false)
   const [messagesByGroup, setMessagesByGroup] = useState<Record<string, Message[]>>({})
   const [groupMembersById, setGroupMembersById] = useState<Record<string, GroupMember[]>>({})
+  const [pinsByConversation, setPinsByConversation] = useState<Record<string, Message[]>>({})
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
   const callListenersRef = useRef(new Set<(event: CallEvent) => void>())
@@ -169,6 +175,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     return api.get<Message[]>(`/chat/groups/${groupId}/messages`).then((res) => {
       setMessagesByGroup((prev) => ({ ...prev, [groupId]: res.data }))
     })
+  }
+
+  function loadPins(friendId: string) {
+    return api.get<Message[]>(`/chat/${friendId}/pins`).then((res) => {
+      setPinsByConversation((prev) => ({ ...prev, [`f:${friendId}`]: res.data }))
+    })
+  }
+
+  function loadGroupPins(groupId: string) {
+    return api.get<Message[]>(`/chat/groups/${groupId}/pins`).then((res) => {
+      setPinsByConversation((prev) => ({ ...prev, [`g:${groupId}`]: res.data }))
+    })
+  }
+
+  function applyMessageUpdate(message: Message) {
+    const replace = (list: Message[] | undefined) => list?.map((m) => (m.id === message.id ? message : m))
+    let key: string
+    if (message.groupId) {
+      const groupId = message.groupId
+      key = `g:${groupId}`
+      setMessagesByGroup((prev) => (prev[groupId] ? { ...prev, [groupId]: replace(prev[groupId])! } : prev))
+    } else {
+      const otherId = message.senderId === user?.id ? message.recipientId! : message.senderId
+      key = `f:${otherId}`
+      setMessagesByFriend((prev) => (prev[otherId] ? { ...prev, [otherId]: replace(prev[otherId])! } : prev))
+    }
+    setPinsByConversation((prev) => {
+      const rest = (prev[key] ?? []).filter((m) => m.id !== message.id)
+      const next = message.pinnedAt ? [...rest, message] : rest
+      next.sort((a, b) => (b.pinnedAt ?? "").localeCompare(a.pinnedAt ?? ""))
+      return { ...prev, [key]: next }
+    })
+  }
+
+  async function setMessagePinned(message: Message, pinned: boolean) {
+    try {
+      const res = pinned
+        ? await api.put<Message>(`/chat/messages/${message.id}/pin`)
+        : await api.delete<Message>(`/chat/messages/${message.id}/pin`)
+      applyMessageUpdate(res.data)
+    } catch (error) {
+      toast.error(getErrorMessage(error, pinned ? "Não foi possível fixar a mensagem." : "Não foi possível desafixar."))
+    }
   }
 
   function loadGroupMembers(groupId: string) {
@@ -322,6 +371,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       client.subscribe("/user/queue/messages", (frame) => {
         handleIncoming(JSON.parse(frame.body) as Message)
       })
+      client.subscribe("/user/queue/message-updates", (frame) => {
+        applyMessageUpdate(JSON.parse(frame.body) as Message)
+      })
       client.subscribe("/user/queue/call", (frame) => {
         const event = JSON.parse(frame.body) as CallEvent
         callListenersRef.current.forEach((listener) => listener(event))
@@ -419,6 +471,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sendImageMessage,
         markRead,
         totalUnread,
+        pinsFor: (friendId) => pinsByConversation[`f:${friendId}`] ?? [],
+        loadPins,
+        groupPinsFor: (groupId) => pinsByConversation[`g:${groupId}`] ?? [],
+        loadGroupPins,
+        setMessagePinned,
 
         activeGroupId,
         setActiveGroupId,
