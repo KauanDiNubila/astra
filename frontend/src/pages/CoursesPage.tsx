@@ -21,17 +21,16 @@ import { Stepper } from "@/components/ui/stepper"
 const MAX_INITIAL_MODULES = 30
 
 export function CoursesPage() {
-  const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState("")
   const [platform, setPlatform] = useState("")
   const [moduleCount, setModuleCount] = useState(0)
   const [saving, setSaving] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const { onMouseMove } = useSpotlight()
-  const { courses, loadCourses } = usePomodoro()
+  const { courses, coursesLoaded, loadCourses } = usePomodoro()
 
   useEffect(() => {
-    loadCourses().finally(() => setLoading(false))
+    void loadCourses()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -57,7 +56,7 @@ export function CoursesPage() {
     }
   }
 
-  if (loading) {
+  if (!coursesLoaded) {
     return <CardGridSkeleton />
   }
 

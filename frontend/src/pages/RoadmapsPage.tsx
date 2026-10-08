@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import type { FormEvent } from "react"
 import { motion } from "motion/react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { fetchJson, invalidateRoadmaps, queryKeys } from "@/lib/queryClient"
 import { useSpotlight } from "@/hooks/useSpotlight"
 import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
 import type { Roadmap } from "@/lib/types"
@@ -15,19 +17,12 @@ import { CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
 export function RoadmapsPage() {
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([])
-  const [loading, setLoading] = useState(true)
+  const roadmapsQuery = useQuery({ queryKey: queryKeys.roadmaps, queryFn: fetchJson<Roadmap[]>("/roadmaps") })
+  const roadmaps = roadmapsQuery.data ?? []
   const [title, setTitle] = useState("")
   const [saving, setSaving] = useState(false)
   const { onMouseMove } = useSpotlight()
 
-  function load() {
-    return api.get<Roadmap[]>("/roadmaps").then((res) => setRoadmaps(res.data))
-  }
-
-  useEffect(() => {
-    load().finally(() => setLoading(false))
-  }, [])
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -36,7 +31,7 @@ export function RoadmapsPage() {
     try {
       await api.post("/roadmaps", { title: title.trim(), source: null })
       setTitle("")
-      await load()
+      await invalidateRoadmaps()
     } catch {
       toast.error("Não foi possível criar o roadmap.")
     } finally {
@@ -44,7 +39,7 @@ export function RoadmapsPage() {
     }
   }
 
-  if (loading) {
+  if (roadmapsQuery.isPending) {
     return <CardGridSkeleton />
   }
 

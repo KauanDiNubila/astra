@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type { FormEvent } from "react"
 import { Link, useParams } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import { usePomodoro } from "@/context/PomodoroContext"
+import { fetchJson, invalidateCourses, queryKeys } from "@/lib/queryClient"
 import type { CourseDetail, ModuleItem } from "@/lib/types"
 import { CourseGithubSection } from "@/components/CourseGithubSection"
 import { ModuleRow } from "@/components/ModuleRow"
@@ -18,28 +19,20 @@ const MAX_INITIAL_LESSONS = 30
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { courseId: pomodoroCourseId, loadCourseDetail } = usePomodoro()
-  const [course, setCourse] = useState<CourseDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  const courseQuery = useQuery({
+    queryKey: queryKeys.course(id ?? ""),
+    queryFn: fetchJson<CourseDetail>(`/courses/${id}`),
+    enabled: !!id,
+  })
+  const course = courseQuery.data ?? null
+  const loading = courseQuery.isPending && !!id
   const [moduleTitle, setModuleTitle] = useState("")
   const [lessonCount, setLessonCount] = useState(0)
   const [saving, setSaving] = useState(false)
 
-  function load() {
-    return api.get<CourseDetail>(`/courses/${id}`).then((res) => setCourse(res.data))
+  function refreshAll() {
+    return invalidateCourses()
   }
-
-  async function refreshAll() {
-    if (pomodoroCourseId === id) {
-      await Promise.all([load(), loadCourseDetail()])
-    } else {
-      await load()
-    }
-  }
-
-  useEffect(() => {
-    load().finally(() => setLoading(false))
-  }, [id])
 
   async function addModule(event: FormEvent) {
     event.preventDefault()

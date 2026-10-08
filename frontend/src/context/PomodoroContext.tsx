@@ -2,7 +2,14 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import { fetchJson, invalidateGoals, invalidateStudyStats, queryKeys } from "@/lib/queryClient"
+import {
+  fetchJson,
+  invalidateCategories,
+  invalidateCourses,
+  invalidateGoals,
+  invalidateStudyStats,
+  queryKeys,
+} from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
 import { playChime } from "@/lib/sound"
@@ -10,6 +17,9 @@ import type { PomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, CourseDetail, CourseSummary, Dashboard, GoalProgress } from "@/lib/types"
 
 export type Mode = "focus" | "break"
+
+const NO_CATEGORIES: Category[] = []
+const NO_COURSES: CourseSummary[] = []
 
 type PomodoroContextValue = {
   settings: PomodoroSettings
@@ -30,6 +40,7 @@ type PomodoroContextValue = {
 
   categories: Category[]
   courses: CourseSummary[]
+  coursesLoaded: boolean
   loadCategories: () => Promise<void>
   loadCourses: () => Promise<void>
   categoryId: string
@@ -106,7 +117,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
 
   const [categoryId, setCategoryId] = useState(persisted?.categoryId ?? "")
   const [courseId, setCourseId] = useState(persisted?.courseId ?? "")
-  const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null)
   const [note, setNote] = useState(persisted?.note ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -126,34 +136,32 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     return invalidateGoals()
   }
 
-  const [categories, setCategories] = useState<Category[]>([])
-  const [courses, setCourses] = useState<CourseSummary[]>([])
+  const categoriesQuery = useQuery({ queryKey: queryKeys.categories, queryFn: fetchJson<Category[]>("/categories") })
+  const coursesQuery = useQuery({ queryKey: queryKeys.courses, queryFn: fetchJson<CourseSummary[]>("/courses") })
+  const courseDetailQuery = useQuery({
+    queryKey: queryKeys.course(courseId),
+    queryFn: fetchJson<CourseDetail>(`/courses/${courseId}`),
+    enabled: !!courseId,
+  })
+  const categories = categoriesQuery.data ?? NO_CATEGORIES
+  const courses = coursesQuery.data ?? NO_COURSES
+  const coursesLoaded = coursesQuery.isFetched
+  const courseDetail = courseId ? (courseDetailQuery.data ?? null) : null
 
   function loadCategories() {
-    return api.get<Category[]>("/categories").then((res) => setCategories(res.data))
+    return invalidateCategories()
   }
 
   function loadCourses() {
-    return api.get<CourseSummary[]>("/courses").then((res) => setCourses(res.data))
+    return invalidateCourses()
   }
-
-  useEffect(() => {
-    loadCategories()
-    loadCourses()
-  }, [])
 
   function loadCourseDetail() {
-    if (!courseId) {
-      setCourseDetail(null)
-      return Promise.resolve()
-    }
-    return api.get<CourseDetail>(`/courses/${courseId}`).then((res) => setCourseDetail(res.data))
+    return invalidateCourses()
   }
 
   useEffect(() => {
-    loadCourseDetail()
     setSelectedModuleId(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId])
 
   function currentModeSeconds() {
@@ -401,6 +409,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         discard,
         categories,
         courses,
+        coursesLoaded,
         loadCategories,
         loadCourses,
         categoryId,
