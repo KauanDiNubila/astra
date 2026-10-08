@@ -28,3 +28,10 @@ export function formatDateTime(iso: string): string {
     minute: "2-digit",
   })
 }
+
+export function formatHours(minutes: number) {
+  const m = Math.round(minutes)
+  const h = Math.floor(m / 60)
+  const rest = m % 60
+  return `${h}h ${String(rest).padStart(2, "0")}min`
+}
