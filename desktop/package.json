@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "tsc && electron .",
     "dist": "tsc && electron-builder --win --publish never",
+    "dist:store": "tsc && electron-builder --win --config electron-builder.store.js --publish never",
     "release": "tsc && electron-builder --win --publish always"
   },
   "devDependencies": {

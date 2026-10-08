@@ -8,6 +8,7 @@ function checkNow() {
 }
 
 export function startAutoUpdate() {
+  if (process.windowsStore) return
   const testFeed = process.env.ASTRA_UPDATE_URL
   if (!app.isPackaged && !testFeed) return
 
