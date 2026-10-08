@@ -184,7 +184,7 @@ function ChapterCopy({ chapter, index }: { chapter: Chapter; index: number }) {
 function DesktopShowcase() {
   return (
     <section aria-label="Conheça o Astra" className="hidden lg:block lg:motion-reduce:hidden">
-      <div data-stage className="relative h-svh overflow-hidden">
+      <div data-stage className="relative h-svh overflow-hidden bg-background">
         <div data-stage-hero className="absolute inset-x-0 top-0 z-10 px-8 pt-[max(7rem,15vh)] text-center">
           <HeroCopy />
         </div>
