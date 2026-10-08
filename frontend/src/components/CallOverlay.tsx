@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import {
+  EyeOff,
   HeadphoneOff,
   Headphones,
   Maximize2,
@@ -15,6 +16,7 @@ import {
   VideoOff,
 } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
+import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
 import type { CallContextValue } from "@/context/CallContext"
@@ -30,6 +32,8 @@ import { Switch } from "@/components/ui/switch"
 type Tile = {
   key: string
   kind: "person" | "screen"
+  clientId: string | null
+  screenState: "offer" | "loading" | "live" | null
   userId: string
   name: string
   stream: MediaStream | null
@@ -99,51 +103,84 @@ function TileVideo({ stream, mirror, dark }: { stream: MediaStream; mirror?: boo
 function CallTile({
   tile,
   onClick,
+  onStopWatching,
   compact,
 }: {
   tile: Tile
   onClick: () => void
+  onStopWatching?: () => void
   compact?: boolean
 }) {
+  const offer = tile.screenState === "offer" || tile.screenState === "loading"
   const showVideo = tile.kind === "screen" ? !!tile.stream : tile.stream !== null && hasLiveVideo(tile.stream)
   const connecting = tile.connection !== null && tile.connection !== "connected"
 
   const reducedMotion = useReducedMotion()
 
   return (
-    <motion.button
-      type="button"
-      onClick={onClick}
+    <motion.div
       initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
       animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className={cn(
-        "relative flex min-h-0 items-center justify-center overflow-hidden rounded-xl bg-muted outline-none ring-2 ring-transparent transition-shadow duration-150 focus-visible:ring-ring",
-        tile.speaking && tile.kind === "person" && "ring-emerald-500",
-        compact ? "aspect-video h-full shrink-0" : "size-full",
-      )}
+      className={cn("relative min-h-0", compact ? "aspect-video h-full shrink-0" : "size-full")}
     >
-      {showVideo && tile.stream ? (
-        <TileVideo stream={tile.stream} mirror={tile.isSelf && tile.kind === "person"} dark={tile.kind === "screen"} />
-      ) : (
-        <UserAvatar userId={tile.userId} name={tile.name} size={compact ? "default" : "xl"} />
-      )}
-      <span className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-1.5 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
-        <span className="truncate">
-          {tile.kind === "screen" ? (tile.isSelf ? "Sua tela" : `Tela de ${tile.name}`) : tile.name}
-        </span>
-        {tile.noMic && tile.kind === "person" && (
-          <MicOff className="size-3.5 shrink-0 text-red-400" aria-label="Sem microfone" role="img">
-            <title>Sem microfone</title>
-          </MicOff>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={tile.screenState === "loading"}
+        title={offer ? `Assistir a tela de ${tile.name}` : undefined}
+        aria-label={offer ? `Assistir a tela de ${tile.name}` : undefined}
+        className={cn(
+          "group/tile relative flex size-full items-center justify-center overflow-hidden rounded-xl bg-muted outline-none ring-2 ring-transparent transition-shadow duration-150 focus-visible:ring-ring",
+          tile.speaking && tile.kind === "person" && "ring-emerald-500",
         )}
-      </span>
-      {connecting && (
-        <span className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
-          Conectando…
+      >
+        {offer ? (
+          <span className="flex flex-col items-center gap-2 px-3 text-center">
+            <MonitorUp className={cn("text-muted-foreground", compact ? "size-5" : "size-8")} />
+            <span
+              className={cn(
+                "rounded-full bg-primary font-medium text-primary-foreground transition-opacity group-hover/tile:opacity-90",
+                compact ? "px-2.5 py-0.5 text-[11px]" : "px-4 py-1.5 text-sm",
+              )}
+            >
+              {tile.screenState === "loading" ? "Carregando…" : compact ? "Assistir" : "Assistir transmissão"}
+            </span>
+          </span>
+        ) : showVideo && tile.stream ? (
+          <TileVideo stream={tile.stream} mirror={tile.isSelf && tile.kind === "person"} dark={tile.kind === "screen"} />
+        ) : (
+          <UserAvatar userId={tile.userId} name={tile.name} size={compact ? "default" : "xl"} />
+        )}
+        <span className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-1.5 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
+          <span className="truncate">
+            {tile.kind === "screen" ? (tile.isSelf ? "Sua tela" : `Tela de ${tile.name}`) : tile.name}
+          </span>
+          {tile.noMic && tile.kind === "person" && (
+            <MicOff className="size-3.5 shrink-0 text-red-400" aria-label="Sem microfone" role="img">
+              <title>Sem microfone</title>
+            </MicOff>
+          )}
         </span>
+        {connecting && (
+          <span className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
+            Conectando…
+          </span>
+        )}
+      </button>
+      {tile.screenState === "live" && onStopWatching && (
+        <button
+          type="button"
+          onClick={onStopWatching}
+          title="Parar de assistir"
+          aria-label={`Parar de assistir a tela de ${tile.name}`}
+          className="absolute right-2 top-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-[11px] text-white outline-none transition-colors hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <EyeOff className="size-3.5" />
+          {!compact && "Parar de assistir"}
+        </button>
       )}
-    </motion.button>
+    </motion.div>
   )
 }
 
@@ -381,6 +418,8 @@ function buildView(call: CallContextValue, userId: string): CallView {
     {
       key: "self",
       kind: "person",
+      clientId: null,
+      screenState: null,
       userId,
       name: "Você",
       stream: call.cameraOn ? call.localStream : null,
@@ -394,6 +433,8 @@ function buildView(call: CallContextValue, userId: string): CallView {
     tiles.push({
       key: "self-screen",
       kind: "screen",
+      clientId: null,
+      screenState: null,
       userId,
       name: "Você",
       stream: call.localScreen,
@@ -408,6 +449,8 @@ function buildView(call: CallContextValue, userId: string): CallView {
     tiles.push({
       key: peer.clientId,
       kind: "person",
+      clientId: peer.clientId,
+      screenState: null,
       userId: peer.userId,
       name: peer.name || "Participante",
       stream: media.camera,
@@ -416,13 +459,17 @@ function buildView(call: CallContextValue, userId: string): CallView {
       noMic: call.peerNoMic(peer.clientId),
       connection: call.connectionOf(peer.clientId),
     })
-    if (media.screen) {
+    const watching = call.watchingScreen(peer.clientId)
+    const live = watching && !!media.screen
+    if (live || call.peerSharing(peer.clientId)) {
       tiles.push({
         key: `${peer.clientId}-screen`,
         kind: "screen",
+        clientId: peer.clientId,
+        screenState: live ? "live" : watching ? "loading" : "offer",
         userId: peer.userId,
         name: peer.name || "participante",
-        stream: media.screen,
+        stream: live ? media.screen : null,
         isSelf: false,
         speaking: false,
         noMic: false,
@@ -474,17 +521,32 @@ function Presence({
 }
 
 function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
-  const { setMinimized } = useCall()
+  const { setMinimized, setWatchingScreen } = useCall()
   const [pinnedKey, setPinnedKey] = useState<string | null>(null)
   const { tiles } = view
 
-  const autoStageKey = tiles.find((t) => t.kind === "screen" && !t.isSelf)?.key ?? null
+  const autoStageKey = tiles.find((t) => t.screenState === "live")?.key ?? null
   const stageKey = pinnedKey && tiles.some((t) => t.key === pinnedKey) ? pinnedKey : autoStageKey
   const stage = tiles.find((t) => t.key === stageKey) ?? null
   const strip = tiles.filter((t) => t.key !== stageKey)
 
   function togglePin(key: string) {
     setPinnedKey((current) => (current === key ? null : key))
+  }
+
+  function handleTileClick(tile: Tile) {
+    if (tile.screenState === "offer" && tile.clientId) {
+      setWatchingScreen(tile.clientId, true)
+      return
+    }
+    if (tile.screenState === "loading") return
+    togglePin(tile.key)
+  }
+
+  function stopWatching(tile: Tile) {
+    if (!tile.clientId) return
+    setWatchingScreen(tile.clientId, false)
+    setPinnedKey((current) => (current === tile.key ? null : current))
   }
 
   return (
@@ -529,12 +591,18 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
         {stage ? (
           <>
             <div className="min-h-0 flex-1">
-              <CallTile tile={stage} onClick={() => togglePin(stage.key)} />
+              <CallTile tile={stage} onClick={() => handleTileClick(stage)} onStopWatching={() => stopWatching(stage)} />
             </div>
             {strip.length > 0 && (
               <div className="-m-0.5 flex h-25 shrink-0 gap-2 overflow-x-auto p-0.5 sm:h-33">
                 {strip.map((t) => (
-                  <CallTile key={t.key} tile={t} compact onClick={() => togglePin(t.key)} />
+                  <CallTile
+                    key={t.key}
+                    tile={t}
+                    compact
+                    onClick={() => handleTileClick(t)}
+                    onStopWatching={() => stopWatching(t)}
+                  />
                 ))}
               </div>
             )}
@@ -542,7 +610,7 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
         ) : (
           <div className={cn("grid min-h-0 flex-1 auto-rows-fr gap-2", gridClass(tiles.length))}>
             {tiles.map((t) => (
-              <CallTile key={t.key} tile={t} onClick={() => togglePin(t.key)} />
+              <CallTile key={t.key} tile={t} onClick={() => handleTileClick(t)} onStopWatching={() => stopWatching(t)} />
             ))}
           </div>
         )}
@@ -621,6 +689,33 @@ export function CallOverlay() {
   const miniVisible = active && call.minimized
   const showFull = useDelayedUnmount(fullVisible)
   const showMini = useDelayedUnmount(miniVisible)
+
+  const sharingKey = active
+    ? call.participants
+        .filter((p) => call.peerSharing(p.clientId))
+        .map((p) => p.clientId)
+        .join(",")
+    : ""
+  const sharingRef = useRef<string[]>([])
+  useEffect(() => {
+    const now = sharingKey ? sharingKey.split(",") : []
+    const started = now.filter((id) => !sharingRef.current.includes(id))
+    sharingRef.current = now
+    if (!call.minimized) return
+    for (const clientId of started) {
+      const name = call.participants.find((p) => p.clientId === clientId)?.name || "Alguém"
+      toast(`${name} está compartilhando a tela`, {
+        action: {
+          label: "Assistir",
+          onClick: () => {
+            call.setWatchingScreen(clientId, true)
+            call.setMinimized(false)
+          },
+        },
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharingKey])
 
   return (
     <>

@@ -44,6 +44,9 @@ export type CallContextValue = {
   muted: boolean
   micMissing: boolean
   peerNoMic: (clientId: string) => boolean
+  peerSharing: (clientId: string) => boolean
+  watchingScreen: (clientId: string) => boolean
+  setWatchingScreen: (clientId: string, watching: boolean) => void
   deafened: boolean
   cameraOn: boolean
   screenSharing: boolean
@@ -868,6 +871,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
         muted,
         micMissing,
         peerNoMic: (clientId) => meshRef.current?.peerNoMic(clientId) ?? false,
+        peerSharing: (clientId) => meshRef.current?.peerSharing(clientId) ?? false,
+        watchingScreen: (clientId) => meshRef.current?.watching(clientId) ?? false,
+        setWatchingScreen: (clientId, watching) => meshRef.current?.setWatching(clientId, watching),
         deafened,
         cameraOn,
         screenSharing,
