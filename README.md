@@ -14,11 +14,12 @@ como tabela.
 
 **🔗 No ar:** [astra-app.dev](https://astra-app.dev)
 
-**🖥️ App para Windows:** [baixar o instalador](https://github.com/KauanDiNubila/astra/releases/latest)
-(`Astra-Setup-<versão>.exe`). O instalador não é assinado, então na primeira
-vez o Windows mostra "O Windows protegeu seu PC": clique em **Mais informações**
-e depois em **Executar assim mesmo**. O app se atualiza sozinho. Detalhes em
-[`desktop/README.md`](desktop/README.md).
+**🖥️ App para Windows:** [instalar pela Microsoft Store](https://apps.microsoft.com/detail/9NRB7QNCJGSP?hl=pt-br&gl=BR)
+(recomendado: sem avisos do Windows e com atualização automática pela loja). Também há
+o [instalador direto](https://github.com/KauanDiNubila/astra/releases/latest)
+(`Astra-Setup-<versão>.exe`), que não é assinado: na primeira vez o Windows mostra
+"O Windows protegeu seu PC", e é só clicar em **Mais informações** e depois em
+**Executar assim mesmo**. Detalhes em [`desktop/README.md`](desktop/README.md).
 
 > Projeto de portfólio. Interface em português, código em inglês.
 
@@ -147,7 +148,7 @@ pasta de notas do projeto — não faz parte deste repositório público.
 |---|---|
 | Casca | Electron 44 (TypeScript) |
 | Instalador | electron-builder (NSIS, por usuário, sem admin) |
-| Atualização | electron-updater (GitHub Releases) |
+| Atualização | electron-updater (GitHub Releases) ou Microsoft Store (pacote `.appx`) |
 
 **Produção**
 
