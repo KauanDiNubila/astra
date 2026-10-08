@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { api, clearAccessToken, refreshSession, setAccessToken } from "@/lib/api"
+import { queryClient } from "@/lib/queryClient"
 import type { AuthResponse, User } from "@/lib/types"
 
 type AuthContextValue = {
@@ -21,6 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [avatarVersion, setAvatarVersion] = useState(() => Date.now())
+  const cachedUserIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    if (cachedUserIdRef.current && cachedUserIdRef.current !== user.id) queryClient.clear()
+    cachedUserIdRef.current = user.id
+  }, [user])
 
   useEffect(() => {
     refreshSession()
@@ -32,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password })
     setAccessToken(res.data.accessToken)
+    queryClient.clear()
     setUser(res.data.user)
   }
 
@@ -47,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* empty */
     }
     clearAccessToken()
+    queryClient.clear()
     setUser(null)
   }
 
@@ -58,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function deleteAccount(confirmation: { password?: string; confirmation?: string }) {
     await api.delete("/me", { data: confirmation })
     clearAccessToken()
+    queryClient.clear()
     setUser(null)
   }
 
