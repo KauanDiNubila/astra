@@ -38,10 +38,11 @@ export function GlobalPomodoroFocus() {
   const currentModule = courseDetail?.modules.find((m) => !m.completed) ?? courseDetail?.modules.at(-1)
 
   const sessionsUntilLongBreak = settings.pomodorosUntilLongBreak
+  const sessionIndex = mode === "break" ? Math.max(0, completedPomodoros - 1) : completedPomodoros
   const sessionCaption = settings.disableBreaks
-    ? `Sessão ${completedPomodoros + 1}`
+    ? `Sessão ${sessionIndex + 1}`
     : `Sessão ${
-        sessionsUntilLongBreak > 0 ? (completedPomodoros % sessionsUntilLongBreak) + 1 : completedPomodoros + 1
+        sessionsUntilLongBreak > 0 ? (sessionIndex % sessionsUntilLongBreak) + 1 : sessionIndex + 1
       } de ${sessionsUntilLongBreak}`
 
   const header = courseDetail
