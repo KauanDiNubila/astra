@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { api } from "@/lib/api"
+import { invalidateRanking } from "@/lib/queryClient"
 import { useAuth } from "@/context/AuthContext"
 import type { Friendship } from "@/lib/types"
 
@@ -49,12 +50,14 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     const res = await api.post<Friendship>(`/friends/${id}/accept`)
     setRequests((prev) => prev.filter((r) => r.id !== id))
     setFriends((prev) => [...prev, res.data])
+    void invalidateRanking()
   }
 
   async function removeFriendship(id: string) {
     await api.delete(`/friends/${id}`)
     setRequests((prev) => prev.filter((r) => r.id !== id))
     setFriends((prev) => prev.filter((f) => f.id !== id))
+    void invalidateRanking()
   }
 
   const incomingRequests = requests.filter((r) => r.incoming)

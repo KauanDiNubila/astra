@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { motion } from "motion/react"
-import { api } from "@/lib/api"
+import { fetchJson, queryKeys } from "@/lib/queryClient"
 import { useAuth } from "@/context/AuthContext"
 import { formatMinutes } from "@/lib/format"
 import type { RankingEntry } from "@/lib/types"
@@ -90,36 +91,20 @@ export function RankingPage() {
   const { user } = useAuth()
   const [period, setPeriod] = useState<Period>("DAILY")
   const [scope, setScope] = useState<Scope>("FRIENDS")
-  const [entries, setEntries] = useState<RankingEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const query = useQuery({
+    queryKey: queryKeys.ranking(period, scope),
+    queryFn: fetchJson<RankingEntry[]>("/ranking", { period, scope }),
+    placeholderData: keepPreviousData,
+  })
+  const [shownData, setShownData] = useState(query.data)
   const [renderKey, setRenderKey] = useState(0)
-  const requestIdRef = useRef(0)
-  const cacheRef = useRef<Map<string, RankingEntry[]>>(new Map())
+  if (query.data !== shownData) {
+    setShownData(query.data)
+    setRenderKey((k) => k + 1)
+  }
+  const entries = query.data ?? []
 
-  useEffect(() => {
-    const key = `${period}:${scope}`
-    const cached = cacheRef.current.get(key)
-    if (cached) {
-      setEntries(cached)
-      setRenderKey((k) => k + 1)
-      setLoading(false)
-      return
-    }
-    const requestId = ++requestIdRef.current
-    api
-      .get<RankingEntry[]>(`/ranking?period=${period}&scope=${scope}`)
-      .then((res) => {
-        if (requestIdRef.current !== requestId) return
-        cacheRef.current.set(key, res.data)
-        setEntries(res.data)
-        setRenderKey((k) => k + 1)
-      })
-      .finally(() => {
-        if (requestIdRef.current === requestId) setLoading(false)
-      })
-  }, [period, scope])
-
-  if (loading) {
+  if (query.isPending) {
     return <PageSkeleton rows={5} />
   }
 
