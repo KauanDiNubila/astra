@@ -3,6 +3,7 @@ import type { FormEvent } from "react"
 import { CalendarIcon, Pencil, Timer, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { invalidateStudyStats } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatDateTime, formatMinutes } from "@/lib/format"
@@ -106,6 +107,7 @@ export function SessionsPage() {
     try {
       await api.delete(`/sessions/${id}`)
       setSessions((prev) => prev.filter((s) => s.id !== id))
+      void invalidateStudyStats()
     } catch {
       toast.error("Não foi possível remover a sessão.")
     } finally {
@@ -129,6 +131,7 @@ export function SessionsPage() {
         note: note.trim() || null,
       })
       await loadSessions()
+      void invalidateStudyStats()
       setMinutes(25)
       setNote("")
       setSelectedDate(new Date())

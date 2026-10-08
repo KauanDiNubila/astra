@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { motion } from "motion/react"
-import { api } from "@/lib/api"
+import { fetchJson, invalidateGoals, queryKeys } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
@@ -56,58 +57,29 @@ function lastNDays(n: number): string[] {
 export function DashboardPage() {
   const { categories } = usePomodoro()
   const { status: githubStatus } = useGitHub()
-  const [data, setData] = useState<Dashboard | null>(null)
-  const [heatmap, setHeatmap] = useState<DailyMinutes[]>([])
-  const [githubHeatmap, setGithubHeatmap] = useState<GitHubDailyPoint[]>([])
-  const [categoryMinutes, setCategoryMinutes] = useState<CategoryMinutes[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriodDays>(30)
   const [categoryPeriod, setCategoryPeriod] = useState<CategoryPeriodDays>(30)
   const [editGoalsOpen, setEditGoalsOpen] = useState(false)
 
-  function loadDashboard(signal?: AbortSignal) {
-    return api.get<Dashboard>("/dashboard", { signal }).then((res) => setData(res.data))
-  }
+  const dashboardQuery = useQuery({ queryKey: queryKeys.dashboard, queryFn: fetchJson<Dashboard>("/dashboard") })
+  const heatmapQuery = useQuery({ queryKey: queryKeys.heatmap, queryFn: fetchJson<DailyMinutes[]>("/heatmap") })
+  const githubQuery = useQuery({
+    queryKey: queryKeys.githubInsights,
+    queryFn: fetchJson<{ series: GitHubDailyPoint[] }>("/github/insights"),
+    enabled: !!githubStatus?.connected,
+  })
+  const categoryQuery = useQuery({
+    queryKey: queryKeys.byCategory(categoryPeriod),
+    queryFn: fetchJson<CategoryMinutes[]>("/dashboard/by-category", { days: categoryPeriod }),
+    placeholderData: keepPreviousData,
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const { signal } = controller
-    // Categorias vêm do PomodoroContext — evita refazer a mesma busca aqui.
-    Promise.all([
-      loadDashboard(signal),
-      api.get<DailyMinutes[]>("/heatmap", { signal }).then((res) => setHeatmap(res.data)),
-    ])
-      .catch(() => {
-        if (!signal.aborted) setError(true)
-      })
-      .finally(() => {
-        if (!signal.aborted) setLoading(false)
-      })
-    return () => controller.abort()
-  }, [])
-
-  useEffect(() => {
-    if (!githubStatus?.connected) return
-    const controller = new AbortController()
-    api
-      .get<{ series: GitHubDailyPoint[] }>("/github/insights", { signal: controller.signal })
-      .then((res) => setGithubHeatmap(res.data.series))
-      .catch(() => {})
-    return () => controller.abort()
-  }, [githubStatus?.connected])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    api
-      .get<CategoryMinutes[]>("/dashboard/by-category", {
-        params: { days: categoryPeriod },
-        signal: controller.signal,
-      })
-      .then((res) => setCategoryMinutes(res.data))
-      .catch(() => {})
-    return () => controller.abort()
-  }, [categoryPeriod])
+  const data = dashboardQuery.data ?? null
+  const heatmap = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
+  const githubHeatmap = githubStatus?.connected ? (githubQuery.data?.series ?? []) : []
+  const categoryMinutes = useMemo(() => categoryQuery.data ?? [], [categoryQuery.data])
+  const loading = dashboardQuery.isPending || heatmapQuery.isPending
+  const error = (dashboardQuery.isError && !dashboardQuery.data) || (heatmapQuery.isError && !heatmapQuery.data)
 
   const trendData = useMemo(() => {
     const byDay = new Map(heatmap.map((d) => [d.day, d.minutes]))
@@ -250,7 +222,7 @@ export function DashboardPage() {
         onClose={() => setEditGoalsOpen(false)}
         dailyTarget={dailyGoal?.targetHours ?? 0}
         weeklyTarget={weeklyGoal?.targetHours ?? 0}
-        onSaved={loadDashboard}
+        onSaved={invalidateGoals}
       />
     </div>
   )

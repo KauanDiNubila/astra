@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { fetchJson, invalidateGoals, invalidateStudyStats, queryKeys } from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
 import { playChime } from "@/lib/sound"
@@ -113,18 +115,16 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [focusMode, setFocusMode] = useState(persisted?.focusMode ?? false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
-  const [dailyGoal, setDailyGoal] = useState<GoalProgress | null>(null)
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: fetchJson<Dashboard>("/dashboard"),
+    enabled: focusMode,
+  })
+  const dailyGoal: GoalProgress | null = dashboardQuery.data?.goals.find((g) => g.type === "DAILY") ?? null
 
   function loadDailyGoal() {
-    return api.get<Dashboard>("/dashboard").then((res) => {
-      setDailyGoal(res.data.goals.find((g) => g.type === "DAILY") ?? null)
-    })
+    return invalidateGoals()
   }
-
-  useEffect(() => {
-    if (focusMode) loadDailyGoal()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusMode])
 
   const [categories, setCategories] = useState<Category[]>([])
   const [courses, setCourses] = useState<CourseSummary[]>([])
@@ -373,6 +373,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       discard()
       setNote("")
       setSessionSavedAt(Date.now())
+      void invalidateStudyStats()
     } catch {
       setError("Não foi possível registrar a sessão.")
     } finally {
