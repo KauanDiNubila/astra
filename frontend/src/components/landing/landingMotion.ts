@@ -94,8 +94,8 @@ const SCREEN_MOTIONS = [pomodoroMotion, heatmapMotion, rankingMotion, githubMoti
 
 function heroIntro(hero: Element, frame: Element | null) {
   const tl = gsap.timeline({ delay: 0.1 })
-  tl.from(all(hero, "[data-hero-fade]"), { autoAlpha: 0, y: 24, duration: 0.9, ease: "power3.out", stagger: 0.08 })
-  if (frame) tl.from(frame, { autoAlpha: 0, y: 60, duration: 1.1, ease: "power3.out" }, 0.35)
+  tl.from(all(hero, "[data-hero-fade]"), { autoAlpha: 0, y: 24, duration: 0.9, ease: "power3.out", stagger: 0.08, clearProps: "transform,opacity,visibility" })
+  if (frame) tl.from(frame, { autoAlpha: 0, y: 60, duration: 1.1, ease: "power3.out", clearProps: "transform,opacity,visibility" }, 0.35)
   return tl
 }
 
@@ -140,6 +140,7 @@ function desktopShowcase(root: Element) {
   tl.set(screens.slice(1), { autoAlpha: 0 }, 0)
   tl.set(chapters.flatMap((c) => all(c, "[data-word]")), { yPercent: 110 }, 0)
   tl.set(chapters.flatMap((c) => all(c, "[data-chapter-fade]")), { autoAlpha: 0, y: 14 }, 0)
+  tl.set(chapters, { autoAlpha: 0 }, 0)
   tl.set(bars, { scaleX: 0, transformOrigin: "0% 50%" }, 0)
   tl.set(stage.querySelector("[data-progress]"), { autoAlpha: 0 }, 0)
 
@@ -149,9 +150,10 @@ function desktopShowcase(root: Element) {
     { x: 0, y: 0, scale: 1, duration: 1, ease: "power2.inOut" },
     0,
   )
-  tl.to(hero, { y: -90, autoAlpha: 0, duration: 0.5, ease: "power1.in" }, 0)
+  tl.to(hero, { y: -90, autoAlpha: 0, duration: 0.5, ease: "power1.in", force3D: false }, 0)
 
   const chapterIn = (i: number, at: number) => {
+    tl.set(chapters[i], { autoAlpha: 1 }, at)
     tl.to(all(chapters[i], "[data-word]"), { yPercent: 0, duration: 0.3, ease: "power3.out", stagger: 0.015 }, at)
     tl.to(all(chapters[i], "[data-chapter-fade]"), { autoAlpha: 1, y: 0, duration: 0.3, ease: "power2.out", stagger: 0.04 }, at + 0.06)
   }
@@ -159,6 +161,7 @@ function desktopShowcase(root: Element) {
   const chapterOut = (i: number, at: number) => {
     tl.to(all(chapters[i], "[data-word]"), { yPercent: -110, duration: 0.22, ease: "power2.in", stagger: 0.008 }, at)
     tl.to(all(chapters[i], "[data-chapter-fade]"), { autoAlpha: 0, y: -10, duration: 0.18, ease: "power2.in" }, at)
+    tl.set(chapters[i], { autoAlpha: 0 }, at + 0.32)
   }
 
   const switchScreen = (from: number, to: number, at: number) => {
