@@ -690,6 +690,14 @@ export function CallOverlay() {
   const showFull = useDelayedUnmount(fullVisible)
   const showMini = useDelayedUnmount(miniVisible)
 
+  useEffect(() => {
+    if (!miniVisible) return
+    document.documentElement.dataset.miniCall = ""
+    return () => {
+      delete document.documentElement.dataset.miniCall
+    }
+  }, [miniVisible])
+
   const sharingKey = active
     ? call.participants
         .filter((p) => call.peerSharing(p.clientId))

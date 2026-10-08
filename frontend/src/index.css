@@ -184,3 +184,8 @@ html.has-titlebar body {
     @apply font-sans;
     }
 }
+
+html[data-mini-call] [data-sonner-toaster][data-y-position="bottom"] {
+  --offset-bottom: 5.5rem !important;
+  --mobile-offset-bottom: calc(8rem + env(safe-area-inset-bottom)) !important;
+}
