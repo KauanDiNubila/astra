@@ -3,7 +3,6 @@ import { Route, Routes } from "react-router-dom"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { Toaster } from "@/components/ui/sonner"
-import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 
@@ -11,6 +10,7 @@ const AdminRoute = lazy(() => import("@/components/AdminRoute").then((m) => ({ d
 const ProtectedLayout = lazy(() =>
   import("@/components/ProtectedLayout").then((m) => ({ default: m.ProtectedLayout })),
 )
+const LandingPage = lazy(() => import("@/pages/LandingPage").then((m) => ({ default: m.LandingPage })))
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })))
 const ChatPage = lazy(() => import("@/pages/ChatPage").then((m) => ({ default: m.ChatPage })))
 const CourseDetailPage = lazy(() =>
