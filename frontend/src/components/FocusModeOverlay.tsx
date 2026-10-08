@@ -9,7 +9,8 @@ import { useCountUp } from "@/hooks/use-count-up"
 import { useTheme } from "@/context/ThemeContext"
 import { formatMinutes } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { GoalProgress } from "@/lib/types"
+import { useQuery } from "@tanstack/react-query"
+import { dashboardQuery } from "@/lib/queryClient"
 import {
   clearCustomFocusImage,
   getCustomFocusImage,
@@ -157,7 +158,6 @@ function ThemePicker({
 type Props = {
   open: boolean
   onExit: () => void
-  dailyGoal: GoalProgress | null
   focusedMinutes: number
   pomodoroMinutes: number
   completedPomodoros: number
@@ -211,7 +211,6 @@ function GoalProgressBar({
 
 function DailyGoalPanel({
   open,
-  goal,
   focusedMinutes,
   pomodoroMinutes,
   completedPomodoros,
@@ -222,7 +221,6 @@ function DailyGoalPanel({
   reducedMotion,
 }: {
   open: boolean
-  goal: GoalProgress | null
   focusedMinutes: number
   pomodoroMinutes: number
   completedPomodoros: number
@@ -232,6 +230,8 @@ function DailyGoalPanel({
   sessionCaption: string
   reducedMotion: boolean
 }) {
+  const { data: dashboard } = useQuery(dashboardQuery)
+  const goal = dashboard?.goals.find((g) => g.type === "DAILY") ?? null
   // achievedHours vem do /dashboard (sessões já salvas antes de abrir o foco);
   // somamos o tempo ao vivo da sessão atual (ainda não salva) por cima, pra o
   // card acompanhar o cronômetro em tempo real sem precisar de outra chamada.
@@ -398,7 +398,6 @@ function BatteryIndicator() {
 export function FocusModeOverlay({
   open,
   onExit,
-  dailyGoal,
   focusedMinutes,
   pomodoroMinutes,
   completedPomodoros,
@@ -671,7 +670,6 @@ export function FocusModeOverlay({
               {goalPanelRendered && (
                 <DailyGoalPanel
                   open={goalPanelOpen}
-                  goal={dailyGoal}
                   focusedMinutes={focusedMinutes}
                   pomodoroMinutes={pomodoroMinutes}
                   completedPomodoros={completedPomodoros}

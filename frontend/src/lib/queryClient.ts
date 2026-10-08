@@ -1,6 +1,7 @@
-import { QueryClient } from "@tanstack/react-query"
+import { QueryClient, queryOptions } from "@tanstack/react-query"
 import type { QueryFunctionContext } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import type { Dashboard } from "@/lib/types"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,8 +33,15 @@ export function fetchJson<T>(url: string, params?: Record<string, unknown>) {
   return ({ signal }: QueryFunctionContext) => api.get<T>(url, { signal, params }).then((res) => res.data)
 }
 
+export const dashboardQuery = queryOptions({
+  queryKey: queryKeys.dashboard,
+  queryFn: fetchJson<Dashboard>("/dashboard"),
+})
+
 function invalidate(...keys: readonly (readonly unknown[])[]) {
-  return Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))).then(() => undefined)
+  return Promise.all(
+    keys.map((queryKey) => queryClient.invalidateQueries({ queryKey, refetchType: "all" })),
+  ).then(() => undefined)
 }
 
 export function invalidateStudyStats() {

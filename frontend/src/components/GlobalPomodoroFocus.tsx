@@ -14,7 +14,6 @@ export function GlobalPomodoroFocus() {
     running,
     focusedMinutes,
     completedPomodoros,
-    dailyGoal,
     settings,
     primaryLabel,
     handlePrimaryClick,
@@ -57,7 +56,6 @@ export function GlobalPomodoroFocus() {
     <FocusModeOverlay
       open={focusMode && pathname === "/sessions"}
       onExit={() => setFocusMode(false)}
-      dailyGoal={dailyGoal}
       focusedMinutes={focusedMinutes}
       pomodoroMinutes={settings.focusMinutes}
       completedPomodoros={completedPomodoros}

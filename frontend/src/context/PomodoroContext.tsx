@@ -6,15 +6,16 @@ import {
   fetchJson,
   invalidateCategories,
   invalidateCourses,
-  invalidateGoals,
+  dashboardQuery,
   invalidateStudyStats,
+  queryClient,
   queryKeys,
 } from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
 import { playChime } from "@/lib/sound"
 import type { PomodoroSettings } from "@/lib/pomodoroSettings"
-import type { Category, CourseDetail, CourseSummary, Dashboard, GoalProgress } from "@/lib/types"
+import type { Category, CourseDetail, CourseSummary } from "@/lib/types"
 
 export type Mode = "focus" | "break"
 
@@ -61,8 +62,6 @@ type PomodoroContextValue = {
   selectedModuleId: string | null
   setSelectedModuleId: (id: string | null) => void
 
-  dailyGoal: GoalProgress | null
-  loadDailyGoal: () => Promise<void>
 }
 
 const PomodoroContext = createContext<PomodoroContextValue | undefined>(undefined)
@@ -125,16 +124,9 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [focusMode, setFocusMode] = useState(persisted?.focusMode ?? false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
-  const dashboardQuery = useQuery({
-    queryKey: queryKeys.dashboard,
-    queryFn: fetchJson<Dashboard>("/dashboard"),
-    enabled: focusMode,
-  })
-  const dailyGoal: GoalProgress | null = dashboardQuery.data?.goals.find((g) => g.type === "DAILY") ?? null
-
-  function loadDailyGoal() {
-    return invalidateGoals()
-  }
+  useEffect(() => {
+    if (focusMode) void queryClient.prefetchQuery(dashboardQuery)
+  }, [focusMode])
 
   const categoriesQuery = useQuery({ queryKey: queryKeys.categories, queryFn: fetchJson<Category[]>("/categories") })
   const coursesQuery = useQuery({ queryKey: queryKeys.courses, queryFn: fetchJson<CourseSummary[]>("/courses") })
@@ -428,8 +420,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         setFocusMode,
         selectedModuleId,
         setSelectedModuleId,
-        dailyGoal,
-        loadDailyGoal,
       }}
     >
       {children}
