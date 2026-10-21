@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { CalendarIcon, Minus, Pencil, Plus, Timer, Trash2 } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { invalidateStudyStats } from "@/lib/queryClient"
@@ -8,7 +9,7 @@ import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { dayKey } from "@/lib/studyStats"
-import { cn } from "@/lib/utils"
+import { cn, fadeSwap } from "@/lib/utils"
 import type { Session } from "@/lib/types"
 import { BigDurationInput } from "@/components/BigDurationInput"
 import { CategoryPicker } from "@/components/CategoryPicker"
@@ -73,6 +74,7 @@ function groupByDay(sessions: Session[]) {
 export function SessionsPage() {
   const { sessionSavedAt, categories, courses, loadCategories } = usePomodoro()
   const { status: githubStatus } = useGitHub()
+  const reducedMotion = useReducedMotion()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
@@ -216,97 +218,99 @@ export function SessionsPage() {
       </div>
 
       <section className="rounded-2xl border p-5 sm:p-8">
-        {registerMode === "pomodoro" ? (
-          <PomodoroTimer />
-        ) : (
-          <form onSubmit={onSubmit} className="flex flex-col gap-8">
-            <div className="flex flex-col items-center gap-2 py-6">
-              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Tempo de foco</span>
-              <div className="flex items-center gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-10 rounded-full"
-                  aria-label="Diminuir 5 minutos"
-                  disabled={minutes <= 5}
-                  onClick={() => setMinutes((m) => Math.max(5, m - 5))}
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <div className="min-w-60">
-                  <BigDurationInput value={minutes} onChange={setMinutes} />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-10 rounded-full"
-                  aria-label="Aumentar 5 minutos"
-                  disabled={minutes >= 1440}
-                  onClick={() => setMinutes((m) => Math.min(1440, m + 5))}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
-              <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                {QUICK_MINUTES.map((value) => (
-                  <button
-                    key={value}
+        <motion.div key={registerMode} {...fadeSwap(reducedMotion)}>
+          {registerMode === "pomodoro" ? (
+            <PomodoroTimer />
+          ) : (
+            <form onSubmit={onSubmit} className="flex flex-col gap-8">
+              <div className="flex flex-col items-center gap-2 py-6">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Tempo de foco</span>
+                <div className="flex items-center gap-4">
+                  <Button
                     type="button"
-                    onClick={() => setMinutes(value)}
-                    className={cn(
-                      "h-7 rounded-full border px-3 text-xs transition-colors hover:bg-accent",
-                      minutes === value ? "border-foreground/40 bg-accent text-foreground" : "text-muted-foreground",
-                    )}
+                    variant="outline"
+                    size="icon"
+                    className="size-10 rounded-full"
+                    aria-label="Diminuir 5 minutos"
+                    disabled={minutes <= 5}
+                    onClick={() => setMinutes((m) => Math.max(5, m - 5))}
                   >
-                    {formatMinutes(value)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 border-t pt-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <CategoryPicker chip categories={categories} value={categoryId} onChange={setCategoryId} onRefresh={loadCategories} />
-                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                  <PopoverTrigger asChild>
+                    <Minus className="size-4" />
+                  </Button>
+                  <div className="min-w-60">
+                    <BigDurationInput value={minutes} onChange={setMinutes} />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-10 rounded-full"
+                    aria-label="Aumentar 5 minutos"
+                    disabled={minutes >= 1440}
+                    onClick={() => setMinutes((m) => Math.min(1440, m + 5))}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                  {QUICK_MINUTES.map((value) => (
                     <button
+                      key={value}
                       type="button"
-                      className="flex h-8 items-center gap-2 rounded-full border px-3 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent"
+                      onClick={() => setMinutes(value)}
+                      className={cn(
+                        "h-7 rounded-full border px-3 text-xs transition-colors hover:bg-accent",
+                        minutes === value ? "border-foreground/40 bg-accent text-foreground" : "text-muted-foreground",
+                      )}
                     >
-                      <CalendarIcon className="size-3.5 text-muted-foreground" />
-                      {dayLabel(dayKey(selectedDate))}
+                      {formatMinutes(value)}
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      disabled={{ after: new Date() }}
-                      onSelect={(date) => {
-                        if (!date) return
-                        setSelectedDate(date)
-                        setDatePickerOpen(false)
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Button type="submit" size="sm" className="ml-auto h-8 rounded-full px-4" disabled={saving}>
-                  {saving ? "Salvando..." : `Registrar ${formatMinutes(minutes)}`}
-                </Button>
+                  ))}
+                </div>
               </div>
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="O que você estudou? (opcional)"
-                aria-label="Nota"
-                className="min-h-20 resize-none"
-              />
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </div>
-          </form>
-        )}
+
+              <div className="flex flex-col gap-4 border-t pt-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CategoryPicker chip categories={categories} value={categoryId} onChange={setCategoryId} onRefresh={loadCategories} />
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-8 items-center gap-2 rounded-full border px-3 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent"
+                      >
+                        <CalendarIcon className="size-3.5 text-muted-foreground" />
+                        {dayLabel(dayKey(selectedDate))}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        disabled={{ after: new Date() }}
+                        onSelect={(date) => {
+                          if (!date) return
+                          setSelectedDate(date)
+                          setDatePickerOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Button type="submit" size="sm" className="ml-auto h-8 rounded-full px-4" disabled={saving}>
+                    {saving ? "Salvando..." : `Registrar ${formatMinutes(minutes)}`}
+                  </Button>
+                </div>
+                <Textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="O que você estudou? (opcional)"
+                  aria-label="Nota"
+                  className="min-h-20 resize-none"
+                />
+                {error && <p className="text-sm text-destructive">{error}</p>}
+              </div>
+            </form>
+          )}
+        </motion.div>
       </section>
 
       <section className="flex flex-col gap-6">

@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { ArrowLeft, Maximize2, Pause, Play, Plus, RotateCcw, Settings as SettingsIcon, SkipForward, Trash2 } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import { cn, fadeSwap } from "@/lib/utils"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { CoursePicker } from "@/components/CoursePicker"
 import { ModuleRow } from "@/components/ModuleRow"
@@ -45,6 +46,7 @@ export function PomodoroTimer() {
   const [view, setView] = useState<View>("timer")
   const [noteOpen, setNoteOpen] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const reducedMotion = useReducedMotion()
 
   const {
     settings,
@@ -79,7 +81,7 @@ export function PomodoroTimer() {
 
   if (view === "settings") {
     return (
-      <div className="flex flex-col gap-4">
+      <motion.div key="settings" {...fadeSwap(reducedMotion)} className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-medium">Configurações do pomodoro</h2>
           <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setView("timer")}>
@@ -88,7 +90,7 @@ export function PomodoroTimer() {
           </Button>
         </div>
         <PomodoroSettingsPanel settings={settings} onChange={setSettings} />
-      </div>
+      </motion.div>
     )
   }
 
@@ -105,7 +107,7 @@ export function PomodoroTimer() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <motion.div key="timer" {...fadeSwap(reducedMotion)} className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <span
@@ -243,6 +245,6 @@ export function PomodoroTimer() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </form>
-    </div>
+    </motion.div>
   )
 }

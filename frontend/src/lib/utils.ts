@@ -37,3 +37,11 @@ export const gridItem = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const } },
 }
+
+export function fadeSwap(reducedMotion: boolean | null) {
+  return {
+    initial: reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const },
+  }
+}

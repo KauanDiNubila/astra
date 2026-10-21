@@ -4,7 +4,7 @@ import type { KeyboardEvent } from "react"
 type Part = "hours" | "minutes"
 
 const INPUT =
-  "bg-transparent text-center text-6xl font-semibold tracking-[-0.045em] tabular-nums outline-none rounded-md transition-colors hover:bg-muted/40 focus:bg-muted/60"
+  "bg-transparent text-center text-6xl font-semibold tracking-[-0.045em] tabular-nums outline-none rounded-md caret-foreground transition-colors selection:bg-foreground/20 selection:text-foreground hover:bg-muted/40 focus:bg-muted/60"
 const UNIT = "text-2xl font-medium text-muted-foreground"
 
 export function BigDurationInput({
