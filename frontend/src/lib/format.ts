@@ -35,3 +35,16 @@ export function formatHours(minutes: number) {
   const rest = m % 60
   return `${h}h ${String(rest).padStart(2, "0")}min`
 }
+
+export function formatDaysAgo(iso: string): string {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const date = new Date(iso)
+  date.setHours(0, 0, 0, 0)
+  const days = Math.round((start.getTime() - date.getTime()) / 86400000)
+  if (days <= 0) return "hoje"
+  if (days === 1) return "ontem"
+  if (days < 14) return `há ${days} dias`
+  if (days < 60) return `há ${Math.floor(days / 7)} semanas`
+  return `em ${new Date(iso).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}`
+}

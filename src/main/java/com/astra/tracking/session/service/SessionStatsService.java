@@ -3,7 +3,9 @@ package com.astra.tracking.session.service;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.astra.tracking.session.dto.CategoryMinutes;
@@ -35,6 +37,17 @@ public class SessionStatsService {
         return sessionRepository.dailyMinutesSince(userId, start).stream()
                 .map(v -> new DailyMinutes(v.getDay(), v.getMinutes()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, OffsetDateTime> lastStudiedByCourse(UUID userId, Collection<UUID> courseIds) {
+        if (courseIds.isEmpty()) {
+            return Map.of();
+        }
+        return sessionRepository.lastStudiedByCourse(userId, courseIds).stream()
+                .collect(Collectors.toMap(
+                        SessionRepository.CourseLastStudiedView::getCourseId,
+                        SessionRepository.CourseLastStudiedView::getLastStudiedAt));
     }
 
     @Transactional(readOnly = true)

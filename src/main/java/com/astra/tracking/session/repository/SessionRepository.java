@@ -42,6 +42,21 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
             """)
     List<UserMinutes> rankingSinceForUsers(@Param("start") OffsetDateTime start, @Param("userIds") Collection<UUID> userIds);
 
+    @Query("""
+            select s.courseId as courseId, max(s.startedAt) as lastStudiedAt
+            from Session s
+            where s.userId = :userId and s.courseId in :courseIds
+            group by s.courseId
+            """)
+    List<CourseLastStudiedView> lastStudiedByCourse(@Param("userId") UUID userId,
+                                                    @Param("courseIds") Collection<UUID> courseIds);
+
+    interface CourseLastStudiedView {
+        UUID getCourseId();
+
+        OffsetDateTime getLastStudiedAt();
+    }
+
     @Query(value = """
             select (s.started_at at time zone 'America/Sao_Paulo')::date as day,
                    sum(s.focused_minutes) as minutes

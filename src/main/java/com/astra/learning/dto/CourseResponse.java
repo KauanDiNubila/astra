@@ -1,6 +1,7 @@
 package com.astra.learning.dto;
 
 import com.astra.learning.entity.CourseStatus;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record CourseResponse(
@@ -10,6 +11,7 @@ public record CourseResponse(
         CourseStatus status,
         double progress,
         long totalLessons,
-        long completedLessons
+        long completedLessons,
+        OffsetDateTime lastStudiedAt
 ) {
 }

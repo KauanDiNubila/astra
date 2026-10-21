@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import type { KeyboardEvent } from "react"
 import { BookOpen, Check, ChevronDown, Search } from "lucide-react"
+import { formatDaysAgo } from "@/lib/format"
 import type { CourseSummary } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -39,7 +40,10 @@ export function CoursePicker({
     const q = normalize(query.trim())
     const matches = courses.filter((c) => !q || normalize(`${c.title} ${c.platform ?? ""}`).includes(q))
     const rank = (c: CourseSummary) => (c.status === "IN_PROGRESS" ? 0 : 1)
-    const active = matches.filter((c) => !isDone(c)).sort((a, b) => rank(a) - rank(b) || b.progress - a.progress)
+    const studied = (c: CourseSummary) => (c.lastStudiedAt ? new Date(c.lastStudiedAt).getTime() : 0)
+    const active = matches
+      .filter((c) => !isDone(c))
+      .sort((a, b) => studied(b) - studied(a) || rank(a) - rank(b) || b.progress - a.progress)
     const done = matches.filter(isDone).sort((a, b) => a.title.localeCompare(b.title))
     return [
       { label: "Em andamento", items: active },
@@ -146,7 +150,13 @@ export function CoursePicker({
                   >
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate">{course.title}</span>
-                      {course.platform && <span className="truncate text-xs text-muted-foreground">{course.platform}</span>}
+                      {(course.platform || course.lastStudiedAt) && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {[course.platform, course.lastStudiedAt && `estudado ${formatDaysAgo(course.lastStudiedAt)}`]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      )}
                     </span>
                     <span className="flex w-20 shrink-0 flex-col items-end gap-1">
                       <span className="text-xs text-muted-foreground tabular-nums">

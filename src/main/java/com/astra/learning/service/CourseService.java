@@ -18,6 +18,8 @@ import com.astra.github.dto.GitHubRepositoryInsight;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
+import com.astra.tracking.session.service.SessionStatsService;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,17 +45,19 @@ public class CourseService {
     private final GitHubRepositoryRepository githubRepositoryRepository;
     private final CourseGithubRepoRepository courseGithubRepoRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final SessionStatsService sessionStatsService;
 
     public CourseService(CourseRepository courseRepository, CourseModuleRepository moduleRepository,
                          LessonRepository lessonRepository, GitHubRepositoryRepository githubRepositoryRepository,
                          CourseGithubRepoRepository courseGithubRepoRepository,
-                         CurrentUserProvider currentUserProvider) {
+                         CurrentUserProvider currentUserProvider, SessionStatsService sessionStatsService) {
         this.courseRepository = courseRepository;
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
         this.githubRepositoryRepository = githubRepositoryRepository;
         this.courseGithubRepoRepository = courseGithubRepoRepository;
         this.currentUserProvider = currentUserProvider;
+        this.sessionStatsService = sessionStatsService;
     }
 
     @Transactional
@@ -69,7 +73,7 @@ public class CourseService {
             }
             moduleRepository.saveAll(modules);
         }
-        return toSummary(saved, 0, 0);
+        return toSummary(saved, 0, 0, null);
     }
 
     @Transactional(readOnly = true)
@@ -99,10 +103,12 @@ public class CourseService {
             }
         }
 
+        Map<UUID, OffsetDateTime> lastStudied = sessionStatsService.lastStudiedByCourse(userId, courseIds);
+
         return courses.stream()
                 .map(c -> {
                     long[] counts = countsByCourse.getOrDefault(c.getId(), new long[2]);
-                    return toSummary(c, counts[0], counts[1]);
+                    return toSummary(c, counts[0], counts[1], lastStudied.get(c.getId()));
                 })
                 .toList();
     }
@@ -280,9 +286,9 @@ public class CourseService {
                 .orElseThrow(() -> new NotFoundException("Course not found"));
     }
 
-    private CourseResponse toSummary(Course course, long total, long completed) {
+    private CourseResponse toSummary(Course course, long total, long completed, OffsetDateTime lastStudiedAt) {
         return new CourseResponse(course.getId(), course.getTitle(), course.getPlatform(),
-                course.getStatus(), progress(total, completed), total, completed);
+                course.getStatus(), progress(total, completed), total, completed, lastStudiedAt);
     }
 
     private ModuleResponse toModuleResponse(CourseModule module, List<Lesson> lessons) {

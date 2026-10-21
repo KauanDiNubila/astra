@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { ArrowUpRight, BookOpen, Check, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { usePomodoro } from "@/context/PomodoroContext"
+import { formatDaysAgo } from "@/lib/format"
 import { cn, fadeSwap, gridItem, gridStagger } from "@/lib/utils"
 import type { CourseSummary } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
@@ -51,10 +52,13 @@ function CourseCard({ course }: { course: CourseSummary }) {
               Concluído
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-right text-xs text-muted-foreground tabular-nums">
               {course.totalLessons === 0
                 ? "Sem aulas ainda"
                 : `${course.completedLessons} de ${course.totalLessons} aulas · faltam ${remaining}`}
+              {course.lastStudiedAt && (
+                <span className="block">Estudado {formatDaysAgo(course.lastStudiedAt)}</span>
+              )}
             </span>
           )}
         </div>
@@ -91,9 +95,17 @@ export function CoursesPage() {
 
   const visible = useMemo(() => {
     const rank = (c: CourseSummary) => (isDone(c) ? 2 : c.status === "IN_PROGRESS" ? 0 : 1)
+    const studied = (c: CourseSummary) => (c.lastStudiedAt ? new Date(c.lastStudiedAt).getTime() : 0)
     return courses
       .filter((c) => filter === "all" || (filter === "done" ? isDone(c) : !isDone(c)))
-      .sort((a, b) => rank(a) - rank(b) || b.progress - a.progress || a.title.localeCompare(b.title))
+      .sort(
+        (a, b) =>
+          Number(isDone(a)) - Number(isDone(b)) ||
+          studied(b) - studied(a) ||
+          rank(a) - rank(b) ||
+          b.progress - a.progress ||
+          a.title.localeCompare(b.title),
+      )
   }, [courses, filter])
 
   if (!coursesLoaded) {

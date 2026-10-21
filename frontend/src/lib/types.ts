@@ -78,6 +78,7 @@ export type CourseSummary = {
   progress: number
   totalLessons: number
   completedLessons: number
+  lastStudiedAt?: string | null
 }
 
 export type LessonItem = {
