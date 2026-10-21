@@ -28,3 +28,7 @@ export function milestoneStates(steps: RoadmapStep[]): MilestoneState[] {
       return "todo"
     })
 }
+
+export function formatStructure(milestones: number, topics: number) {
+  return `${milestones} ${milestones === 1 ? "marco" : "marcos"} · ${topics} ${topics === 1 ? "tópico" : "tópicos"}`
+}

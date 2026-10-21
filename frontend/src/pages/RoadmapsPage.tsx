@@ -6,7 +6,7 @@ import { ArrowUpRight, Map as MapIcon, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
 import { fetchJson, invalidateRoadmaps, queryKeys } from "@/lib/queryClient"
-import { milestoneStates, roadmapProgress } from "@/lib/roadmapProgress"
+import { formatStructure, milestoneStates, roadmapProgress } from "@/lib/roadmapProgress"
 import { cn, gridItem, gridStagger } from "@/lib/utils"
 import type { Roadmap, RoadmapDetail } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
@@ -28,7 +28,7 @@ function RoadmapCard({ roadmap, detail }: { roadmap: Roadmap; detail: RoadmapDet
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {progress ? `${progress.milestones} marcos · ${progress.topics} tópicos` : (roadmap.source ?? "Roadmap")}
+            {progress ? formatStructure(progress.milestones, progress.topics) : (roadmap.source ?? "Roadmap")}
           </p>
           <h2 className="mt-1.5 line-clamp-2 font-semibold tracking-tight break-words">{roadmap.title}</h2>
         </div>

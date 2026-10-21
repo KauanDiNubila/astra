@@ -657,7 +657,7 @@ export function RoadmapDiagram(props: Props) {
   }
 
   return (
-    <div className="rounded-lg border bg-muted/20 p-3">
+    <div className="rounded-2xl border p-3 sm:p-4">
       <GraphView {...props} />
     </div>
   )
