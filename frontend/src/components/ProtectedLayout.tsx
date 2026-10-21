@@ -7,17 +7,14 @@ import { GitHubProvider } from "@/context/GitHubContext"
 import { LegalProvider } from "@/context/LegalContext"
 import { PomodoroProvider } from "@/context/PomodoroContext"
 import { AppLayout } from "@/components/AppLayout"
+import { AppLoading } from "@/components/AppLoading"
 import { TermsGate } from "@/components/TermsGate"
 
 export function ProtectedLayout() {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-app items-center justify-center text-muted-foreground">
-        Carregando...
-      </div>
-    )
+    return <AppLoading />
   }
 
   if (!user) {

@@ -1,6 +1,8 @@
+import { Suspense } from "react"
 import type { ReactNode } from "react"
 import { motion } from "motion/react"
-import { useLocation } from "react-router-dom"
+import { Sparkle } from "lucide-react"
+import { NavLink, useLocation } from "react-router-dom"
 import { useChat } from "@/context/ChatContext"
 import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
 import { pageTitleFor } from "@/lib/pageTitles"
@@ -13,8 +15,7 @@ import { IncomingCallDialog } from "@/components/IncomingCallDialog"
 import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { PomodoroMiniWidget } from "@/components/PomodoroMiniWidget"
-import { Separator } from "@/components/ui/separator"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 function getInitialSidebarOpen() {
@@ -40,9 +41,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <SidebarProvider defaultOpen={getInitialSidebarOpen()}>
         <AppSidebar />
         <SidebarInset>
-          <header className="flex h-14 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="max-sm:size-10" />
-            <Separator orientation="vertical" className="h-4" />
+          <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
+            <NavLink to="/dashboard" className="flex items-center gap-2 text-[15px] font-semibold">
+              <Sparkle className="size-4 fill-current" />
+              Astra
+            </NavLink>
             <div className="ml-auto">
               <NotificationsPopover />
             </div>
@@ -57,7 +60,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               isChatRoute ? "px-0 sm:px-6 sm:py-8" : "max-w-5xl px-4 py-6 max-md:pb-24 sm:px-6 sm:py-8",
             )}
           >
-            {children}
+            <Suspense fallback={null}>{children}</Suspense>
           </motion.div>
         </SidebarInset>
         <MobileBottomNav />

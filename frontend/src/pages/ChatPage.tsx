@@ -456,7 +456,7 @@ export function ChatPage() {
   return (
     <div
       className={cn(
-        "sm:h-[calc(100dvh-9rem-var(--titlebar-h))]",
+        "sm:h-[calc(100dvh-9rem-var(--titlebar-h))] md:h-[calc(100dvh-5.5rem-var(--titlebar-h))]",
         friendId || groupId
           ? "max-sm:h-[calc(100dvh-3.6rem)]"
           : "max-sm:h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))]",

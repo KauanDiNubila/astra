@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { AdminBadge } from "@/components/AdminBadge"
 import { EditProfileModal } from "@/components/EditProfileModal"
+import { NotificationsPopover } from "@/components/NotificationsPopover"
 import { SidebarFocus } from "@/components/SidebarFocus"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -29,6 +30,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
 
@@ -150,27 +152,32 @@ export function AppSidebar() {
   const totalUnread = totalDmUnread + totalGroupUnread
   const { pathname } = useLocation()
   const visibleGroups = navGroupsFor(user?.role)
+  const { isMobile } = useSidebar()
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild size="default" tooltip="Astra">
-              <NavLink to="/dashboard">
-                <Sparkle className="fill-current" />
-                <span className="text-base font-semibold">Astra</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+          <SidebarMenu className="min-w-0 flex-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild size="default" tooltip="Astra">
+                <NavLink to="/dashboard">
+                  <Sparkle className="fill-current" />
+                  <span className="text-base font-semibold">Astra</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          {!isMobile && <NotificationsPopover side="right" align="start" className="size-8" />}
+          {!isMobile && <SidebarTrigger className="text-muted-foreground" />}
+        </div>
         <SidebarFocus />
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Buscar (Ctrl K)" onClick={openCommandPalette} className="text-muted-foreground">
               <Search />
               <span>Buscar</span>
-              <kbd className="ml-auto rounded border border-sidebar-border px-1.5 font-sans text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+              <kbd className="ml-auto rounded border border-sidebar-border px-1.5 font-sans text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden max-md:hidden">
                 Ctrl K
               </kbd>
             </SidebarMenuButton>

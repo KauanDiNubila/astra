@@ -5,12 +5,21 @@ import { toast } from "sonner"
 import { AdminBadge } from "@/components/AdminBadge"
 import { useFriends } from "@/context/FriendsContext"
 import { formatRelativeTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const REFRESH_COOLDOWN_MS = 15_000
 
-export function NotificationsPopover() {
+export function NotificationsPopover({
+  side = "bottom",
+  align = "end",
+  className,
+}: {
+  side?: "top" | "right" | "bottom" | "left"
+  align?: "start" | "center" | "end"
+  className?: string
+}) {
   const { incomingRequests: requests, refresh, acceptRequest, removeFriendship } = useFriends()
   const lastRefreshRef = useRef(0)
 
@@ -44,7 +53,7 @@ export function NotificationsPopover() {
   return (
     <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
+        <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label="Notificações">
           <Bell className="size-4.5" />
           {requests.length > 0 && (
             <span className="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
@@ -53,7 +62,7 @@ export function NotificationsPopover() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 gap-0 p-0">
+      <PopoverContent side={side} align={align} className="w-80 gap-0 p-0">
         <div className="flex items-center gap-3 border-b border-border p-3.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <Bell className="size-4" />

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react"
 import { Outlet, Route, Routes } from "react-router-dom"
+import { AppLoading } from "@/components/AppLoading"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -33,19 +34,13 @@ const PrivacyPage = lazy(() => import("@/pages/PrivacyPage").then((m) => ({ defa
 const TermsPage = lazy(() => import("@/pages/TermsPage").then((m) => ({ default: m.TermsPage })))
 const SessionsPage = lazy(() => import("@/pages/SessionsPage").then((m) => ({ default: m.SessionsPage })))
 
-function RouteFallback() {
-  return (
-    <div className="flex min-h-app items-center justify-center text-muted-foreground">Carregando...</div>
-  )
-}
-
 function App() {
   return (
     <>
       <ScrollToTop />
       <DesktopTitleBar />
       <OverlayScrollbar />
-      <Suspense fallback={<RouteFallback />}>
+      <Suspense fallback={<AppLoading />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route
