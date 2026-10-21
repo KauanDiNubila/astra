@@ -6,6 +6,7 @@ public record RoadmapResponse(
         UUID id,
         String title,
         String source,
-        boolean predefined
+        boolean predefined,
+        RoadmapProgress progress
 ) {
 }

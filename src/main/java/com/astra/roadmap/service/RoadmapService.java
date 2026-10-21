@@ -22,6 +22,7 @@ import com.astra.roadmap.entity.RoadmapStep;
 import com.astra.roadmap.entity.RoadmapStepCompletion;
 import com.astra.roadmap.entity.RoadmapStepResource;
 import com.astra.roadmap.entity.StepStatus;
+import com.astra.roadmap.dto.RoadmapProgress;
 import com.astra.roadmap.repository.RoadmapRepository;
 import com.astra.roadmap.repository.RoadmapStepCompletionRepository;
 import com.astra.roadmap.repository.RoadmapStepRepository;
@@ -51,14 +52,28 @@ public class RoadmapService {
     public RoadmapResponse create(CreateRoadmapRequest request) {
         UUID userId = currentUserProvider.currentUserId();
         Roadmap roadmap = new Roadmap(userId, request.title(), request.source());
-        return toSummary(roadmapRepository.save(roadmap));
+        return toSummary(roadmapRepository.save(roadmap), RoadmapProgress.EMPTY);
     }
 
     @Transactional(readOnly = true)
     public List<RoadmapResponse> list() {
         UUID userId = currentUserProvider.currentUserId();
-        return roadmapRepository.findByOwnerIdIsNullOrOwnerId(userId).stream()
-                .map(this::toSummary)
+        List<Roadmap> roadmaps = roadmapRepository.findByOwnerIdIsNullOrOwnerId(userId);
+        if (roadmaps.isEmpty()) {
+            return List.of();
+        }
+        List<RoadmapStep> steps = stepRepository.findByRoadmapIdInOrderByPosition(
+                roadmaps.stream().map(Roadmap::getId).toList());
+        List<UUID> stepIds = steps.stream().map(RoadmapStep::getId).toList();
+        Map<UUID, StepStatus> statusByStep = stepIds.isEmpty()
+                ? Map.of()
+                : completionRepository.findStatusesForUser(userId, stepIds).stream()
+                        .collect(Collectors.toMap(RoadmapStepCompletion::getStepId, RoadmapStepCompletion::getStatus));
+        Map<UUID, List<RoadmapStep>> stepsByRoadmap = steps.stream()
+                .collect(Collectors.groupingBy(step -> step.getRoadmap().getId()));
+        return roadmaps.stream()
+                .map(roadmap -> toSummary(roadmap,
+                        progress(stepsByRoadmap.getOrDefault(roadmap.getId(), List.of()), statusByStep)))
                 .toList();
     }
 
@@ -140,9 +155,43 @@ public class RoadmapService {
                 .orElseThrow(() -> new NotFoundException("Roadmap not found"));
     }
 
-    private RoadmapResponse toSummary(Roadmap roadmap) {
+    private RoadmapResponse toSummary(Roadmap roadmap, RoadmapProgress progress) {
         return new RoadmapResponse(roadmap.getId(), roadmap.getTitle(), roadmap.getSource(),
-                roadmap.getOwnerId() == null);
+                roadmap.getOwnerId() == null, progress);
+    }
+
+    private RoadmapProgress progress(List<RoadmapStep> steps, Map<UUID, StepStatus> statusByStep) {
+        List<RoadmapStep> mains = steps.stream()
+                .filter(step -> step.getParentStepId() == null)
+                .sorted(Comparator.comparingInt(RoadmapStep::getPosition))
+                .toList();
+        List<StepStatus> statuses = steps.stream().map(step -> statusByStep.get(step.getId())).toList();
+        int total = (int) statuses.stream().filter(status -> status != StepStatus.SKIPPED).count();
+        int done = (int) statuses.stream().filter(status -> status == StepStatus.DONE).count();
+        boolean started = statuses.stream().anyMatch(status -> status == StepStatus.DONE || status == StepStatus.LEARNING);
+        List<RoadmapProgress.MilestoneState> states = mains.stream()
+                .map(main -> milestoneState(main, steps, statusByStep))
+                .toList();
+        return new RoadmapProgress(mains.size(), steps.size() - mains.size(), done, total, started, states);
+    }
+
+    private RoadmapProgress.MilestoneState milestoneState(RoadmapStep main, List<RoadmapStep> steps,
+                                                         Map<UUID, StepStatus> statusByStep) {
+        List<StepStatus> children = steps.stream()
+                .filter(step -> main.getId().equals(step.getParentStepId()))
+                .map(step -> statusByStep.get(step.getId()))
+                .filter(status -> status != StepStatus.SKIPPED)
+                .toList();
+        StepStatus own = statusByStep.get(main.getId());
+        boolean allChildrenDone = !children.isEmpty() && children.stream().allMatch(status -> status == StepStatus.DONE);
+        if (own == StepStatus.DONE || allChildrenDone) {
+            return RoadmapProgress.MilestoneState.DONE;
+        }
+        boolean anyProgress = children.stream().anyMatch(status -> status == StepStatus.DONE || status == StepStatus.LEARNING);
+        if (own == StepStatus.LEARNING || anyProgress) {
+            return RoadmapProgress.MilestoneState.ACTIVE;
+        }
+        return RoadmapProgress.MilestoneState.TODO;
     }
 
     private StepResponse toStepResponse(RoadmapStep step, StepStatus status, List<ResourceResponse> resources) {

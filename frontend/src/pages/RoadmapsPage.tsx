@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react"
 import type { FormEvent, ReactNode } from "react"
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { motion, useReducedMotion } from "motion/react"
 import { ArrowUpRight, Map as MapIcon, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
 import { fetchJson, invalidateRoadmaps, queryKeys } from "@/lib/queryClient"
-import { formatStructure, milestoneStates, roadmapProgress } from "@/lib/roadmapProgress"
+import { formatStructure } from "@/lib/roadmapProgress"
 import { cn, gridItem, gridStagger } from "@/lib/utils"
-import type { Roadmap, RoadmapDetail } from "@/lib/types"
+import type { Roadmap } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
 import { FormModal } from "@/components/FormModal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-function RoadmapCard({ roadmap, detail }: { roadmap: Roadmap; detail: RoadmapDetail | undefined }) {
+function RoadmapCard({ roadmap }: { roadmap: Roadmap }) {
   const reducedMotion = useReducedMotion()
-  const progress = detail ? roadmapProgress(detail.steps) : null
-  const states = detail ? milestoneStates(detail.steps) : []
+  const progress = roadmap.progress
+    ? { ...roadmap.progress, pct: roadmap.progress.total > 0 ? Math.round((roadmap.progress.done / roadmap.progress.total) * 100) : 0 }
+    : null
+  const states = roadmap.progress?.milestoneStates ?? []
 
   return (
     <Link
@@ -42,13 +44,13 @@ function RoadmapCard({ roadmap, detail }: { roadmap: Roadmap; detail: RoadmapDet
               <span
                 className={cn(
                   "size-2.5 shrink-0 rounded-full border-2 transition-colors",
-                  state === "done" && "border-emerald-500 bg-emerald-500",
-                  state === "active" && "border-amber-400 bg-amber-400",
-                  state === "todo" && "border-muted-foreground/30",
+                  state === "DONE" && "border-emerald-500 bg-emerald-500",
+                  state === "ACTIVE" && "border-amber-400 bg-amber-400",
+                  state === "TODO" && "border-muted-foreground/30",
                 )}
               />
               {i < states.length - 1 && (
-                <span className={cn("h-px flex-1", state === "done" ? "bg-emerald-500/60" : "bg-border")} />
+                <span className={cn("h-px flex-1", state === "DONE" ? "bg-emerald-500/60" : "bg-border")} />
               )}
             </div>
           ))}
@@ -60,7 +62,7 @@ function RoadmapCard({ roadmap, detail }: { roadmap: Roadmap; detail: RoadmapDet
           </span>
           <span className="text-xs text-muted-foreground tabular-nums">
             {!progress
-              ? "Carregando…"
+              ? "—"
               : progress.total === 0
                 ? "Sem etapas ainda"
                 : progress.started
@@ -150,35 +152,22 @@ export function RoadmapsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const roadmapsQuery = useQuery({ queryKey: queryKeys.roadmaps, queryFn: fetchJson<Roadmap[]>("/roadmaps") })
   const roadmaps = roadmapsQuery.data ?? []
-  const details = useQueries({
-    queries: roadmaps.map((roadmap) => ({
-      queryKey: queryKeys.roadmap(roadmap.id),
-      queryFn: fetchJson<RoadmapDetail>(`/roadmaps/${roadmap.id}`),
-    })),
-  })
-  const detailById = new Map(roadmaps.map((roadmap, i) => [roadmap.id, details[i]?.data]))
 
   if (roadmapsQuery.isPending) {
     return <CardGridSkeleton />
   }
 
-  const pctOf = (r: Roadmap) => {
-    const detail = detailById.get(r.id)
-    return detail ? roadmapProgress(detail.steps).pct : 0
-  }
+  const pctOf = (r: Roadmap) => (r.progress && r.progress.total > 0 ? r.progress.done / r.progress.total : 0)
   const byProgress = (a: Roadmap, b: Roadmap) => pctOf(b) - pctOf(a)
   const own = roadmaps.filter((r) => !r.predefined).sort(byProgress)
   const predefined = roadmaps.filter((r) => r.predefined).sort(byProgress)
-  const inProgress = roadmaps.filter((r) => {
-    const detail = detailById.get(r.id)
-    return detail ? roadmapProgress(detail.steps).started : false
-  }).length
+  const inProgress = roadmaps.filter((r) => r.progress?.started).length
 
   const grid = (items: Roadmap[]) => (
     <motion.div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" variants={gridStagger} initial="hidden" animate="show">
       {items.map((roadmap) => (
         <motion.div key={roadmap.id} variants={gridItem}>
-          <RoadmapCard roadmap={roadmap} detail={detailById.get(roadmap.id)} />
+          <RoadmapCard roadmap={roadmap} />
         </motion.div>
       ))}
     </motion.div>

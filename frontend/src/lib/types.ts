@@ -107,11 +107,21 @@ export type Goal = {
   targetHours: number
 }
 
+export type RoadmapProgress = {
+  milestones: number
+  topics: number
+  done: number
+  total: number
+  started: boolean
+  milestoneStates: ("DONE" | "ACTIVE" | "TODO")[]
+}
+
 export type Roadmap = {
   id: string
   title: string
   source: string | null
   predefined: boolean
+  progress?: RoadmapProgress
 }
 
 export type StepStatus = "LEARNING" | "DONE" | "SKIPPED"

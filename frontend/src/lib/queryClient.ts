@@ -24,7 +24,6 @@ export const queryKeys = {
   ranking: (period: string, scope: string) => ["ranking", period, scope] as const,
   rankingAll: ["ranking"] as const,
   roadmaps: ["roadmaps"] as const,
-  roadmap: (id: string) => ["roadmaps", id] as const,
   courses: ["courses"] as const,
   course: (id: string) => ["courses", id] as const,
   categories: ["categories"] as const,
