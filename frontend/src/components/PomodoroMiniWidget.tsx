@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
 
 function formatClock(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0")
@@ -16,8 +17,9 @@ export function PomodoroMiniWidget() {
   const navigate = useNavigate()
   const reducedMotion = useReducedMotion()
   const { running, focusedSeconds, timeLeft, handlePrimaryClick } = usePomodoro()
+  const { state, isMobile } = useSidebar()
 
-  const visible = (running || focusedSeconds > 0) && pathname !== "/sessions"
+  const visible = (running || focusedSeconds > 0) && pathname !== "/sessions" && (isMobile || state === "collapsed")
 
   // Timer manual em vez de AnimatePresence.exit: essa versão do motion trava
   // sem desmontar quando `visible` alterna rápido (ex.: navegação entre

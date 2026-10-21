@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { AdminBadge } from "@/components/AdminBadge"
 import { EditProfileModal } from "@/components/EditProfileModal"
+import { SidebarFocus } from "@/components/SidebarFocus"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
@@ -214,6 +215,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarFocus />
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {visibleGroups.map((group) => (

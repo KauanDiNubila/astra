@@ -60,9 +60,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </motion.div>
         </SidebarInset>
         <MobileBottomNav />
+        <PomodoroMiniWidget />
       </SidebarProvider>
       <GlobalPomodoroFocus />
-      <PomodoroMiniWidget />
       <CallOverlay />
       <IncomingCallDialog />
     </TooltipProvider>
