@@ -120,8 +120,33 @@ function ProgressDot({
 export function CourseProgressPath({ items, onSetProgress, onDelete, saving }: Props) {
   const sorted = [...items].sort((a, b) => a.position - b.position)
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [hover, setHover] = useState<{ id: string; left: number; top: number; touch: boolean } | null>(null)
+  const [edges, setEdges] = useState({ left: false, right: false })
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      setEdges({
+        left: el.scrollLeft > 1,
+        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+      })
+    }
+    const firstPending = sorted.findIndex((item) => !item.completed)
+    const target = PADDING + Math.max(0, firstPending === -1 ? sorted.length - 1 : firstPending) * SPACING_X
+    el.scrollLeft = Math.max(0, target - el.clientWidth / 2)
+    update()
+    el.addEventListener("scroll", update, { passive: true })
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener("scroll", update)
+      observer.disconnect()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted.length])
 
   useEffect(() => () => {
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current)
@@ -209,8 +234,14 @@ export function CourseProgressPath({ items, onSetProgress, onDelete, saving }: P
   return (
     // Não clipa (overflow visible por padrão) — o selo de excluir flutua
     // aqui por cima do container de scroll, sem precisar aumentar sua altura.
-    <div ref={containerRef} className="relative">
-      <div className={cn("overflow-x-auto", SCROLLBAR_HIDE_CLASS)}>
+    <div ref={containerRef} className="relative min-w-0">
+      <div
+        ref={scrollRef}
+        className={cn("overflow-x-auto", SCROLLBAR_HIDE_CLASS)}
+        style={{
+          maskImage: `linear-gradient(to right, ${edges.left ? "transparent" : "black"}, black 32px, black calc(100% - 32px), ${edges.right ? "transparent" : "black"})`,
+        }}
+      >
         <div className="relative" style={{ width, height }}>
           <svg
             className="absolute inset-0"
