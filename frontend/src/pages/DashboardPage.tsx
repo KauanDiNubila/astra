@@ -156,7 +156,7 @@ export function DashboardPage() {
             />
           }
         >
-          <CategoryBreakdown key={categoryPeriod} data={categoryData} />
+          <CategoryBreakdown data={categoryData} />
         </Panel>
       </div>
 

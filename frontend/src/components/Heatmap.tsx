@@ -80,7 +80,7 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
   return (
     <div className="flex flex-col gap-3">
       <div ref={scrollRef} className="overflow-x-auto">
-        <div className="flex min-w-[640px] flex-col gap-1.5">
+        <div className="flex min-w-[640px] flex-col gap-1.5 p-0.5">
           <div className="grid text-[10px] text-muted-foreground" style={columns}>
             {months.map((m) => (
               <span key={m.index} style={{ gridColumnStart: m.index + 1, gridRowStart: 1 }} className="col-span-3 whitespace-nowrap">
@@ -103,7 +103,6 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
                             "aspect-square w-full animate-in fade-in zoom-in-50 duration-300 motion-reduce:animate-none",
                             levelClass(cell.minutes),
                             cell.githubActivity > 0 ? "rounded-full" : "rounded-[3px]",
-                            cell.key === todayKey && "ring-1 ring-foreground/60 ring-offset-1 ring-offset-background",
                           )}
                         />
                       </TooltipTrigger>
