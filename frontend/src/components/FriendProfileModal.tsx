@@ -10,6 +10,7 @@ import { fetchGithubProfile } from "@/lib/githubProfile"
 import type { GithubProfileSummary } from "@/lib/githubProfile"
 import type { ConversationSummary } from "@/lib/types"
 import { UserAvatar } from "@/components/UserAvatar"
+import { useFriends } from "@/context/FriendsContext"
 import { cn } from "@/lib/utils"
 
 function GithubStat({ value, label, plain }: { value?: number; label: string; plain?: boolean }) {
@@ -35,6 +36,11 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
   const [copied, setCopied] = useState(false)
   const [githubProfile, setGithubProfile] = useState<GithubProfileSummary | null>(null)
   const githubLogin = friend?.friendGithubLogin ?? null
+  const { friends } = useFriends()
+  const friendship = friends.find((f) => f.friendUserId === friend?.friendUserId)
+  const friendsSince = friendship
+    ? new Date(friendship.createdAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })
+    : null
 
   useEffect(() => {
     setGithubProfile(null)
@@ -103,62 +109,66 @@ export function FriendProfileModal({ friend, open, onClose }: Props) {
           transition={{ type: "spring", damping: 22, stiffness: 320, mass: 0.8 }}
           className="pointer-events-auto w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-lg"
         >
-          <div className="flex items-center justify-between px-6 py-4">
-            <h2 className="text-lg font-semibold text-popover-foreground">Perfil</h2>
+          <div className="relative h-24 bg-muted">
             <button
               type="button"
               title="Fechar"
+              aria-label="Fechar"
               onClick={onClose}
-              className="p-1 text-muted-foreground transition-colors hover:text-foreground"
+              className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full bg-popover/60 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
             >
-              <X size={20} />
+              <X size={16} />
             </button>
           </div>
 
           <div className="px-6 pb-6">
-          <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/30 px-6 py-8">
-            <UserAvatar userId={friend.friendUserId} name={friend.friendName} size="xl" />
-            {friend.friendGithubLogin ? (
-              <a
-                href={`https://github.com/${friend.friendGithubLogin}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`Abrir @${friend.friendGithubLogin} no GitHub`}
-                className="group mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground transition-colors hover:text-muted-foreground"
-              >
-                {friend.friendName}
-                {friend.friendAdmin && <AdminBadge />}
-                <GitHubIcon className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-              </a>
-            ) : (
-              <h3 className="mt-1 flex items-center justify-center gap-1.5 text-center text-2xl font-bold text-foreground">
-                {friend.friendName}
-                {friend.friendAdmin && <AdminBadge />}
-              </h3>
-            )}
-            {friend.friendBio && (
-              <p className="mt-1 text-center text-sm text-muted-foreground">{friend.friendBio}</p>
-            )}
-            <button
-              type="button"
-              onClick={copyHandle}
-              title="Copiar identificador"
-              className="mt-3 group flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-mono text-xs text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-            >
-              <span>
-                {friend.friendName}#{friend.friendTag}
-              </span>
-              {copied ? (
-                <Check size={12} className="shrink-0" />
-              ) : (
-                <Copy size={12} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-              )}
-            </button>
+            <div className="-mt-10">
+              <UserAvatar
+                userId={friend.friendUserId}
+                name={friend.friendName}
+                size="xl"
+                className="ring-4 ring-popover data-[size=xl]:size-20 [&_[data-slot=avatar-fallback]]:text-2xl"
+              />
+            </div>
+            <h2 className="mt-3 flex items-center gap-1.5 text-xl font-semibold tracking-tight text-popover-foreground">
+              {friend.friendName}
+              {friend.friendAdmin && <AdminBadge />}
+            </h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">{friend.friendBio || "Sem bio por enquanto."}</p>
 
-          </div>
+            <div className="mt-5 flex flex-col divide-y divide-border/60 rounded-xl border">
+              <button
+                type="button"
+                onClick={copyHandle}
+                title="Copiar identificador"
+                className="group flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30"
+              >
+                <span className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Identificador</span>
+                  <span className="text-sm font-medium tabular-nums">
+                    {friend.friendName}#{friend.friendTag}
+                  </span>
+                </span>
+                <span className="relative size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground">
+                  <Copy className={cn("absolute inset-0 size-4 transition-all duration-200", copied && "scale-50 opacity-0")} />
+                  <Check
+                    className={cn(
+                      "absolute inset-0 size-4 text-emerald-500 transition-all duration-200",
+                      copied ? "scale-100 opacity-100" : "scale-50 opacity-0",
+                    )}
+                  />
+                </span>
+              </button>
+              {friendsSince && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
+                  <span className="text-xs text-muted-foreground">Amigos desde</span>
+                  <span className="text-sm">{friendsSince}</span>
+                </div>
+              )}
+            </div>
 
           {friend.friendGithubLogin && (
-            <div className="mt-4">
+            <div className="mt-3">
               <a
                 href={`https://github.com/${friend.friendGithubLogin}`}
                 target="_blank"
