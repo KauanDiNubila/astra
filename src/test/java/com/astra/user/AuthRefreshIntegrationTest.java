@@ -54,6 +54,21 @@ class AuthRefreshIntegrationTest {
     }
 
     @Test
+    void outroSiteNaoConsegueUsarOCookieParaRenovarOuDeslogar() throws Exception {
+        Cookie original = registerAndLogin().getResponse().getCookie("astra_refresh_token");
+
+        mockMvc.perform(post("/auth/refresh").cookie(original).header("Origin", "https://evil.example"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/auth/logout").cookie(original).header("Origin", "https://evil.example"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/auth/logout").cookie(original).header("Origin", "null"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/auth/refresh").cookie(original).header("Origin", "http://localhost:5173"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void tokenInexistenteRetorna401() throws Exception {
         mockMvc.perform(post("/auth/refresh").cookie(new Cookie("astra_refresh_token", "inexistente")))
                 .andExpect(status().isUnauthorized());
