@@ -49,9 +49,13 @@ public class StatsService {
         long weekMinutes = sumMinutesSince(dailyMinutes, weekStart);
         long totalMinutes = sessionStatsService.totalFocusedMinutes(userId);
         int streak = currentStreak(dailyMinutes, today);
+        long previousWeekMinutes = sumMinutesBetween(dailyMinutes, weekStart.minusWeeks(1), today.minusWeeks(1));
+        long last30DaysMinutes = sumMinutesSince(dailyMinutes, today.minusDays(29));
+        int longestStreak = longestStreak(dailyMinutes);
         List<GoalProgress> goals = goalProgress(userId, todayMinutes, weekMinutes);
 
-        return new DashboardResponse(todayMinutes, weekMinutes, totalMinutes, streak, goals);
+        return new DashboardResponse(todayMinutes, weekMinutes, totalMinutes, streak, previousWeekMinutes,
+                last30DaysMinutes, longestStreak, goals);
     }
 
     private long minutesForDay(List<DailyMinutes> days, LocalDate day) {
@@ -65,6 +69,13 @@ public class StatsService {
     private long sumMinutesSince(List<DailyMinutes> days, LocalDate start) {
         return days.stream()
                 .filter(d -> !d.day().isBefore(start))
+                .mapToLong(DailyMinutes::minutes)
+                .sum();
+    }
+
+    private long sumMinutesBetween(List<DailyMinutes> days, LocalDate start, LocalDate end) {
+        return days.stream()
+                .filter(d -> !d.day().isBefore(start) && !d.day().isAfter(end))
                 .mapToLong(DailyMinutes::minutes)
                 .sum();
     }
@@ -92,6 +103,24 @@ public class StatsService {
                     return new GoalProgress(g.type(), g.targetHours(), achievedHours, reached);
                 })
                 .toList();
+    }
+
+    private int longestStreak(List<DailyMinutes> days) {
+        List<LocalDate> active = days.stream()
+                .filter(d -> d.minutes() > 0)
+                .map(DailyMinutes::day)
+                .distinct()
+                .sorted()
+                .toList();
+        int best = 0;
+        int current = 0;
+        LocalDate previous = null;
+        for (LocalDate day : active) {
+            current = previous != null && previous.plusDays(1).equals(day) ? current + 1 : 1;
+            best = Math.max(best, current);
+            previous = day;
+        }
+        return best;
     }
 
     private int currentStreak(List<DailyMinutes> days, LocalDate today) {

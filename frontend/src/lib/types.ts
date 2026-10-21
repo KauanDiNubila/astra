@@ -35,6 +35,9 @@ export type Dashboard = {
   weekMinutes: number
   totalMinutes: number
   currentStreak: number
+  previousWeekMinutes: number
+  last30DaysMinutes: number
+  longestStreak: number
   goals: GoalProgress[]
 }
 

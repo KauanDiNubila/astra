@@ -5,7 +5,7 @@ import { fetchJson, invalidateGoals, queryKeys } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
-import { averagePerDay, dayKey, longestStreak, previousWeekSoFar } from "@/lib/studyStats"
+import { dayKey } from "@/lib/studyStats"
 import type { Dashboard, DailyMinutes, CategoryMinutes, GitHubDailyPoint } from "@/lib/types"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { GitHubActivityCard } from "@/components/GitHubActivityCard"
@@ -86,15 +86,6 @@ export function DashboardPage() {
     }))
   }, [categoryMinutes, categories])
 
-  const derived = useMemo(
-    () => ({
-      previousWeek: previousWeekSoFar(heatmap),
-      dailyAverage: averagePerDay(heatmap, 30),
-      bestStreak: longestStreak(heatmap),
-    }),
-    [heatmap],
-  )
-
   const trendTotal = trendData.reduce((sum, d) => sum + d.minutes, 0)
   const categoryTotal = categoryData.reduce((sum, c) => sum + c.minutes, 0)
 
@@ -116,11 +107,11 @@ export function DashboardPage() {
       <div className="mt-4">
         <StatStrip
           weekMinutes={data.weekMinutes}
-          previousWeekMinutes={derived.previousWeek}
+          previousWeekMinutes={data.previousWeekMinutes}
           totalMinutes={data.totalMinutes}
-          dailyAverage={derived.dailyAverage}
+          dailyAverage={Math.round(data.last30DaysMinutes / 30)}
           streak={data.currentStreak}
-          bestStreak={derived.bestStreak}
+          bestStreak={data.longestStreak}
         />
       </div>
 

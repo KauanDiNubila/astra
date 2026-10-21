@@ -7,6 +7,9 @@ public record DashboardResponse(
         long weekMinutes,
         long totalMinutes,
         int currentStreak,
+        long previousWeekMinutes,
+        long last30DaysMinutes,
+        int longestStreak,
         List<GoalProgress> goals
 ) {
 }
