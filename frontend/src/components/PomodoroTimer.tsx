@@ -1,12 +1,11 @@
 import { useState } from "react"
 import { ArrowLeft, BookOpen, Maximize2, Pause, Play, Plus, RotateCcw, Settings as SettingsIcon, SkipForward, X } from "lucide-react"
-import { motion, useReducedMotion } from "motion/react"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { CategoryPicker } from "@/components/CategoryPicker"
-import { FlipDigits } from "@/components/FlipDigits"
 import { ModuleRow } from "@/components/ModuleRow"
+import { PomodoroDisplay } from "@/components/PomodoroDisplay"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,43 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type View = "timer" | "settings"
 
-function formatClock(totalSeconds: number) {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0")
-  const s = Math.floor(totalSeconds % 60).toString().padStart(2, "0")
-  return `${m}:${s}`
-}
-
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground" title={label} aria-label={label} onClick={onClick}>
       {children}
     </Button>
-  )
-}
-
-function FocusRing({ progress, isBreak, children }: { progress: number; isBreak: boolean; children: React.ReactNode }) {
-  const reducedMotion = useReducedMotion()
-  return (
-    <div className="relative flex size-64 items-center justify-center sm:size-72">
-      <svg viewBox="0 0 200 200" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
-        <circle cx="100" cy="100" r="92" fill="none" strokeWidth="5" className="stroke-muted" />
-        <motion.circle
-          cx="100"
-          cy="100"
-          r="92"
-          fill="none"
-          strokeWidth="5"
-          strokeLinecap="round"
-          pathLength={1}
-          strokeDasharray="1 1"
-          className={cn("transition-colors duration-500", isBreak ? "stroke-amber-400" : "stroke-emerald-500")}
-          initial={false}
-          animate={{ strokeDashoffset: 1 - progress, opacity: progress > 0 ? 1 : 0 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 1, ease: "linear" }}
-        />
-      </svg>
-      <div className="relative flex flex-col items-center">{children}</div>
-    </div>
   )
 }
 
@@ -105,7 +72,6 @@ export function PomodoroTimer() {
   }
 
   const isBreak = mode === "break"
-  const progress = totalSeconds > 0 ? 1 - timeLeft / totalSeconds : 0
   const cycleLength = settings.pomodorosUntilLongBreak
   const cycle = isBreak ? Math.max(1, completedPomodoros % cycleLength || cycleLength) : (completedPomodoros % cycleLength) + 1
   const phase = isBreak ? (isLongBreak ? "Pausa longa" : "Pausa") : "Foco"
@@ -144,22 +110,24 @@ export function PomodoroTimer() {
       </div>
 
       <div className="flex flex-col items-center gap-8">
-        <FocusRing progress={progress} isBreak={isBreak}>
-          <FlipDigits
-            value={formatClock(timeLeft)}
-            className="font-semibold tracking-[-0.04em] tabular-nums"
-            style={{ fontSize: "3.75rem" }}
+        <div className="py-6">
+          <PomodoroDisplay
+            size={320}
+            mode={mode}
+            isLongBreak={isLongBreak}
+            timeLeft={timeLeft}
+            totalSeconds={totalSeconds}
+            caption={
+              focusedMinutes > 0
+                ? `${formatMinutes(focusedMinutes)} focados`
+                : started
+                  ? isBreak
+                    ? "Descansando"
+                    : "Em foco"
+                  : "Pronto para começar"
+            }
           />
-          <span className="mt-1 text-sm text-muted-foreground tabular-nums">
-            {focusedMinutes > 0
-              ? `${formatMinutes(focusedMinutes)} focados`
-              : started
-                ? isBreak
-                  ? "Descansando"
-                  : "Em foco"
-                : "Pronto para começar"}
-          </span>
-        </FocusRing>
+        </div>
 
         <div className="flex items-center gap-2">
           <Button type="button" size="lg" className="h-11 min-w-36 rounded-full px-6 text-[15px]" onClick={handlePrimaryClick}>

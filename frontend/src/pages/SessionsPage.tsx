@@ -10,6 +10,7 @@ import { formatMinutes } from "@/lib/format"
 import { dayKey } from "@/lib/studyStats"
 import { cn } from "@/lib/utils"
 import type { Session } from "@/lib/types"
+import { BigDurationInput } from "@/components/BigDurationInput"
 import { CategoryPicker } from "@/components/CategoryPicker"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
@@ -233,7 +234,9 @@ export function SessionsPage() {
                 >
                   <Minus className="size-4" />
                 </Button>
-                <p className="min-w-52 text-center text-6xl font-semibold tracking-[-0.045em]">{formatMinutes(minutes)}</p>
+                <div className="min-w-60">
+                  <BigDurationInput value={minutes} onChange={setMinutes} />
+                </div>
                 <Button
                   type="button"
                   variant="outline"
