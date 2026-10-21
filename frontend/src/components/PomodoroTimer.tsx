@@ -1,15 +1,15 @@
 import { useState } from "react"
-import { ArrowLeft, BookOpen, Maximize2, Pause, Play, Plus, RotateCcw, Settings as SettingsIcon, SkipForward, X } from "lucide-react"
+import { ArrowLeft, Maximize2, Pause, Play, Plus, RotateCcw, Settings as SettingsIcon, SkipForward, X } from "lucide-react"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { CategoryPicker } from "@/components/CategoryPicker"
+import { CoursePicker } from "@/components/CoursePicker"
 import { ModuleRow } from "@/components/ModuleRow"
 import { PomodoroDisplay } from "@/components/PomodoroDisplay"
 import { PomodoroSettingsPanel } from "@/components/PomodoroSettingsPanel"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type View = "timer" | "settings"
 
@@ -160,20 +160,7 @@ export function PomodoroTimer() {
         <div className="flex flex-wrap items-center gap-2">
           <CategoryPicker chip categories={categories} value={categoryId} onChange={setCategoryId} onRefresh={loadCategories} />
           {courses.length > 0 && (
-            <Select value={courseId || "none"} onValueChange={(v) => setCourseId(v === "none" ? "" : v)}>
-              <SelectTrigger className="h-8! w-auto gap-2 rounded-full bg-transparent px-3 text-sm hover:bg-accent dark:bg-transparent dark:hover:bg-accent">
-                <BookOpen className="size-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Curso" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem curso</SelectItem>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CoursePicker courses={courses} value={courseId} onChange={setCourseId} />
           )}
           {!showNote && (
             <button
