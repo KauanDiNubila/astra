@@ -94,6 +94,10 @@ o [instalador direto](https://github.com/KauanDiNubila/astra/releases/latest)
 - `Content-Security-Policy` restritiva no frontend (`script-src 'self'`, sem
   inline/eval) — bloqueia script injetado de rodar, não só protege onde o
   token mora.
+- Cabeçalhos de segurança no frontend: o site não pode ser embutido em outra
+  página (`frame-ancestors 'none'` e `X-Frame-Options`, contra clickjacking),
+  `nosniff`, `Referrer-Policy` e câmera/microfone/tela liberados só para o
+  próprio domínio (`Permissions-Policy`).
 - Rate limit no login (por IP) + rate limit de borda no Cloudflare (por IP,
   todos os endpoints).
 - Autorização por dono verificada em todo endpoint com id (auditoria manual +
