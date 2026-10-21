@@ -1,5 +1,5 @@
 import { useReducedMotion } from "motion/react"
-import { Area, AreaChart, XAxis } from "recharts"
+import { Bar, BarChart, XAxis } from "recharts"
 import { formatMinutes } from "@/lib/format"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 
@@ -8,6 +8,11 @@ type Point = { day: string; minutes: number }
 function formatShortDate(dayKey: string): string {
   const [, month, day] = dayKey.split("-")
   return `${day}/${month}`
+}
+
+function formatLongDate(dayKey: string): string {
+  const [year, month, day] = dayKey.split("-").map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })
 }
 
 const chartConfig = {
@@ -34,13 +39,7 @@ export function FocusTrendChart({ data }: { data: Point[] }) {
 
   return (
     <ChartContainer config={chartConfig} className="h-[200px] w-full">
-      <AreaChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
-        <defs>
-          <linearGradient id="focus-trend-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-minutes)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="var(--color-minutes)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
+      <BarChart data={data} margin={{ left: 14, right: 14, top: 8, bottom: 0 }} barCategoryGap="18%">
         <XAxis
           dataKey="day"
           tickLine={false}
@@ -52,31 +51,27 @@ export function FocusTrendChart({ data }: { data: Point[] }) {
           fontSize={10}
         />
         <ChartTooltip
-          cursor={false}
+          cursor={{ fill: "var(--muted)", opacity: 0.6, radius: 4 }}
           content={
             <ChartTooltipContent
-              labelFormatter={(value) => formatShortDate(value as string)}
-              formatter={(value, name) => (
-                <div className="flex w-full items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{name}</span>
-                  <span className="font-mono font-medium text-foreground">
-                    {formatMinutes(value as number)}
-                  </span>
-                </div>
+              hideIndicator
+              labelFormatter={(value) => formatLongDate(value as string)}
+              formatter={(value) => (
+                <span className="font-medium text-foreground tabular-nums">{formatMinutes(value as number)}</span>
               )}
             />
           }
         />
-        <Area
+        <Bar
           dataKey="minutes"
           name="Foco"
-          type="monotone"
-          fill="url(#focus-trend-gradient)"
-          stroke="var(--color-minutes)"
-          strokeWidth={2.5}
+          fill="var(--color-minutes)"
+          radius={[3, 3, 1, 1]}
+          maxBarSize={22}
           isAnimationActive={!reducedMotion}
+          animationDuration={700}
         />
-      </AreaChart>
+      </BarChart>
     </ChartContainer>
   )
 }

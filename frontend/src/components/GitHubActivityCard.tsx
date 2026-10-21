@@ -6,7 +6,7 @@ import { api } from "@/lib/api"
 import type { ActivityPeriod, GitHubActivityResponse } from "@/lib/types"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { GitHubIcon } from "@/components/icons/GitHubIcon"
 
 const periods: { key: ActivityPeriod; label: string }[] = [
   { key: "TODAY", label: "Hoje" },
@@ -42,25 +42,26 @@ export function GitHubActivityCard() {
 
   if (!status?.connected) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>GitHub</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">Conecte o GitHub pra ver sua atividade aqui.</p>
-          <Button type="button" size="sm" variant="outline" onClick={connect}>
-            Conectar
-          </Button>
-        </CardContent>
-      </Card>
+      <section className="flex items-center gap-4 rounded-2xl border border-dashed px-5 py-4">
+        <GitHubIcon className="size-5 shrink-0 text-muted-foreground" />
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+          Conecte o GitHub para ver commits e PRs ao lado do seu tempo de foco.
+        </p>
+        <Button type="button" size="sm" variant="outline" onClick={connect}>
+          Conectar
+        </Button>
+      </section>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <section className="flex flex-col gap-5 rounded-2xl border p-5 sm:p-6">
+      <div>
         <div className="flex items-center justify-between">
-          <CardTitle>GitHub</CardTitle>
+          <h2 className="flex items-center gap-2 text-sm font-medium">
+            <GitHubIcon className="size-4" />
+            GitHub
+          </h2>
           <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
             {periods.map((p) => (
               <PillToggleButton
@@ -75,30 +76,30 @@ export function GitHubActivityCard() {
             ))}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      </div>
+      <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="flex flex-col">
-            <span className="text-lg font-semibold tabular-nums">{Math.round(commitCount)}</span>
+            <span className="text-2xl font-semibold tracking-tight tabular-nums">{Math.round(commitCount)}</span>
             <span className="text-xs text-muted-foreground">commits</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-semibold tabular-nums">{Math.round(pullRequestCount)}</span>
+            <span className="text-2xl font-semibold tracking-tight tabular-nums">{Math.round(pullRequestCount)}</span>
             <span className="text-xs text-muted-foreground">PRs</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-semibold tabular-nums">{Math.round(issueCount)}</span>
+            <span className="text-2xl font-semibold tracking-tight tabular-nums">{Math.round(issueCount)}</span>
             <span className="text-xs text-muted-foreground">issues</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-semibold tabular-nums">{Math.round(repoCount)}</span>
+            <span className="text-2xl font-semibold tracking-tight tabular-nums">{Math.round(repoCount)}</span>
             <span className="text-xs text-muted-foreground">repos</span>
           </div>
         </div>
-        <Link to="/github" className="text-sm text-primary hover:underline">
+        <Link to="/github" className="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground">
           Ver insights →
         </Link>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
