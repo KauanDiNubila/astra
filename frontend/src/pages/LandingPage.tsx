@@ -1,6 +1,24 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { ComponentType } from "react"
-import { ArrowRight, ArrowUpRight, Code2, Monitor } from "lucide-react"
+import {
+  AppWindow,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Code2,
+  Download,
+  MessageCircle,
+  Maximize2,
+  Monitor,
+  PencilLine,
+  Pin,
+  Route,
+  ScreenShare,
+  Tags,
+  Users,
+  Video,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { Navigate, Link } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/context/ThemeContext"
@@ -11,7 +29,7 @@ import { AppFrame } from "@/components/landing/AppFrame"
 import { AstraMark } from "@/components/landing/AstraMark"
 import { SplitWords } from "@/components/landing/SplitWords"
 import { setupLandingMotion } from "@/components/landing/landingMotion"
-import { CoursesArt, GoalArt, GroupArt, OrbitArt, RoadmapArt } from "@/components/landing/featureArt"
+import { OrbitArt } from "@/components/landing/featureArt"
 import { GithubScreen, HeatmapScreen, OverviewScreen, PomodoroScreen, RankingScreen } from "@/components/landing/screens"
 
 const STORE_URL = "https://apps.microsoft.com/detail/9NRB7QNCJGSP?hl=pt-br&gl=BR"
@@ -50,31 +68,19 @@ const CHAPTERS: Chapter[] = [
   },
 ]
 
-const FEATURES = [
-  {
-    title: "Cursos e módulos",
-    text: "Cadastre os cursos que você está fazendo e marque cada módulo concluído para acompanhar o progresso.",
-    Art: CoursesArt,
-    inverted: false,
-  },
-  {
-    title: "Roadmaps",
-    text: "Siga trilhas prontas de Backend Java e Frontend ou monte a sua, etapa por etapa.",
-    Art: RoadmapArt,
-    inverted: true,
-  },
-  {
-    title: "Metas de estudo",
-    text: "Defina quantas horas quer estudar por dia e por semana e acompanhe direto no dashboard.",
-    Art: GoalArt,
-    inverted: true,
-  },
-  {
-    title: "Estudo em grupo",
-    text: "Converse com seus amigos, crie grupos e faça chamadas para estudar junto.",
-    Art: GroupArt,
-    inverted: false,
-  },
+const FEATURES: { title: string; text: string; Icon: LucideIcon }[] = [
+  { title: "Cursos e módulos", text: "Marque cada módulo concluído e veja quanto falta para terminar.", Icon: BookOpen },
+  { title: "Roadmaps", text: "Trilhas prontas de Backend Java e Frontend, ou monte a sua.", Icon: Route },
+  { title: "Categorias", text: "Separe o tempo por assunto e veja para onde ele está indo.", Icon: Tags },
+  { title: "Registro manual", text: "Estudou longe do computador? Lance a sessão depois.", Icon: PencilLine },
+  { title: "Modo foco", text: "Tela cheia, sem distração: só o timer e o que você está estudando.", Icon: Maximize2 },
+  { title: "Chat", text: "Converse com seus amigos sem sair do app.", Icon: MessageCircle },
+  { title: "Grupos", text: "Um espaço para a turma, o projeto ou a maratona de estudo.", Icon: Users },
+  { title: "Chamadas", text: "Voz e vídeo para estudar junto, minimizadas enquanto você navega.", Icon: Video },
+  { title: "Compartilhar tela", text: "Mostre o código ou o exercício, e cada um escolhe se quer assistir.", Icon: ScreenShare },
+  { title: "Mensagens fixadas", text: "O link da aula ou o combinado sempre no topo da conversa.", Icon: Pin },
+  { title: "Seus dados", text: "Exporte tudo quando quiser ou exclua a conta de vez.", Icon: Download },
+  { title: "App para Windows", text: "Instale pela Microsoft Store e abra direto da barra de tarefas.", Icon: AppWindow },
 ]
 
 const PRIMARY_CTA =
@@ -261,43 +267,19 @@ function StackedShowcase() {
   )
 }
 
-function SectionLabel({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-      <h2 className="w-fit rounded-md bg-foreground px-2.5 py-1 text-xl font-semibold tracking-[-0.02em] text-background sm:text-2xl">
-        {title}
-      </h2>
-      <p className="max-w-md text-pretty text-sm text-muted-foreground sm:text-base">{text}</p>
-    </div>
-  )
-}
-
 function Features() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-24 sm:px-8 sm:py-32">
-      <SectionLabel
-        title="Funcionalidades"
-        text="Além do foco e do ranking, o Astra organiza tudo o que você está aprendendo."
-      />
-      <div className="mt-10 grid gap-4 md:grid-cols-2">
-        {FEATURES.map(({ title, text, Art, inverted }) => (
-          <article
-            key={title}
-            data-feature-card
-            data-inverted={inverted || undefined}
-            className={cn(
-              "group flex min-h-72 flex-col justify-between gap-8 rounded-3xl border p-7 sm:flex-row sm:items-center",
-              inverted ? "border-transparent bg-foreground text-background" : "bg-card text-card-foreground",
-            )}
-          >
-            <div className="max-w-60">
-              <h3 className="text-2xl font-semibold tracking-[-0.03em]">{title}</h3>
-              <p className={cn("mt-3 text-pretty text-sm", inverted ? "text-background/65" : "text-muted-foreground")}>
-                {text}
-              </p>
-            </div>
-            <div className="flex shrink-0 justify-center sm:w-56">
-              <Art />
+      <h2 className="text-[clamp(2.4rem,4.4vw,4.25rem)] font-semibold leading-[0.98] tracking-[-0.04em]">E ainda mais.</h2>
+      <div className="mt-12 grid gap-px overflow-hidden rounded-3xl border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        {FEATURES.map(({ title, text, Icon }) => (
+          <article key={title} className="bg-background">
+            <div data-feature-card className="flex h-full gap-4 p-5 sm:flex-col sm:gap-0 sm:p-7">
+              <Icon className="size-5 shrink-0 text-foreground" strokeWidth={1.5} />
+              <div className="sm:mt-8">
+                <h3 className="font-semibold tracking-[-0.01em]">{title}</h3>
+                <p className="mt-1.5 text-pretty text-sm text-muted-foreground">{text}</p>
+              </div>
             </div>
           </article>
         ))}
@@ -311,8 +293,7 @@ function CtaCard() {
     <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-8 sm:pb-32">
       <div
         data-cta-card
-        data-inverted
-        className="group grid items-center gap-10 overflow-hidden rounded-3xl bg-foreground p-8 text-background sm:p-12 md:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid items-center gap-10 overflow-hidden rounded-3xl bg-foreground p-8 text-background sm:p-12 md:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div>
           <h2 className="text-balance text-3xl font-semibold tracking-[-0.035em] sm:text-5xl">Comece a estudar com método</h2>
