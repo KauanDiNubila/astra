@@ -9,7 +9,6 @@ import { useChat } from "@/context/ChatContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { useTheme } from "@/context/ThemeContext"
 import { useDelayedUnmount } from "@/hooks/useDelayedUnmount"
-import { COMMAND_PALETTE_EVENT } from "@/lib/commandPalette"
 import { navGroupsFor } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
@@ -65,10 +64,8 @@ export function CommandPalette() {
       if (openRef.current) setOpen(false)
       else show()
     }
-    window.addEventListener(COMMAND_PALETTE_EVENT, show)
     window.addEventListener("keydown", onKeyDown)
     return () => {
-      window.removeEventListener(COMMAND_PALETTE_EVENT, show)
       window.removeEventListener("keydown", onKeyDown)
     }
   }, [])

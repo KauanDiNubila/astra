@@ -1,13 +1,11 @@
 import { useState } from "react"
-import { ChevronsUpDown, FileText, LogOut, Search, Shield, Sparkle, UserPen } from "lucide-react"
+import { ChevronsUpDown, LogOut, Sparkle, UserPen } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
-import { LegalLink } from "@/context/LegalContext"
 import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
-import { openCommandPalette } from "@/lib/commandPalette"
 import { isLinkActive, navGroupsFor } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -122,17 +120,6 @@ function UserMenu() {
                 {theme === "dark" ? "Modo claro" : "Modo escuro"}
               </button>
               <Separator className="my-1" />
-              <div onClick={() => handleOpenChange(false)}>
-                <LegalLink doc="terms" className={itemClass}>
-                  <FileText />
-                  Termos de Uso
-                </LegalLink>
-                <LegalLink doc="privacy" className={itemClass}>
-                  <Shield />
-                  Política de Privacidade
-                </LegalLink>
-              </div>
-              <Separator className="my-1" />
               <button type="button" className={itemClass} onClick={() => setConfirming(true)}>
                 <LogOut />
                 Sair
@@ -172,17 +159,6 @@ export function AppSidebar() {
           {!isMobile && <SidebarTrigger className="text-muted-foreground" />}
         </div>
         <SidebarFocus />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Buscar (Ctrl K)" onClick={openCommandPalette} className="text-muted-foreground">
-              <Search />
-              <span>Buscar</span>
-              <kbd className="ml-auto rounded border border-sidebar-border px-1.5 font-sans text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden max-md:hidden">
-                Ctrl K
-              </kbd>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {visibleGroups.map((group) => (
