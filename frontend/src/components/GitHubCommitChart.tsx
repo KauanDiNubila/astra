@@ -32,7 +32,7 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
 
   return (
     <ChartContainer config={chartConfig} className="h-[200px] w-full">
-      <BarChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
+      <BarChart data={data} margin={{ left: 14, right: 14, top: 8, bottom: 0 }} barCategoryGap="18%">
         <XAxis
           dataKey="date"
           tickLine={false}
@@ -44,15 +44,15 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
           fontSize={10}
         />
         <ChartTooltip
-          cursor={false}
+          cursor={{ fill: "var(--muted)", opacity: 0.6, radius: 4 }}
           content={
             <ChartTooltipContent
+              hideIndicator
               labelFormatter={(value) => formatShortDate(value as string)}
-              formatter={(value, name) => (
-                <div className="flex w-full items-center justify-between gap-4">
-                  <span className="text-muted-foreground">{name}</span>
-                  <span className="font-mono font-medium text-foreground">{value as number}</span>
-                </div>
+              formatter={(value) => (
+                <span className="font-medium text-foreground tabular-nums">
+                  {value as number} {(value as number) === 1 ? "contribuição" : "contribuições"}
+                </span>
               )}
             />
           }
@@ -61,8 +61,10 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
           dataKey="contributionCount"
           name="Atividade"
           fill="var(--color-contributionCount)"
-          radius={[2, 2, 0, 0]}
+          radius={[3, 3, 1, 1]}
+          maxBarSize={22}
           isAnimationActive={!reducedMotion}
+          animationDuration={700}
         />
       </BarChart>
     </ChartContainer>
