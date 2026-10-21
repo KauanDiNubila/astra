@@ -55,7 +55,6 @@ type PomodoroContextValue = {
   saving: boolean
   error: string | null
   saveSession: (event: { preventDefault: () => void }) => Promise<void>
-  sessionSavedAt: number | null
 
   focusMode: boolean
   setFocusMode: (open: boolean) => void
@@ -119,7 +118,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [note, setNote] = useState(persisted?.note ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sessionSavedAt, setSessionSavedAt] = useState<number | null>(null)
 
   const [focusMode, setFocusMode] = useState(persisted?.focusMode ?? false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
@@ -372,7 +370,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       })
       discard()
       setNote("")
-      setSessionSavedAt(Date.now())
       void invalidateStudyStats()
     } catch {
       setError("Não foi possível registrar a sessão.")
@@ -415,7 +412,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         saving,
         error,
         saveSession,
-        sessionSavedAt,
         focusMode,
         setFocusMode,
         selectedModuleId,

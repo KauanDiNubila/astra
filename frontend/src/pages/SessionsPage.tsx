@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { CalendarIcon, Minus, Pencil, Plus, Timer, Trash2 } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import type { InfiniteData } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import { invalidateStudyStats } from "@/lib/queryClient"
+import { invalidateStudyStats, queryClient, queryKeys } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
@@ -72,11 +74,9 @@ function groupByDay(sessions: Session[]) {
 }
 
 export function SessionsPage() {
-  const { sessionSavedAt, categories, courses, loadCategories } = usePomodoro()
+  const { categories, courses, loadCategories } = usePomodoro()
   const { status: githubStatus } = useGitHub()
   const reducedMotion = useReducedMotion()
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
   const [registerMode, setRegisterMode] = useState<RegisterMode>("pomodoro")
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
 
@@ -89,44 +89,34 @@ export function SessionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmSessionId, setConfirmSessionId] = useState<string | null>(null)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
   const confirmSessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function loadSessions() {
-    return api.get<Session[]>("/sessions", { params: { page: 0, size: PAGE_SIZE } }).then((res) => {
-      setSessions(res.data)
-      setHasMore(res.data.length === PAGE_SIZE)
+  const sessionsQuery = useInfiniteQuery({
+    queryKey: queryKeys.sessions,
+    queryFn: ({ pageParam, signal }) =>
+      api.get<Session[]>("/sessions", { signal, params: { page: pageParam, size: PAGE_SIZE } }).then((res) => res.data),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === PAGE_SIZE ? allPages.length : undefined),
+  })
+  const sessions = useMemo(() => {
+    const seen = new Set<string>()
+    return (sessionsQuery.data?.pages ?? []).flat().filter((session) => !seen.has(session.id) && seen.add(session.id))
+  }, [sessionsQuery.data])
+  const loading = sessionsQuery.isPending && !sessionsQuery.isError
+  const hasMore = sessionsQuery.hasNextPage
+  const loadingMore = sessionsQuery.isFetchingNextPage
+
+  function updateSessions(update: (sessions: Session[]) => Session[]) {
+    queryClient.setQueryData<InfiniteData<Session[], number>>(queryKeys.sessions, (data) =>
+      data ? { ...data, pages: data.pages.map(update) } : data,
+    )
+  }
+
+  function loadMoreSessions() {
+    sessionsQuery.fetchNextPage().then((result) => {
+      if (result.isError) toast.error("Não foi possível carregar mais sessões.")
     })
   }
-
-  async function loadMoreSessions() {
-    setLoadingMore(true)
-    try {
-      const page = Math.floor(sessions.length / PAGE_SIZE)
-      const res = await api.get<Session[]>("/sessions", { params: { page, size: PAGE_SIZE } })
-      setSessions((prev) => {
-        const known = new Set(prev.map((session) => session.id))
-        return [...prev, ...res.data.filter((session) => !known.has(session.id))]
-      })
-      setHasMore(res.data.length === PAGE_SIZE)
-    } catch {
-      toast.error("Não foi possível carregar mais sessões.")
-    } finally {
-      setLoadingMore(false)
-    }
-  }
-
-  useEffect(() => {
-    // Categorias vêm do PomodoroContext (já buscadas uma vez pra casca
-    // protegida inteira) — não refazer a busca aqui a cada visita à página.
-    loadSessions().finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    if (sessionSavedAt !== null) loadSessions()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionSavedAt])
 
   useEffect(() => {
     return () => {
@@ -146,7 +136,7 @@ export function SessionsPage() {
     setDeletingSessionId(id)
     try {
       await api.delete(`/sessions/${id}`)
-      setSessions((prev) => prev.filter((s) => s.id !== id))
+      updateSessions((page) => page.filter((s) => s.id !== id))
       void invalidateStudyStats()
     } catch {
       toast.error("Não foi possível remover a sessão.")
@@ -170,8 +160,7 @@ export function SessionsPage() {
         startedAt: combineDateWithNow(selectedDate).toISOString(),
         note: note.trim() || null,
       })
-      await loadSessions()
-      void invalidateStudyStats()
+      await invalidateStudyStats()
       setMinutes(25)
       setNote("")
       setSelectedDate(new Date())
@@ -380,8 +369,8 @@ export function SessionsPage() {
                             sessionId={s.id}
                             linkedRepositoryId={s.githubRepositoryId}
                             onLinked={(repositoryId) =>
-                              setSessions((prev) =>
-                                prev.map((session) =>
+                              updateSessions((page) =>
+                                page.map((session) =>
                                   session.id === s.id ? { ...session, githubRepositoryId: repositoryId } : session,
                                 ),
                               )

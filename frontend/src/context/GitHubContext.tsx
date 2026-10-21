@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { api } from "@/lib/api"
+import { invalidateGitHub } from "@/lib/queryClient"
 import type { GitHubConnectionStatus } from "@/lib/types"
 
 type GitHubContextValue = {
@@ -45,6 +46,7 @@ export function GitHubProvider({ children }: { children: ReactNode }) {
   async function disconnect() {
     await api.delete("/github/connection")
     await refresh()
+    void invalidateGitHub()
   }
 
   async function sync() {
@@ -52,6 +54,7 @@ export function GitHubProvider({ children }: { children: ReactNode }) {
     try {
       await api.post("/github/sync")
       await refresh()
+      await invalidateGitHub()
     } finally {
       setSyncing(false)
     }

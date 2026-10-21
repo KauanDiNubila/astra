@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { ArrowUpRight, Lock, RefreshCw } from "lucide-react"
 import { motion } from "motion/react"
 import { useGitHub } from "@/context/GitHubContext"
 import { useCountUp } from "@/hooks/use-count-up"
-import { api } from "@/lib/api"
 import { formatRelativeTime } from "@/lib/format"
+import { fetchJson, queryKeys } from "@/lib/queryClient"
 import { gridItem, gridStagger } from "@/lib/utils"
 import type { ActivityPeriod, GitHubActivityResponse, GitHubInsightsResponse } from "@/lib/types"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
@@ -23,38 +24,21 @@ const periods: { key: ActivityPeriod; label: string }[] = [
 
 export function GitHubInsightsPage() {
   const { status, loading: statusLoading, syncing, connect, sync } = useGitHub()
-  const [activity, setActivity] = useState<GitHubActivityResponse | null>(null)
-  const [insights, setInsights] = useState<GitHubInsightsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<ActivityPeriod>("MONTH")
-
-  useEffect(() => {
-    if (statusLoading) return
-    if (!status?.connected) {
-      setLoading(false)
-      return
-    }
-    const controller = new AbortController()
-    Promise.all([
-      api.get<GitHubActivityResponse>("/github/activity", { signal: controller.signal }).then((res) => setActivity(res.data)),
-      api.get<GitHubInsightsResponse>("/github/insights", { signal: controller.signal }).then((res) => setInsights(res.data)),
-    ])
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
-    return () => controller.abort()
-  }, [status?.connected, statusLoading])
-
-  async function handleSync() {
-    await sync()
-    const [activityRes, insightsRes] = await Promise.all([
-      api.get<GitHubActivityResponse>("/github/activity"),
-      api.get<GitHubInsightsResponse>("/github/insights"),
-    ])
-    setActivity(activityRes.data)
-    setInsights(insightsRes.data)
-  }
+  const connected = !!status?.connected
+  const activityQuery = useQuery({
+    queryKey: queryKeys.githubActivity,
+    queryFn: fetchJson<GitHubActivityResponse>("/github/activity"),
+    enabled: connected,
+  })
+  const insightsQuery = useQuery({
+    queryKey: queryKeys.githubInsights,
+    queryFn: fetchJson<GitHubInsightsResponse>("/github/insights"),
+    enabled: connected,
+  })
+  const activity = activityQuery.data ?? null
+  const insights = insightsQuery.data ?? null
+  const loading = connected && ((activityQuery.isPending && !activityQuery.isError) || (insightsQuery.isPending && !insightsQuery.isError))
 
   if (statusLoading || loading) {
     return <StatGridSkeleton />
@@ -115,7 +99,7 @@ export function GitHubInsightsPage() {
             {status.lastSyncedAt && ` · sincronizado ${formatRelativeTime(status.lastSyncedAt)}`}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" className="rounded-full" disabled={syncing} onClick={handleSync}>
+        <Button type="button" variant="outline" size="sm" className="rounded-full" disabled={syncing} onClick={sync}>
           <RefreshCw className={syncing ? "size-4 animate-spin" : "size-4"} />
           {syncing ? "Sincronizando..." : "Sincronizar"}
         </Button>

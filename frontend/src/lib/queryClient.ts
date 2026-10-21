@@ -21,6 +21,8 @@ export const queryKeys = {
   byCategory: (days: number) => ["by-category", days] as const,
   byCategoryAll: ["by-category"] as const,
   githubInsights: ["github-insights"] as const,
+  githubActivity: ["github-activity"] as const,
+  sessions: ["sessions"] as const,
   ranking: (period: string, scope: string) => ["ranking", period, scope] as const,
   rankingAll: ["ranking"] as const,
   roadmaps: ["roadmaps"] as const,
@@ -45,7 +47,7 @@ function invalidate(...keys: readonly (readonly unknown[])[]) {
 }
 
 export function invalidateStudyStats() {
-  return invalidate(queryKeys.dashboard, queryKeys.heatmap, queryKeys.byCategoryAll, queryKeys.rankingAll)
+  return invalidate(queryKeys.dashboard, queryKeys.heatmap, queryKeys.byCategoryAll, queryKeys.rankingAll, queryKeys.sessions)
 }
 
 export function invalidateGoals() {
@@ -53,7 +55,7 @@ export function invalidateGoals() {
 }
 
 export function invalidateCategories() {
-  return invalidate(queryKeys.categories, queryKeys.byCategoryAll)
+  return invalidate(queryKeys.categories, queryKeys.byCategoryAll, queryKeys.sessions)
 }
 
 export function invalidateCourses() {
@@ -62,6 +64,10 @@ export function invalidateCourses() {
 
 export function invalidateRoadmaps() {
   return invalidate(queryKeys.roadmaps)
+}
+
+export function invalidateGitHub() {
+  return invalidate(queryKeys.githubInsights, queryKeys.githubActivity)
 }
 
 export function invalidateRanking() {
