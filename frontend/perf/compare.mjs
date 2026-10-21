@@ -21,6 +21,12 @@ if (!BEFORE) {
   process.exit(1)
 }
 
+const VALID_REF = /^[\w./-]+$/
+if (![BEFORE, AFTER].every((ref) => ref === undefined || VALID_REF.test(ref))) {
+  console.error("BEFORE e AFTER devem ser um commit, branch ou tag (só letras, números, ., /, _ e -)")
+  process.exit(1)
+}
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "astra-perf-"))
 const worktrees = []
 
