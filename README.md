@@ -35,22 +35,29 @@ o [instalador direto](https://github.com/KauanDiNubila/astra/releases/latest)
 - **Privacidade (LGPD)** — Termos de Uso e Política de Privacidade com aceite
   registrado (no cadastro, no login social e, para contas antigas, num aviso
   único), baixar uma cópia dos próprios dados em JSON e excluir a própria conta.
-- **Sessões** — registrar tempo focado (Pomodoro ou manual → minutos) e listar.
+- **Sessões** — registrar tempo focado (Pomodoro ou manual → minutos), com
+  histórico agrupado por dia, modo foco em tela cheia e um mini timer no menu
+  lateral enquanto o Pomodoro roda.
 - **Categorias** — separar o tempo por tipo (estudo, trabalho, leitura…).
-- **Dashboard** — horas de hoje/semana/total, streak e progresso das metas.
+- **Dashboard** — tempo de hoje com as metas do dia e da semana, comparação com
+  a semana passada, média diária dos últimos 30 dias, streak atual e recorde,
+  tempo de foco por dia e por categoria.
 - **Heatmap** — minutos por dia (estilo GitHub) no fuso de Brasília, com a
   atividade do GitHub combinada na mesma célula (ver seção **Integração com
   GitHub**).
-- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); marcar um módulo inteiro como concluído de uma vez; ligar uma sessão a um curso; ligar repositórios do GitHub a um curso.
+- **Cursos** — cadastrar curso e módulos, acompanhar progresso (concluídos ÷ total); marcar um módulo inteiro como concluído de uma vez; ligar uma sessão a um curso (os cursos estudados por último aparecem primeiro); ligar repositórios do GitHub a um curso.
 - **Metas** — objetivo de horas diário/semanal (bateu ou não).
-- **Roadmaps** — trilhas com etapas ordenadas (próprias + pré-definidas), diagrama visual interativo, e o "pin": pendurar um curso numa etapa. Conclusão de etapa é por-usuário mesmo em roadmaps compartilhados.
-- **Amigos** — pedido de amizade por e-mail, aceitar/recusar/remover.
+- **Roadmaps** — trilhas com etapas ordenadas (próprias + pré-definidas), diagrama visual interativo, e o "pin": pendurar um curso numa etapa. Conclusão de etapa é por-usuário mesmo em roadmaps compartilhados; a lista mostra o progresso de cada trilha.
+- **Amigos** — pedido de amizade pelo identificador (`Nome#1234`, copiável no
+  topo da página), aceitar/recusar/remover.
 - **Chat** — mensagens em tempo real entre amigos via WebSocket (STOMP), com
-  anexo de imagem, grupos, responder mensagem (duplo-clique no desktop, swipe
-  no mobile) e mensagens cifradas em repouso (AES-256-GCM).
+  anexo de imagem, grupos, busca de conversas, mensagens fixadas, responder
+  mensagem (duplo-clique no desktop, swipe no mobile) e mensagens cifradas em
+  repouso (AES-256-GCM).
 - **Chamadas** — voz e vídeo entre amigos, 1:1 ou em grupo (até 5 pessoas),
   direto entre os navegadores (WebRTC ponto a ponto, sem servidor de mídia):
-  câmera, compartilhamento de tela com o som do sistema, toque e notificação de
+  câmera, compartilhamento de tela com o som do sistema (cada um escolhe se quer
+  assistir à transmissão), toque e notificação de
   chamada recebida, mudo, fone desligado, indicador de quem está falando,
   escolha de microfone/câmera/saída de som, cancelamento de eco e supressão de
   ruído. Dá pra entrar sem microfone (só ouvindo) e conectar um depois; quem
@@ -68,6 +75,7 @@ o [instalador direto](https://github.com/KauanDiNubila/astra/releases/latest)
   login do GitHub visível no perfil pros amigos — só se o dono autorizar (o
   perfil do amigo mostra também repositórios públicos, seguidores e desde quando
   ele está no GitHub).
+- **Atalhos** — paleta de comandos com `Ctrl+K` para navegar e agir sem o mouse.
 - **Administração** — painel pra listar, banir (reversível) ou excluir (cascata) contas; acesso restrito a `ADMIN`/`OWNER`.
 
 > Princípio central: nada de "total", "streak" ou "ranking" é armazenado — tudo é **agregação sobre `session`**.
