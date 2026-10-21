@@ -80,9 +80,8 @@ const HeatmapGrid = memo(function HeatmapGrid({ weeks }: { weeks: Cell[][] }) {
                 data-row={row}
                 style={{ animationDelay: `${450 + index * 9}ms`, animationFillMode: "backwards" }}
                 className={cn(
-                  "aspect-square w-full animate-in fade-in duration-500 ease-out motion-reduce:animate-none",
+                  "aspect-square w-full rounded-full animate-in fade-in duration-500 ease-out motion-reduce:animate-none",
                   levelClass(cell.minutes),
-                  cell.githubActivity > 0 ? "rounded-full" : "rounded-[3px]",
                 )}
               />
             ),
@@ -175,15 +174,9 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
         <span className="flex items-center gap-1.5">
           Menos
           {LEVELS.map((level) => (
-            <span key={level} className={cn("size-2.5 rounded-[2px]", level)} />
+            <span key={level} className={cn("size-2.5 rounded-full", level)} />
           ))}
           Mais
-          {githubData && githubData.length > 0 && (
-            <span className="ml-3 flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-muted-foreground/60" />
-              GitHub
-            </span>
-          )}
         </span>
       </div>
     </div>
