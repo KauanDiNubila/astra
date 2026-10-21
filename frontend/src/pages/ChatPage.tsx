@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronLeft, ImagePlus, Phone, Pin, PinOff, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
+import { ChevronLeft, ImagePlus, MessageCircle, Phone, Pin, PinOff, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
@@ -27,6 +27,26 @@ import { Textarea } from "@/components/ui/textarea"
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PREFIX = /^(https?:\/\/|www\.)/i
 const TRAILING_PUNCTUATION = /[.,!?;:'")\]}]+$/
+
+function messageDayLabel(iso: string) {
+  const date = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (date.toDateString() === today.toDateString()) return "Hoje"
+  if (date.toDateString() === yesterday.toDateString()) return "Ontem"
+  const label = date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+  })
+  return label.charAt(0).toUpperCase() + label.slice(1).replace(".", "")
+}
+
+function messageTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+}
 
 function linkifyText(text: string) {
   return text.split(URL_PATTERN).map((part, i) => {
@@ -465,7 +485,7 @@ export function ChatPage() {
       <h1 className="sr-only">Chat</h1>
       <OverlayScrollbar target={conversationListRef} />
       <OverlayScrollbar target={scrollContainerRef} />
-      <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-xl">
+      <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-2xl">
       <div
         ref={conversationListRef}
         className={cn(
@@ -508,17 +528,17 @@ export function ChatPage() {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="flex min-w-0 items-center gap-1">
-                          <span className="min-w-0 truncate font-medium">{c.friendName}</span>
+                          <span className={cn("min-w-0 truncate", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{c.friendName}</span>
                           {c.friendAdmin && <AdminBadge />}
                         </span>
                         {c.lastMessageAt && (
-                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                          <span className="shrink-0 text-[11px] text-muted-foreground/70">
                             {formatRelativeTime(c.lastMessageAt)}
                           </span>
                         )}
                       </span>
                       <span className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+                        <span className={cn("min-w-0 truncate text-xs", c.unreadCount > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
@@ -549,7 +569,7 @@ export function ChatPage() {
           </Button>
         </div>
         {groupConversations.length === 0 && (
-          <p className="px-4 pb-3 text-sm text-muted-foreground">Nenhum grupo ainda. Toque em + para criar um.</p>
+          <p className="px-4 pb-3 text-sm text-muted-foreground">Nenhum grupo ainda. Use o + para criar um.</p>
         )}
         {groupConversations.length > 0 && (
           <ul className="flex flex-col gap-0.5 p-2">
@@ -570,15 +590,15 @@ export function ChatPage() {
                     <GroupAvatar groupId={c.groupId} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate font-medium">{c.groupName}</span>
+                        <span className={cn("min-w-0 truncate", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{c.groupName}</span>
                         {c.lastMessageAt && (
-                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                          <span className="shrink-0 text-[11px] text-muted-foreground/70">
                             {formatRelativeTime(c.lastMessageAt)}
                           </span>
                         )}
                       </span>
                       <span className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+                        <span className={cn("min-w-0 truncate text-xs", c.unreadCount > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
@@ -598,8 +618,21 @@ export function ChatPage() {
 
       <div className={cn("flex flex-1 flex-col overflow-hidden", !(friendId || groupId) && "hidden sm:flex")}>
         {!friendId && !groupId ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            Selecione uma conversa.
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full border text-muted-foreground">
+              <MessageCircle className="size-5" />
+            </span>
+            <p className="font-medium">Suas conversas</p>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              {conversations.length > 0
+                ? "Escolha uma conversa ao lado para continuar de onde parou."
+                : "Adicione um amigo para começar a conversar e combinar sessões de estudo."}
+            </p>
+            {conversations.length === 0 && (
+              <Button asChild variant="outline" size="sm" className="rounded-full">
+                <Link to="/friends">Adicionar amigo</Link>
+              </Button>
+            )}
           </div>
         ) : (
           <div ref={conversationScope} className="flex flex-1 flex-col overflow-hidden">
@@ -757,9 +790,17 @@ export function ChatPage() {
                       {m.pinnedAt ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
                     </button>
                   )
+                  const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()
                   return (
+                    <Fragment key={m.id}>
+                    {newDay && (
+                      <div className="my-4 flex items-center gap-3 first:mt-0" role="separator">
+                        <span className="h-px flex-1 bg-border/60" />
+                        <span className="text-[11px] font-medium text-muted-foreground">{messageDayLabel(m.createdAt)}</span>
+                        <span className="h-px flex-1 bg-border/60" />
+                      </div>
+                    )}
                     <motion.div
-                      key={m.id}
                       id={`message-${m.id}`}
                       initial={{ opacity: 0, scale: 0.94, y: 4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -775,7 +816,7 @@ export function ChatPage() {
                       className={cn(
                         "group flex items-center gap-1",
                         mine ? "justify-end" : "justify-start",
-                        groupedWithPrev ? "mt-0.5" : "mt-3 first:mt-0",
+                        groupedWithPrev && !newDay ? "mt-0.5" : newDay ? "mt-0" : "mt-3",
                       )}
                     >
                       {mine && pinButton}
@@ -783,6 +824,7 @@ export function ChatPage() {
                       <SwipeableMessage onReply={() => startReply(m)}>
                       <div
                         data-message-bubble
+                        title={new Date(m.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                         className={cn(
                           "relative max-w-[70%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
                           mine ? "bg-primary text-primary-foreground" : "bg-muted",
@@ -833,20 +875,23 @@ export function ChatPage() {
                           {m.content && (
                             <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
                           )}
-                          <p
-                            className={`mt-1 flex items-center gap-1 text-[10px] ${
-                              mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                            }`}
-                          >
-                            {m.pinnedAt && <Pin className="size-2.5" aria-label="Fixada" role="img" />}
-                            {formatRelativeTime(m.createdAt)}
-                          </p>
+                          {(!groupedWithNext || m.pinnedAt) && (
+                            <p
+                              className={`mt-1 flex items-center gap-1 text-[10px] tabular-nums ${
+                                mine ? "text-primary-foreground/70" : "text-muted-foreground"
+                              }`}
+                            >
+                              {m.pinnedAt && <Pin className="size-2.5" aria-label="Fixada" role="img" />}
+                              {!groupedWithNext && messageTime(m.createdAt)}
+                            </p>
+                          )}
                         </div>
                       </div>
                       </SwipeableMessage>
                       {!mine && replyButton}
                       {!mine && pinButton}
                     </motion.div>
+                    </Fragment>
                   )
                 })}
               </div>
