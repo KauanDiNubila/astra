@@ -7,6 +7,7 @@ import { pageTitleFor } from "@/lib/pageTitles"
 import { cn } from "@/lib/utils"
 import { AppSidebar } from "@/components/AppSidebar"
 import { CallOverlay } from "@/components/CallOverlay"
+import { CommandPalette } from "@/components/CommandPalette"
 import { GlobalPomodoroFocus } from "@/components/GlobalPomodoroFocus"
 import { IncomingCallDialog } from "@/components/IncomingCallDialog"
 import { MobileBottomNav } from "@/components/MobileBottomNav"
@@ -65,6 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <GlobalPomodoroFocus />
       <CallOverlay />
       <IncomingCallDialog />
+      <CommandPalette />
     </TooltipProvider>
   )
 }

@@ -1,22 +1,5 @@
 import { useState } from "react"
-import {
-  BookOpen,
-  ChevronsUpDown,
-  Clock,
-  FileText,
-  GitBranch,
-  LayoutDashboard,
-  LogOut,
-  Map,
-  MessageCircle,
-  Shield,
-  ShieldCheck,
-  Sparkle,
-  Trophy,
-  UserPen,
-  Users,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { ChevronsUpDown, FileText, LogOut, Search, Shield, Sparkle, UserPen } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { LegalLink } from "@/context/LegalContext"
@@ -24,6 +7,8 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
+import { openCommandPalette } from "@/lib/commandPalette"
+import { isLinkActive, navGroupsFor } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -46,41 +31,6 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-
-type NavItem = { to: string; label: string; end: boolean; icon: LucideIcon }
-
-const groups: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Estudo",
-    items: [
-      { to: "/dashboard", label: "Dashboard", end: true, icon: LayoutDashboard },
-      { to: "/sessions", label: "Sessões", end: false, icon: Clock },
-      { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
-      { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
-    ],
-  },
-  {
-    label: "Social",
-    items: [
-      { to: "/friends", label: "Amigos", end: false, icon: Users },
-      { to: "/chat", label: "Chat", end: false, icon: MessageCircle },
-      { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
-    ],
-  },
-  {
-    label: "Integrações",
-    items: [{ to: "/github", label: "GitHub", end: false, icon: GitBranch }],
-  },
-]
-
-const adminGroup = {
-  label: "Administração",
-  items: [{ to: "/admin", label: "Admin", end: false, icon: ShieldCheck }],
-}
-function isLinkActive(pathname: string, to: string, end: boolean) {
-  if (end) return pathname === to
-  return pathname === to || pathname.startsWith(`${to}/`)
-}
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/)
@@ -199,8 +149,7 @@ export function AppSidebar() {
   const { totalUnread: totalDmUnread, totalGroupUnread } = useChat()
   const totalUnread = totalDmUnread + totalGroupUnread
   const { pathname } = useLocation()
-  const isStaff = user?.role === "ADMIN" || user?.role === "OWNER"
-  const visibleGroups = isStaff ? [...groups, adminGroup] : groups
+  const visibleGroups = navGroupsFor(user?.role)
 
   return (
     <Sidebar collapsible="icon">
@@ -216,6 +165,17 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarFocus />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Buscar (Ctrl K)" onClick={openCommandPalette} className="text-muted-foreground">
+              <Search />
+              <span>Buscar</span>
+              <kbd className="ml-auto rounded border border-sidebar-border px-1.5 font-sans text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Ctrl K
+              </kbd>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {visibleGroups.map((group) => (
