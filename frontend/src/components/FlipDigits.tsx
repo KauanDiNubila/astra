@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 
 function FlipChar({ char, reducedMotion }: { char: string; reducedMotion: boolean }) {
   return (
-    <span className="relative inline-block w-[1ch] text-center" style={{ perspective: 240 }}>
+    <span className={`relative inline-block text-center ${char === ":" ? "w-[0.4em]" : "w-[1ch]"}`} style={{ perspective: 240 }}>
       <span className="invisible">{char}</span>
       <AnimatePresence initial={false}>
         <motion.span
@@ -12,7 +12,7 @@ function FlipChar({ char, reducedMotion }: { char: string; reducedMotion: boolea
           animate={{ rotateX: 0, opacity: 1 }}
           exit={reducedMotion ? { opacity: 0 } : { rotateX: 90, opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0"
+          className="absolute inset-0 flex justify-center"
           style={{ transformStyle: "preserve-3d" }}
         >
           {char}

@@ -14,9 +14,10 @@ type Props = {
   value: string
   onChange: (id: string) => void
   onRefresh: () => Promise<void>
+  chip?: boolean
 }
 
-export function CategoryPicker({ categories, value, onChange, onRefresh }: Props) {
+export function CategoryPicker({ categories, value, onChange, onRefresh, chip = false }: Props) {
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState("")
@@ -93,10 +94,24 @@ export function CategoryPicker({ categories, value, onChange, onRefresh }: Props
       }}
     >
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-between font-normal">
-          {selected ? selected.name : "Escolha uma categoria"}
-          <ChevronDown className="size-4 opacity-50" />
-        </Button>
+        {chip ? (
+          <button
+            type="button"
+            className="flex h-8 items-center gap-2 rounded-full border px-3 text-sm transition-colors hover:bg-accent data-[state=open]:bg-accent"
+          >
+            <span
+              className="size-2 rounded-full bg-muted-foreground/60"
+              style={selected?.color ? { backgroundColor: selected.color } : undefined}
+            />
+            <span className={selected ? "" : "text-muted-foreground"}>{selected ? selected.name : "Categoria"}</span>
+            <ChevronDown className="size-3.5 opacity-50" />
+          </button>
+        ) : (
+          <Button type="button" variant="outline" className="w-full justify-between font-normal">
+            {selected ? selected.name : "Escolha uma categoria"}
+            <ChevronDown className="size-4 opacity-50" />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-64 p-1" align="start">
         <div className="flex flex-col">
