@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react"
-import { Route, Routes } from "react-router-dom"
+import { Outlet, Route, Routes } from "react-router-dom"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { ScrollToTop } from "@/components/ScrollToTop"
 import { Toaster } from "@/components/ui/sonner"
+import { LegalProvider } from "@/context/LegalContext"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 
@@ -47,8 +48,16 @@ function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            element={
+              <LegalProvider>
+                <Outlet />
+              </LegalProvider>
+            }
+          >
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
           <Route path="/privacidade" element={<PrivacyPage />} />
           <Route path="/termos" element={<TermsPage />} />
           <Route element={<ProtectedLayout />}>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { LegalLink } from "@/context/LegalContext"
 import { baseURL } from "@/lib/api"
 import { GitHubIcon } from "@/components/icons/GitHubIcon"
 import { Button } from "@/components/ui/button"
@@ -53,13 +53,13 @@ export function OAuthButtons() {
       </Button>
       <p className="mt-1 text-center text-xs text-muted-foreground">
         Ao continuar com Google ou GitHub, você concorda com os{" "}
-        <Link to="/termos" className="underline underline-offset-4 hover:text-foreground">
+        <LegalLink doc="terms" className="underline underline-offset-4 hover:text-foreground">
           Termos de Uso
-        </Link>{" "}
+        </LegalLink>{" "}
         e a{" "}
-        <Link to="/privacidade" className="underline underline-offset-4 hover:text-foreground">
+        <LegalLink doc="privacy" className="underline underline-offset-4 hover:text-foreground">
           Política de Privacidade
-        </Link>
+        </LegalLink>
         .
       </p>
       {waitingBrowser && (

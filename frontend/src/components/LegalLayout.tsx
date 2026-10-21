@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { ArrowLeft } from "lucide-react"
+import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { LEGAL_LAST_UPDATED, LEGAL_PROSE_CLASS } from "@/lib/legal"
 
@@ -13,7 +14,12 @@ export function LegalLayout({ title, children }: { title: string; children: Reac
 
   return (
     <div className="min-h-app bg-background px-4 py-10 text-foreground sm:px-6">
-      <article className="mx-auto w-full max-w-3xl">
+      <motion.article
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto w-full max-w-3xl"
+      >
         <button
           type="button"
           onClick={goBack}
@@ -35,7 +41,7 @@ export function LegalLayout({ title, children }: { title: string; children: Reac
             Política de Privacidade
           </Link>
         </footer>
-      </article>
+      </motion.article>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { getErrorMessage } from "@/lib/api"
 import { OAuthButtons } from "@/components/OAuthButtons"
+import { LegalLink } from "@/context/LegalContext"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -102,13 +103,13 @@ export function RegisterPage() {
                 />
                 <span>
                   Li e aceito os{" "}
-                  <Link to="/termos" className="text-foreground underline underline-offset-4">
+                  <LegalLink doc="terms" className="text-foreground underline underline-offset-4">
                     Termos de Uso
-                  </Link>{" "}
+                  </LegalLink>{" "}
                   e a{" "}
-                  <Link to="/privacidade" className="text-foreground underline underline-offset-4">
+                  <LegalLink doc="privacy" className="text-foreground underline underline-offset-4">
                     Política de Privacidade
-                  </Link>
+                  </LegalLink>
                   .
                 </span>
               </label>
