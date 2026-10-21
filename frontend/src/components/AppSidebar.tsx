@@ -1,16 +1,22 @@
 import { useState } from "react"
 import {
   BookOpen,
+  ChevronsUpDown,
   Clock,
+  FileText,
   GitBranch,
   LayoutDashboard,
+  LogOut,
   Map,
   MessageCircle,
+  Shield,
   ShieldCheck,
   Sparkle,
   Trophy,
+  UserPen,
   Users,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
 import { LegalLink } from "@/context/LegalContext"
@@ -18,6 +24,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { AdminBadge } from "@/components/AdminBadge"
@@ -30,26 +37,45 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
-const links = [
-  { to: "/dashboard", label: "Dashboard", end: true, icon: LayoutDashboard },
-  { to: "/sessions", label: "Sessões", end: false, icon: Clock },
-  { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
-  { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
-  { to: "/friends", label: "Amigos", end: false, icon: Users },
-  { to: "/chat", label: "Chat", end: false, icon: MessageCircle },
-  { to: "/github", label: "GitHub", end: false, icon: GitBranch },
-  { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
+type NavItem = { to: string; label: string; end: boolean; icon: LucideIcon }
+
+const groups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Estudo",
+    items: [
+      { to: "/dashboard", label: "Dashboard", end: true, icon: LayoutDashboard },
+      { to: "/sessions", label: "Sessões", end: false, icon: Clock },
+      { to: "/courses", label: "Cursos", end: false, icon: BookOpen },
+      { to: "/roadmaps", label: "Roadmaps", end: false, icon: Map },
+    ],
+  },
+  {
+    label: "Social",
+    items: [
+      { to: "/friends", label: "Amigos", end: false, icon: Users },
+      { to: "/chat", label: "Chat", end: false, icon: MessageCircle },
+      { to: "/ranking", label: "Ranking", end: false, icon: Trophy },
+    ],
+  },
+  {
+    label: "Integrações",
+    items: [{ to: "/github", label: "GitHub", end: false, icon: GitBranch }],
+  },
 ]
 
-const adminLink = { to: "/admin", label: "Admin", end: false, icon: ShieldCheck }
-
+const adminGroup = {
+  label: "Administração",
+  items: [{ to: "/admin", label: "Admin", end: false, icon: ShieldCheck }],
+}
 function isLinkActive(pathname: string, to: string, end: boolean) {
   if (end) return pathname === to
   return pathname === to || pathname.startsWith(`${to}/`)
@@ -62,22 +88,118 @@ function initials(name: string) {
   return (first + last).toUpperCase()
 }
 
-export function AppSidebar() {
+function UserMenu() {
   const { user, logout, avatarVersion } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const { totalUnread: totalDmUnread, totalGroupUnread } = useChat()
-  const totalUnread = totalDmUnread + totalGroupUnread
-  const { pathname } = useLocation()
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [logoutOpen, setLogoutOpen] = useState(false)
+  const { state, isMobile } = useSidebar()
+  const [open, setOpen] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const isStaff = user?.role === "ADMIN" || user?.role === "OWNER"
+  const collapsed = state === "collapsed" && !isMobile
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next)
+    if (!next) setConfirming(false)
+  }
 
   async function confirmLogout() {
     setLoggingOut(true)
     await logout()
   }
+
+  const itemClass =
+    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm text-popover-foreground transition-colors hover:bg-accent [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground"
+
+  return (
+    <>
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-md p-1.5 text-left transition-colors hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+          >
+            <Avatar size="sm" className="shrink-0">
+              {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar?v=${avatarVersion}`} />}
+              <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
+            </Avatar>
+            <span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
+              <span className="flex items-center gap-1 truncate text-sm font-medium">
+                {user?.name}
+                {isStaff && <AdminBadge />}
+              </span>
+              {user?.bio && <span className="truncate text-xs text-muted-foreground">{user.bio}</span>}
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side={collapsed ? "right" : "top"}
+          align={collapsed ? "end" : "start"}
+          className={cn("gap-0 p-1", collapsed ? "w-60" : "w-(--radix-popover-trigger-width) min-w-56")}
+        >
+          {confirming ? (
+            <div className="flex flex-col gap-3 p-2">
+              <p className="text-sm text-popover-foreground">Deseja mesmo sair?</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirming(false)}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" size="sm" className="flex-1" disabled={loggingOut} onClick={confirmLogout}>
+                  {loggingOut ? "Saindo..." : "Sair"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={itemClass}
+                onClick={() => {
+                  handleOpenChange(false)
+                  setProfileOpen(true)
+                }}
+              >
+                <UserPen />
+                Editar perfil
+              </button>
+              <button type="button" className={itemClass} onClick={toggleTheme}>
+                <ThemeToggleIcon isDark={theme === "dark"} />
+                {theme === "dark" ? "Modo claro" : "Modo escuro"}
+              </button>
+              <Separator className="my-1" />
+              <div onClick={() => handleOpenChange(false)}>
+                <LegalLink doc="terms" className={itemClass}>
+                  <FileText />
+                  Termos de Uso
+                </LegalLink>
+                <LegalLink doc="privacy" className={itemClass}>
+                  <Shield />
+                  Política de Privacidade
+                </LegalLink>
+              </div>
+              <Separator className="my-1" />
+              <button type="button" className={itemClass} onClick={() => setConfirming(true)}>
+                <LogOut />
+                Sair
+              </button>
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
+      <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+    </>
+  )
+}
+
+export function AppSidebar() {
+  const { user } = useAuth()
+  const { totalUnread: totalDmUnread, totalGroupUnread } = useChat()
+  const totalUnread = totalDmUnread + totalGroupUnread
+  const { pathname } = useLocation()
   const isStaff = user?.role === "ADMIN" || user?.role === "OWNER"
-  const visibleLinks = isStaff ? [...links, adminLink] : links
+  const visibleGroups = isStaff ? [...groups, adminGroup] : groups
 
   return (
     <Sidebar collapsible="icon">
@@ -93,106 +215,49 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {visibleLinks.map((link) => {
-              const active = isLinkActive(pathname, link.to, link.end)
-              return (
-                <SidebarMenuItem key={link.to}>
-                  {active && (
-                    <motion.div
-                      layoutId="active-nav-pill"
-                      className="absolute inset-0 rounded-md bg-sidebar-accent"
-                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                    />
-                  )}
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={link.label}
-                    isActive={active}
-                    className="relative z-10 data-active:bg-transparent"
-                  >
-                    <NavLink to={link.to} end={link.end}>
-                      <link.icon />
-                      <span>{link.label}</span>
-                      {link.to === "/chat" && totalUnread > 0 && (
-                        <span className="ml-auto flex size-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-                          {totalUnread}
-                        </span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+      <SidebarContent className="gap-0">
+        {visibleGroups.map((group) => (
+          <SidebarGroup key={group.label} className="py-1">
+            <SidebarGroupLabel className="h-7 text-[11px] font-medium tracking-wide text-sidebar-foreground/50 uppercase">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              {group.items.map((link) => {
+                const active = isLinkActive(pathname, link.to, link.end)
+                return (
+                  <SidebarMenuItem key={link.to}>
+                    {active && (
+                      <motion.div
+                        layoutId="active-nav-pill"
+                        className="absolute inset-0 rounded-md bg-sidebar-accent"
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={link.label}
+                      isActive={active}
+                      className="relative z-10 data-active:bg-transparent"
+                    >
+                      <NavLink to={link.to} end={link.end}>
+                        <link.icon />
+                        <span>{link.label}</span>
+                        {link.to === "/chat" && totalUnread > 0 && (
+                          <span className="ml-auto flex size-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                            {totalUnread}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
-        <button
-          type="button"
-          onClick={() => setProfileOpen(true)}
-          title={user?.name}
-          className="flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-        >
-          <Avatar size="sm" className="shrink-0">
-            {user && <AvatarImage src={`${baseURL}/users/${user.id}/avatar?v=${avatarVersion}`} />}
-            <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
-          </Avatar>
-          <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-              {user?.name}
-              {isStaff && <AdminBadge />}
-            </span>
-            {user?.bio && <span className="truncate text-xs text-muted-foreground/70">{user.bio}</span>}
-          </span>
-        </button>
-        <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
-        <Separator />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={theme === "dark" ? "Modo claro" : "Modo escuro"}
-              onClick={toggleTheme}
-            >
-              <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
-              <span>{theme === "dark" ? "Modo claro" : "Modo escuro"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <Popover open={logoutOpen} onOpenChange={setLogoutOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="group-data-[collapsible=icon]:hidden">
-              Sair
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" className="w-(--radix-popover-trigger-width)">
-            <p className="text-center text-sm text-popover-foreground">Deseja mesmo sair?</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setLogoutOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="flex-1"
-                disabled={loggingOut}
-                onClick={confirmLogout}
-              >
-                {loggingOut ? "Saindo..." : "Sair"}
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-        <p className="flex justify-center gap-3 text-[11px] text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
-          <LegalLink doc="terms" className="hover:text-foreground">
-            Termos
-          </LegalLink>
-          <LegalLink doc="privacy" className="hover:text-foreground">
-            Privacidade
-          </LegalLink>
-        </p>
+        <UserMenu />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
