@@ -44,7 +44,7 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
           fontSize={10}
         />
         <ChartTooltip
-          cursor={{ fill: "var(--muted)", opacity: 0.6, radius: 4 }}
+          cursor={false}
           content={
             <ChartTooltipContent
               hideIndicator
@@ -63,8 +63,12 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
           fill="var(--color-contributionCount)"
           radius={[3, 3, 1, 1]}
           maxBarSize={22}
+          activeBar={{ fill: "var(--color-contributionCount)", fillOpacity: 1, stroke: "none" }}
+          fillOpacity={0.7}
           isAnimationActive={!reducedMotion}
-          animationDuration={700}
+          animationBegin={250}
+          animationDuration={900}
+          animationEasing="ease-out"
         />
       </BarChart>
     </ChartContainer>

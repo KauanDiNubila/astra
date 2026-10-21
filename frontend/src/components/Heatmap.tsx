@@ -1,10 +1,9 @@
-import { useEffect, useRef } from "react"
-import { Tooltip as TooltipPrimitive } from "radix-ui"
+import { memo, useEffect, useMemo, useRef, useState } from "react"
+import type { MouseEvent } from "react"
 import type { DailyMinutes, GitHubDailyPoint } from "@/lib/types"
 import { formatMinutes } from "@/lib/format"
 import { dayKey } from "@/lib/studyStats"
 import { cn } from "@/lib/utils"
-import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
 
 const LEVELS = [
   "bg-muted",
@@ -38,14 +37,9 @@ function monthLabel(date: Date) {
 
 type Cell = { key: string; minutes: number; githubActivity: number; future: boolean }
 
-export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData?: GitHubDailyPoint[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
+type Hover = { cell: Cell; left: number; top: number }
 
-  useEffect(() => {
-    const el = scrollRef.current
-    if (el) el.scrollLeft = el.scrollWidth
-  }, [])
-
+function buildWeeks(data: DailyMinutes[], githubData: GitHubDailyPoint[] | undefined) {
   const byDay = new Map(data.map((d) => [d.day, d.minutes]))
   const githubByDay = new Map((githubData ?? []).map((d) => [d.date, d.contributionCount]))
   const today = new Date()
@@ -63,78 +57,116 @@ export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData
         const last = months[months.length - 1]
         if (!last || weeks.length - last.index >= 3) months.push({ index: weeks.length, label: monthLabel(cursor) })
       }
-      week.push({
-        key,
-        minutes: byDay.get(key) ?? 0,
-        githubActivity: githubByDay.get(key) ?? 0,
-        future: key > todayKey,
-      })
+      week.push({ key, minutes: byDay.get(key) ?? 0, githubActivity: githubByDay.get(key) ?? 0, future: key > todayKey })
       cursor.setDate(cursor.getDate() + 1)
     }
     weeks.push(week)
   }
+  return { weeks, months }
+}
 
-  const activeDays = weeks.flat().filter((c) => c.minutes > 0).length
+const HeatmapGrid = memo(function HeatmapGrid({ weeks }: { weeks: Cell[][] }) {
+  return (
+    <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
+      {weeks.map((week, index) => (
+        <div key={index} className="flex flex-col gap-[3px]">
+          {week.map((cell, row) =>
+            cell.future ? (
+              <div key={cell.key} className="aspect-square w-full" />
+            ) : (
+              <div
+                key={cell.key}
+                data-week={index}
+                data-row={row}
+                style={{ animationDelay: `${450 + index * 9}ms`, animationFillMode: "backwards" }}
+                className={cn(
+                  "aspect-square w-full animate-in fade-in duration-500 ease-out motion-reduce:animate-none",
+                  levelClass(cell.minutes),
+                  cell.githubActivity > 0 ? "rounded-full" : "rounded-[3px]",
+                )}
+              />
+            ),
+          )}
+        </div>
+      ))}
+    </div>
+  )
+})
+
+export function Heatmap({ data, githubData }: { data: DailyMinutes[]; githubData?: GitHubDailyPoint[] }) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [hover, setHover] = useState<Hover | null>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [])
+
+  const { weeks, months } = useMemo(() => buildWeeks(data, githubData), [data, githubData])
+  const activeDays = useMemo(() => weeks.flat().filter((c) => c.minutes > 0).length, [weeks])
   const columns = { gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }
+
+  function handleMove(event: MouseEvent<HTMLDivElement>) {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-week]")
+    if (!target || !wrapperRef.current) {
+      setVisible(false)
+      return
+    }
+    const cell = weeks[Number(target.dataset.week)]?.[Number(target.dataset.row)]
+    if (!cell) return
+    const cellRect = target.getBoundingClientRect()
+    const wrapperRect = wrapperRef.current.getBoundingClientRect()
+    const left = Math.min(
+      Math.max(cellRect.left - wrapperRect.left + cellRect.width / 2, 80),
+      wrapperRect.width - 80,
+    )
+    setHover({ cell, left, top: cellRect.top - wrapperRect.top })
+    setVisible(true)
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <div ref={scrollRef} className="overflow-x-auto">
-        <div className="flex min-w-[640px] flex-col gap-1.5 p-0.5">
-          <div className="grid text-[10px] text-muted-foreground" style={columns}>
-            {months.map((m) => (
-              <span key={m.index} style={{ gridColumnStart: m.index + 1, gridRowStart: 1 }} className="col-span-3 whitespace-nowrap">
-                {m.label}
-              </span>
-            ))}
-          </div>
-          <div className="grid gap-[3px]" style={columns}>
-            {weeks.map((week, index) => (
-              <div key={index} className="flex flex-col gap-[3px]">
-                {week.map((cell) =>
-                  cell.future ? (
-                    <div key={cell.key} className="aspect-square w-full" />
-                  ) : (
-                    <Tooltip key={cell.key}>
-                      <TooltipTrigger asChild>
-                        <div
-                          style={{ animationDelay: `${index * 6}ms`, animationFillMode: "backwards" }}
-                          className={cn(
-                            "aspect-square w-full animate-in fade-in zoom-in-50 duration-300 motion-reduce:animate-none",
-                            levelClass(cell.minutes),
-                            cell.githubActivity > 0 ? "rounded-full" : "rounded-[3px]",
-                          )}
-                        />
-                      </TooltipTrigger>
-                      <TooltipPrimitive.Portal>
-                        <TooltipPrimitive.Content
-                          sideOffset={6}
-                          className="z-50 min-w-36 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
-                        >
-                          <div className="grid gap-1">
-                            <span className="font-medium text-foreground">{formatDayLabel(cell.key)}</span>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="text-muted-foreground">estudo</span>
-                              <span className="font-medium text-foreground tabular-nums">
-                                {cell.minutes > 0 ? formatMinutes(cell.minutes) : "0 min"}
-                              </span>
-                            </div>
-                            {cell.githubActivity > 0 && (
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="text-muted-foreground">GitHub</span>
-                                <span className="font-medium text-foreground tabular-nums">{cell.githubActivity}</span>
-                              </div>
-                            )}
-                          </div>
-                        </TooltipPrimitive.Content>
-                      </TooltipPrimitive.Portal>
-                    </Tooltip>
-                  ),
-                )}
-              </div>
-            ))}
+      <div ref={wrapperRef} className="relative">
+        <div ref={scrollRef} className="overflow-x-auto" onMouseMove={handleMove} onMouseLeave={() => setVisible(false)}>
+          <div className="flex min-w-[640px] flex-col gap-1.5 p-0.5">
+            <div className="grid text-[10px] text-muted-foreground" style={columns}>
+              {months.map((m) => (
+                <span key={m.index} style={{ gridColumnStart: m.index + 1, gridRowStart: 1 }} className="col-span-3 whitespace-nowrap">
+                  {m.label}
+                </span>
+              ))}
+            </div>
+            <HeatmapGrid weeks={weeks} />
           </div>
         </div>
+        {hover && (
+          <div
+            role="tooltip"
+            className={cn(
+              "pointer-events-none absolute z-20 min-w-36 -translate-x-1/2 -translate-y-full rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl transition-[opacity,transform] duration-150",
+              visible ? "opacity-100" : "opacity-0",
+            )}
+            style={{ left: hover.left, top: hover.top - 6 }}
+          >
+            <div className="grid gap-1">
+              <span className="font-medium text-foreground">{formatDayLabel(hover.cell.key)}</span>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">estudo</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {hover.cell.minutes > 0 ? formatMinutes(hover.cell.minutes) : "0 min"}
+                </span>
+              </div>
+              {hover.cell.githubActivity > 0 && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">GitHub</span>
+                  <span className="font-medium text-foreground tabular-nums">{hover.cell.githubActivity}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>

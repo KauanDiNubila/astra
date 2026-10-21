@@ -38,6 +38,16 @@ export const gridItem = {
   show: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const } },
 }
 
+export const ENTER_EASE = [0.22, 1, 0.36, 1] as const
+
+export function enterAt(delay: number, reducedMotion: boolean | null) {
+  return {
+    initial: reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: reducedMotion ? 0.2 : 0.5, ease: ENTER_EASE, delay: reducedMotion ? 0 : delay },
+  }
+}
+
 export function fadeSwap(reducedMotion: boolean | null) {
   return {
     initial: reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 },

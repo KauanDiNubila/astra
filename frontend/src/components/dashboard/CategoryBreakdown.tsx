@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { motion, useReducedMotion } from "motion/react"
 import { useCountUp } from "@/hooks/use-count-up"
 import { formatMinutes } from "@/lib/format"
@@ -9,6 +10,11 @@ const EASE = [0.22, 1, 0.36, 1] as const
 
 function Row({ row, pct }: { row: Slice; pct: number }) {
   const reducedMotion = useReducedMotion()
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    mountedRef.current = true
+  }, [])
+  const firstPaint = !mountedRef.current
   const minutes = Math.round(useCountUp(row.minutes, 500))
   const percent = Math.round(useCountUp(pct, 500))
 
@@ -32,7 +38,7 @@ function Row({ row, pct }: { row: Slice; pct: number }) {
           className="h-full rounded-full bg-foreground/80"
           initial={{ width: reducedMotion ? `${pct}%` : 0 }}
           animate={{ width: `${pct}%` }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.6, ease: EASE }}
+          transition={reducedMotion ? { duration: 0 } : { duration: 0.8, ease: EASE, delay: firstPaint ? 0.6 : 0 }}
         />
       </div>
     </motion.li>

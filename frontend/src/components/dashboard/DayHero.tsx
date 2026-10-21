@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useCountUp } from "@/hooks/use-count-up"
 import { formatMinutes } from "@/lib/format"
 import type { GoalProgress } from "@/lib/types"
+import { enterAt } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 function greeting(hour: number) {
@@ -22,7 +23,8 @@ function formatHours(hours: number) {
 }
 
 function Duration({ minutes }: { minutes: number }) {
-  const animated = Math.round(useCountUp(minutes))
+  const reducedMotion = useReducedMotion()
+  const animated = Math.round(useCountUp(minutes, reducedMotion ? 1 : 1100, reducedMotion ? minutes : 0))
   const hours = Math.floor(animated / 60)
   const mins = animated % 60
   const unit = "ml-0.5 text-2xl font-medium tracking-normal text-muted-foreground sm:text-3xl"
@@ -67,7 +69,7 @@ function GoalRings({ goals }: { goals: GoalProgress[] }) {
               className={ring.className}
               initial={{ strokeDashoffset: 1, opacity: 0 }}
               animate={{ strokeDashoffset: progress > 0 ? 1 - progress : 1, opacity: progress > 0 ? 1 : 0 }}
-              transition={reducedMotion ? { duration: 0 } : { duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
             />
           </g>
         )
@@ -86,13 +88,14 @@ export function DayHero({
   onEditGoals: () => void
 }) {
   const { user } = useAuth()
+  const reducedMotion = useReducedMotion()
   const now = new Date()
   const firstName = user?.name.trim().split(/\s+/)[0] ?? ""
   const hasGoals = goals.some((g) => g.targetHours > 0)
 
   return (
     <section className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-      <div>
+      <motion.div {...enterAt(0, reducedMotion)}>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {greeting(now.getHours())}
           {firstName && `, ${firstName}`}
@@ -102,9 +105,9 @@ export function DayHero({
         <div className="mt-2">
           <Duration minutes={todayMinutes} />
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex items-center gap-5">
+      <motion.div {...enterAt(0.12, reducedMotion)} className="flex items-center gap-5">
         <GoalRings goals={goals} />
         <div className="flex flex-col gap-3">
           {hasGoals ? (
@@ -132,7 +135,7 @@ export function DayHero({
             {hasGoals ? "Editar metas" : "Definir metas"}
           </Button>
         </div>
-      </div>
+      </motion.div>
     </section>
   )
 }

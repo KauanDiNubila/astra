@@ -51,7 +51,7 @@ export function FocusTrendChart({ data }: { data: Point[] }) {
           fontSize={10}
         />
         <ChartTooltip
-          cursor={{ fill: "var(--muted)", opacity: 0.6, radius: 4 }}
+          cursor={false}
           content={
             <ChartTooltipContent
               hideIndicator
@@ -68,8 +68,12 @@ export function FocusTrendChart({ data }: { data: Point[] }) {
           fill="var(--color-minutes)"
           radius={[3, 3, 1, 1]}
           maxBarSize={22}
+          activeBar={{ fill: "var(--color-minutes)", fillOpacity: 1, stroke: "none" }}
+          fillOpacity={0.7}
           isAnimationActive={!reducedMotion}
-          animationDuration={700}
+          animationBegin={550}
+          animationDuration={900}
+          animationEasing="ease-out"
         />
       </BarChart>
     </ChartContainer>

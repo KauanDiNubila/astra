@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { motion, useReducedMotion } from "motion/react"
 import { fetchJson, invalidateGoals, queryKeys } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { dayKey } from "@/lib/studyStats"
+import { enterAt } from "@/lib/utils"
 import type { Dashboard, DailyMinutes, CategoryMinutes, GitHubDailyPoint } from "@/lib/types"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { GitHubActivityCard } from "@/components/GitHubActivityCard"
@@ -45,6 +47,7 @@ function lastNDays(n: number): string[] {
 }
 
 export function DashboardPage() {
+  const reducedMotion = useReducedMotion()
   const { categories } = usePomodoro()
   const { status: githubStatus } = useGitHub()
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriodDays>(30)
@@ -66,7 +69,10 @@ export function DashboardPage() {
 
   const data = dashboardQuery.data ?? null
   const heatmap = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
-  const githubHeatmap = githubStatus?.connected ? (githubQuery.data?.series ?? []) : []
+  const githubHeatmap = useMemo(
+    () => (githubStatus?.connected ? (githubQuery.data?.series ?? []) : []),
+    [githubStatus?.connected, githubQuery.data],
+  )
   const categoryMinutes = useMemo(() => categoryQuery.data ?? [], [categoryQuery.data])
   const loading = dashboardQuery.isPending || heatmapQuery.isPending
   const error = (dashboardQuery.isError && !dashboardQuery.data) || (heatmapQuery.isError && !heatmapQuery.data)
@@ -115,13 +121,14 @@ export function DashboardPage() {
         />
       </div>
 
-      <Panel title="Atividade" summary="Último ano">
+      <Panel title="Atividade" summary="Último ano" delay={0.32}>
         <Heatmap data={heatmap} githubData={githubHeatmap} />
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel
           title="Tempo de foco"
+          delay={0.42}
           summary={trendTotal > 0 ? `${formatMinutes(trendTotal)} · média de ${formatMinutes(Math.round(trendTotal / trendPeriod))} por dia` : undefined}
           actions={
             <PeriodToggle
@@ -137,6 +144,7 @@ export function DashboardPage() {
 
         <Panel
           title="Por categoria"
+          delay={0.5}
           summary={categoryTotal > 0 ? `${formatMinutes(categoryTotal)} no período` : undefined}
           actions={
             <PeriodToggle
@@ -151,7 +159,9 @@ export function DashboardPage() {
         </Panel>
       </div>
 
-      <GitHubActivityCard />
+      <motion.div {...enterAt(0.58, reducedMotion)}>
+        <GitHubActivityCard />
+      </motion.div>
 
       <EditGoalsModal
         open={editGoalsOpen}
@@ -168,15 +178,18 @@ function Panel({
   title,
   summary,
   actions,
+  delay,
   children,
 }: {
   title: string
   summary?: string
   actions?: ReactNode
+  delay: number
   children: ReactNode
 }) {
+  const reducedMotion = useReducedMotion()
   return (
-    <section className="flex min-w-0 flex-col gap-5 rounded-2xl border p-5 sm:p-6">
+    <motion.section {...enterAt(delay, reducedMotion)} className="flex min-w-0 flex-col gap-5 rounded-2xl border p-5 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-sm font-medium">{title}</h2>
@@ -185,7 +198,7 @@ function Panel({
         {actions}
       </div>
       {children}
-    </section>
+    </motion.section>
   )
 }
 

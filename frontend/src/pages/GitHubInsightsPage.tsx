@@ -165,7 +165,7 @@ export function GitHubInsightsPage() {
         <GitHubCommitChart data={series} />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-5 rounded-2xl border p-5 sm:p-6">
           <h2 className="text-sm font-medium">Linguagens</h2>
           {insights && insights.languages.length > 0 ? (
