@@ -9,7 +9,6 @@ import { AdminBadge } from "@/components/AdminBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { UserAvatar } from "@/components/UserAvatar"
-import { Card, CardContent } from "@/components/ui/card"
 
 const MEDAL_STYLES: Record<number, string> = {
   1: "bg-amber-400/15 text-amber-500 dark:text-amber-400",
@@ -112,7 +111,7 @@ export function RankingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Ranking</h1>
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Ranking</h1>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-md border bg-muted/30 p-1">
@@ -143,8 +142,7 @@ export function RankingPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <div className="overflow-hidden rounded-2xl border">
           <motion.div
             key={renderKey}
             initial={{ opacity: 0, y: 6 }}
@@ -163,7 +161,7 @@ export function RankingPage() {
                   const pct = maxMinutes > 0 ? (entry.minutes / maxMinutes) * 100 : 0
                   const isMe = entry.userId === user?.id
                   return (
-                    <li key={entry.userId} className="flex items-center justify-between gap-3 px-6 py-3">
+                    <li key={entry.userId} className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
                       <span className="flex min-w-0 items-center gap-3">
                         <PositionBadge position={entry.position} />
                         <AvatarRing pct={pct} position={entry.position}>
@@ -192,8 +190,7 @@ export function RankingPage() {
               </ul>
             )}
           </motion.div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }
