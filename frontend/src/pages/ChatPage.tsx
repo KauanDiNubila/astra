@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronLeft, ImagePlus, MessageCircle, Phone, Pin, PinOff, Plus, Reply, Send, Volume2, VolumeX, X } from "lucide-react"
+import { ArrowUp, ChevronLeft, ImagePlus, MessageCircle, Phone, Pin, PinOff, Plus, Reply, Search, Volume2, VolumeX, X } from "lucide-react"
 import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
@@ -21,12 +21,15 @@ import { ImageLightbox } from "@/components/ImageLightbox"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PREFIX = /^(https?:\/\/|www\.)/i
 const TRAILING_PUNCTUATION = /[.,!?;:'")\]}]+$/
+
+function normalizeSearch(text: string) {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+}
 
 function messageDayLabel(iso: string) {
   const date = new Date(iso)
@@ -171,6 +174,7 @@ export function ChatPage() {
   const { phase: callPhase, startDirectCall, startGroupCall } = useCall()
   const ready = conversationsLoaded && groupConversationsLoaded
   const [draft, setDraft] = useState("")
+  const [search, setSearch] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [displayedReplyingTo, setDisplayedReplyingTo] = useState<Message | null>(null)
   useEffect(() => {
@@ -456,7 +460,21 @@ export function ChatPage() {
   }
 
   const activeFriend = conversations.find((c) => c.friendUserId === friendId)
+  const normalizedSearch = normalizeSearch(search.trim())
+  const visibleConversations = normalizedSearch
+    ? conversations.filter((c) => normalizeSearch(c.friendName).includes(normalizedSearch))
+    : conversations
+  const visibleGroups = normalizedSearch
+    ? groupConversations.filter((c) => normalizeSearch(c.groupName).includes(normalizedSearch))
+    : groupConversations
   const activeGroup = groupConversations.find((c) => c.groupId === groupId)
+  const composerPlaceholder = isGroup
+    ? activeGroup
+      ? `Escreva para ${activeGroup.groupName}…`
+      : "Escreva uma mensagem…"
+    : activeFriend
+      ? `Escreva para ${activeFriend.friendName.trim().split(/\s+/)[0]}…`
+      : "Escreva uma mensagem…"
   const activeGroupMembers = groupId ? (groupMembersById[groupId] ?? []) : []
 
   function memberName(userId: string) {
@@ -485,16 +503,28 @@ export function ChatPage() {
       <h1 className="sr-only">Chat</h1>
       <OverlayScrollbar target={conversationListRef} />
       <OverlayScrollbar target={scrollContainerRef} />
-      <Card className="flex h-full flex-row gap-0 overflow-hidden rounded-none p-0 sm:rounded-2xl">
+      <div className="flex h-full flex-row overflow-hidden bg-background sm:rounded-2xl sm:border">
       <div
         ref={conversationListRef}
         className={cn(
-          "overlay-scroll flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-64",
+          "overlay-scroll flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-72",
           (friendId || groupId) && "hidden sm:flex",
         )}
       >
-        <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Conversas</span>
+        <div className="px-3 pt-3">
+          <label className="flex h-9 items-center gap-2 rounded-xl border bg-card px-3 text-sm text-muted-foreground focus-within:border-foreground/30">
+            <Search className="size-3.5 shrink-0" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar conversa"
+              aria-label="Buscar conversa"
+              className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </label>
+        </div>
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <span className="text-xs font-medium text-muted-foreground">Mensagens</span>
           <Button
             type="button"
             variant="ghost"
@@ -506,22 +536,25 @@ export function ChatPage() {
             {chatSoundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
           </Button>
         </div>
+        {normalizedSearch && visibleConversations.length === 0 && visibleGroups.length === 0 && (
+          <p className="px-4 py-2 text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>
+        )}
         {conversations.length === 0 ? (
           <p className="px-4 pb-3 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>
         ) : (
           <ul className="flex flex-col gap-0.5 p-2">
-            {conversations.map((c) => (
+            {visibleConversations.map((c) => (
               <li key={c.friendUserId} className="relative">
                 {c.friendUserId === friendId && (
                   <motion.div
                     layoutId="chat-conversation-pill-friend"
-                    className="absolute inset-0 rounded-lg bg-muted"
+                    className="absolute inset-0 rounded-xl bg-muted/70"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <Link
                   to={`/chat/${c.friendUserId}`}
-                  className="relative z-10 flex flex-col gap-1 rounded-lg px-3 py-2.5 hover:bg-muted/50"
+                  className="relative z-10 flex flex-col gap-1 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/40"
                 >
                   <span className="flex items-center gap-2.5">
                     <UserAvatar userId={c.friendUserId} name={c.friendName} size="default" />
@@ -555,7 +588,7 @@ export function ChatPage() {
           </ul>
         )}
 
-        <div className="mt-2 flex items-center justify-between border-t px-4 py-2">
+        <div className="mt-2 flex items-center justify-between px-4 pt-2 pb-1">
           <span className="text-xs font-medium text-muted-foreground">Grupos</span>
           <Button
             type="button"
@@ -573,21 +606,21 @@ export function ChatPage() {
         )}
         {groupConversations.length > 0 && (
           <ul className="flex flex-col gap-0.5 p-2">
-            {groupConversations.map((c) => (
+            {visibleGroups.map((c) => (
               <li key={c.groupId} className="relative">
                 {c.groupId === groupId && (
                   <motion.div
                     layoutId="chat-conversation-pill-group"
-                    className="absolute inset-0 rounded-lg bg-muted"
+                    className="absolute inset-0 rounded-xl bg-muted/70"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <Link
                   to={`/chat/g/${c.groupId}`}
-                  className="relative z-10 flex flex-col gap-1 rounded-lg px-3 py-2.5 hover:bg-muted/50"
+                  className="relative z-10 flex flex-col gap-1 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/40"
                 >
                   <span className="flex items-center gap-2.5">
-                    <GroupAvatar groupId={c.groupId} />
+                    <GroupAvatar groupId={c.groupId} className="rounded-lg after:rounded-lg [&>*]:rounded-lg" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className={cn("min-w-0 truncate", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{c.groupName}</span>
@@ -791,6 +824,7 @@ export function ChatPage() {
                     </button>
                   )
                   const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()
+                  const showAvatar = !mine && !groupedWithNext
                   return (
                     <Fragment key={m.id}>
                     {newDay && (
@@ -814,21 +848,32 @@ export function ChatPage() {
                         startReply(m)
                       }}
                       className={cn(
-                        "group flex items-center gap-1",
+                        "group flex items-end gap-1",
                         mine ? "justify-end" : "justify-start",
                         groupedWithPrev && !newDay ? "mt-0.5" : newDay ? "mt-0" : "mt-3",
                       )}
                     >
                       {mine && pinButton}
                       {mine && replyButton}
+                      {!mine && (
+                        <span className="mr-1 w-6 shrink-0">
+                          {showAvatar &&
+                            (isGroup ? (
+                              <UserAvatar userId={m.senderId} name={memberName(m.senderId)} size="sm" />
+                            ) : (
+                              activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />
+                            ))}
+                        </span>
+                      )}
                       <SwipeableMessage onReply={() => startReply(m)}>
                       <div
                         data-message-bubble
                         title={new Date(m.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                         className={cn(
-                          "relative max-w-[70%] overflow-hidden rounded-2xl px-3.5 py-2 text-sm shadow-sm",
-                          mine ? "bg-primary text-primary-foreground" : "bg-muted",
-                          !groupedWithNext && (mine ? "rounded-br-md" : "rounded-bl-md"),
+                          "relative max-w-[70%] overflow-hidden rounded-[18px] px-3.5 py-2 text-sm",
+                          mine ? "bg-primary text-primary-foreground" : "border bg-card",
+                          groupedWithPrev && !newDay && (mine ? "rounded-tr-md" : "rounded-tl-md"),
+                          groupedWithNext && (mine ? "rounded-br-md" : "rounded-bl-md"),
                         )}
                       >
                         {highlight?.id === m.id && (
@@ -952,7 +997,8 @@ export function ChatPage() {
               </div>
             )}
 
-            <form onSubmit={onSubmit} className="flex items-center gap-2 border-t p-3">
+            <form onSubmit={onSubmit} className="px-3 pt-1 pb-3 sm:px-4 sm:pb-4">
+              <div className="flex items-end gap-1 rounded-2xl border bg-card p-1.5 pl-2 transition-colors focus-within:border-foreground/30">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -965,29 +1011,37 @@ export function ChatPage() {
                 variant="ghost"
                 size="icon"
                 title="Anexar imagem"
+                className="size-8 shrink-0 rounded-xl text-muted-foreground"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ImagePlus className="size-4" />
               </Button>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Textarea
                   ref={textareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={onKeyDown}
                   onPaste={handlePaste}
-                  placeholder="Escreva uma mensagem..."
-                  className="max-h-40 min-h-10 w-full resize-none"
+                  placeholder={composerPlaceholder}
+                  className="max-h-40 min-h-8 w-full resize-none border-0 bg-transparent px-1 py-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
                 />
               </div>
-              <Button type="submit" size="icon" disabled={pendingImage ? sendingImage : !draft.trim()}>
-                <Send className="size-4" />
+              <Button
+                type="submit"
+                size="icon"
+                aria-label="Enviar"
+                className="size-8 shrink-0 rounded-xl"
+                disabled={pendingImage ? sendingImage : !draft.trim()}
+              >
+                <ArrowUp className="size-4" />
               </Button>
+              </div>
             </form>
           </div>
         )}
       </div>
-      </Card>
+      </div>
 
       <CreateGroupModal open={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
       <ImageLightbox messageId={lightboxMessageId} onClose={() => setLightboxMessageId(null)} />
