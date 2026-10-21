@@ -1,32 +1,80 @@
-import { useEffect, useState } from "react"
-import type { FormEvent } from "react"
-import { motion } from "motion/react"
-import { Plus } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { motion, useReducedMotion } from "motion/react"
+import { ArrowUpRight, BookOpen, Check, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
-import { toast } from "sonner"
-import { api } from "@/lib/api"
 import { usePomodoro } from "@/context/PomodoroContext"
-import { useSpotlight } from "@/hooks/useSpotlight"
-import { cn, gridItem, gridStagger, INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS } from "@/lib/utils"
+import { cn, fadeSwap, gridItem, gridStagger } from "@/lib/utils"
 import type { CourseSummary } from "@/lib/types"
 import { CardGridSkeleton } from "@/components/CardGridSkeleton"
-import { Badge } from "@/components/ui/badge"
+import { NewCourseModal } from "@/components/NewCourseModal"
+import { PillToggleButton } from "@/components/PillToggleButton"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { Stepper } from "@/components/ui/stepper"
 
-const MAX_INITIAL_MODULES = 30
+type Filter = "all" | "active" | "done"
+
+function isDone(course: CourseSummary) {
+  return course.status === "DONE" || (course.totalLessons > 0 && course.completedLessons >= course.totalLessons)
+}
+
+function CourseCard({ course }: { course: CourseSummary }) {
+  const reducedMotion = useReducedMotion()
+  const done = isDone(course)
+  const pct = Math.round(course.progress * 100)
+  const remaining = Math.max(0, course.totalLessons - course.completedLessons)
+
+  return (
+    <Link
+      to={`/courses/${course.id}`}
+      className="group flex h-full flex-col gap-6 rounded-2xl border p-5 transition-colors duration-200 hover:border-foreground/20 hover:bg-muted/20 sm:p-6"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {course.platform || "Curso"}
+          </p>
+          <h2 className="mt-1.5 line-clamp-2 font-semibold tracking-tight break-words" title={course.title}>
+            {course.title}
+          </h2>
+        </div>
+        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3">
+        <div className="flex items-end justify-between gap-3">
+          <span className="text-3xl font-semibold tracking-[-0.03em] tabular-nums">
+            {pct}
+            <span className="ml-0.5 text-lg font-medium text-muted-foreground">%</span>
+          </span>
+          {done ? (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+              <Check className="size-3" />
+              Concluído
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {course.totalLessons === 0
+                ? "Sem aulas ainda"
+                : `${course.completedLessons} de ${course.totalLessons} aulas · faltam ${remaining}`}
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <motion.div
+            className={cn("h-full rounded-full", done ? "bg-emerald-500" : "bg-foreground/80")}
+            initial={{ width: reducedMotion ? `${pct}%` : 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          />
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 export function CoursesPage() {
-  const [title, setTitle] = useState("")
-  const [platform, setPlatform] = useState("")
-  const [moduleCount, setModuleCount] = useState(0)
-  const [saving, setSaving] = useState(false)
-  const [formOpen, setFormOpen] = useState(false)
-  const { onMouseMove } = useSpotlight()
+  const reducedMotion = useReducedMotion()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [filter, setFilter] = useState<Filter>("all")
   const { courses, coursesLoaded, loadCourses } = usePomodoro()
 
   useEffect(() => {
@@ -34,119 +82,100 @@ export function CoursesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    if (!title.trim()) return
-    setSaving(true)
-    try {
-      await api.post<CourseSummary>("/courses", {
-        title: title.trim(),
-        platform: platform.trim() || null,
-        moduleCount: moduleCount || null,
-      })
-      setTitle("")
-      setPlatform("")
-      setModuleCount(0)
-      setFormOpen(false)
-      await loadCourses()
-    } catch {
-      toast.error("Não foi possível criar o curso.")
-    } finally {
-      setSaving(false)
-    }
-  }
+  const summary = useMemo(() => {
+    const done = courses.filter(isDone).length
+    const lessons = courses.reduce((sum, c) => sum + c.totalLessons, 0)
+    const completed = courses.reduce((sum, c) => sum + c.completedLessons, 0)
+    return { done, active: courses.length - done, overall: lessons > 0 ? Math.round((completed / lessons) * 100) : 0 }
+  }, [courses])
+
+  const visible = useMemo(() => {
+    const rank = (c: CourseSummary) => (isDone(c) ? 2 : c.status === "IN_PROGRESS" ? 0 : 1)
+    return courses
+      .filter((c) => filter === "all" || (filter === "done" ? isDone(c) : !isDone(c)))
+      .sort((a, b) => rank(a) - rank(b) || b.progress - a.progress || a.title.localeCompare(b.title))
+  }, [courses, filter])
 
   if (!coursesLoaded) {
     return <CardGridSkeleton />
   }
 
+  const filters: { key: Filter; label: string; count: number }[] = [
+    { key: "all", label: "Todos", count: courses.length },
+    { key: "active", label: "Em andamento", count: summary.active },
+    { key: "done", label: "Concluídos", count: summary.done },
+  ]
+
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Cursos</h1>
-        {courses.length > 0 && (
-          <Button
-            type="button"
-            variant={formOpen ? "secondary" : "outline"}
-            className="gap-1.5 sm:hidden"
-            aria-expanded={formOpen}
-            onClick={() => setFormOpen((open) => !open)}
-          >
-            <Plus className="size-4" />
-            Novo curso
-          </Button>
-        )}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cursos</h1>
+          <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+            {courses.length === 0
+              ? "Acompanhe os cursos que você está fazendo, módulo por módulo."
+              : `${courses.length} ${courses.length === 1 ? "curso" : "cursos"} · ${summary.done} ${summary.done === 1 ? "concluído" : "concluídos"} · ${summary.overall}% no geral`}
+          </p>
+        </div>
+        <Button type="button" className="rounded-full" onClick={() => setModalOpen(true)}>
+          <Plus data-icon="inline-start" />
+          Novo curso
+        </Button>
       </div>
 
-      <Card className={cn(!formOpen && courses.length > 0 && "max-sm:hidden")}>
-        <CardHeader>
-          <CardTitle>Novo curso</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="title">Título</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </div>
-            <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="platform">Plataforma</Label>
-              <Input id="platform" value={platform} onChange={(e) => setPlatform(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Módulos</Label>
-              <Stepper
-                value={moduleCount}
-                onChange={setModuleCount}
-                min={0}
-                max={MAX_INITIAL_MODULES}
-                aria-label="Quantidade de módulos"
-              />
-            </div>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Criando..." : "Criar"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
       {courses.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum curso ainda.</p>
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2"
-          variants={gridStagger}
-          initial="hidden"
-          animate="show"
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-16 text-center transition-colors hover:bg-muted/20"
         >
-          {courses.map((course) => (
-            <motion.div key={course.id} variants={gridItem}>
-              <Link to={`/courses/${course.id}`}>
-                <Card
-                  className={cn("h-full", INTERACTIVE_CARD_CLASS, SPOTLIGHT_CLASS)}
-                  onMouseMove={onMouseMove}
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between gap-2">
-                      <CardTitle className="line-clamp-2 break-words text-base" title={course.title}>
-                        {course.title}
-                      </CardTitle>
-                      <Badge variant="secondary">
-                        {course.completedLessons}/{course.totalLessons} aulas
-                      </Badge>
-                    </div>
-                    {course.platform && (
-                      <p className="text-sm text-muted-foreground">{course.platform}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <Progress value={Math.round(course.progress * 100)} />
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
+          <BookOpen className="size-6 text-muted-foreground" />
+          <span className="font-medium">Cadastre seu primeiro curso</span>
+          <span className="max-w-xs text-sm text-muted-foreground">
+            Marque cada aula concluída e veja o progresso aqui e no seu foco.
+          </span>
+        </button>
+      ) : (
+        <>
+          <div className="flex w-fit gap-1 rounded-md border bg-muted/30 p-1">
+            {filters.map((f) => (
+              <PillToggleButton
+                key={f.key}
+                active={filter === f.key}
+                layoutId="courses-filter-pill"
+                onClick={() => setFilter(f.key)}
+                className="h-7 gap-1.5 px-2.5"
+              >
+                {f.label}
+                <span className="text-xs text-muted-foreground tabular-nums">{f.count}</span>
+              </PillToggleButton>
+            ))}
+          </div>
+
+          <motion.div key={filter} {...fadeSwap(reducedMotion)}>
+            {visible.length === 0 ? (
+              <p className="rounded-2xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">
+                {filter === "done" ? "Nenhum curso concluído ainda." : "Nenhum curso em andamento."}
+              </p>
+            ) : (
+              <motion.div
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                variants={gridStagger}
+                initial="hidden"
+                animate="show"
+              >
+                {visible.map((course) => (
+                  <motion.div key={course.id} variants={gridItem}>
+                    <CourseCard course={course} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+        </>
       )}
+
+      <NewCourseModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={loadCourses} />
     </div>
   )
 }
