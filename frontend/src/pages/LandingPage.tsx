@@ -29,7 +29,6 @@ import { AppFrame } from "@/components/landing/AppFrame"
 import { AstraMark } from "@/components/landing/AstraMark"
 import { SplitWords } from "@/components/landing/SplitWords"
 import { setupLandingMotion } from "@/components/landing/landingMotion"
-import { OrbitArt } from "@/components/landing/featureArt"
 import { GithubScreen, HeatmapScreen, OverviewScreen, PomodoroScreen, RankingScreen } from "@/components/landing/screens"
 
 const STORE_URL = "https://apps.microsoft.com/detail/9NRB7QNCJGSP?hl=pt-br&gl=BR"
@@ -288,44 +287,31 @@ function Features() {
   )
 }
 
-function CtaCard() {
+function Closing() {
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-8 sm:pb-32">
-      <div
-        data-cta-card
-        className="grid items-center gap-10 overflow-hidden rounded-3xl bg-foreground p-8 text-background sm:p-12 md:grid-cols-[minmax(0,1fr)_auto]"
-      >
-        <div>
-          <h2 className="text-balance text-3xl font-semibold tracking-[-0.035em] sm:text-5xl">Comece a estudar com método</h2>
-          <p className="mt-4 max-w-lg text-pretty text-background/65 sm:text-lg">
-            Crie sua conta grátis e use no navegador, ou instale o app para Windows pela Microsoft Store.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className={cn(PRIMARY_CTA, "bg-background text-foreground hover:bg-background/85")}>
-              <Link to="/register">
-                Criar conta grátis
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className={cn(
-                SECONDARY_CTA,
-                "border-background/25 bg-transparent text-background hover:bg-background/10 hover:text-background",
-                "dark:border-background/25 dark:bg-transparent dark:hover:bg-background/10",
-              )}
-            >
-              <a href={STORE_URL} target="_blank" rel="noreferrer">
-                <Monitor data-icon="inline-start" />
-                Microsoft Store
-                <ArrowUpRight data-icon="inline-end" />
-              </a>
-            </Button>
-          </div>
+    <section className="px-4 pb-20 pt-8 text-center sm:px-8 sm:pb-28 sm:pt-12">
+      <div data-cta-card className="mx-auto max-w-3xl">
+        <h2 className="text-balance text-[clamp(2.4rem,5vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.045em]">
+          Comece a estudar com método
+        </h2>
+        <p className="mx-auto mt-5 max-w-lg text-pretty text-muted-foreground sm:text-lg">
+          Crie sua conta grátis e use no navegador, ou instale o app para Windows pela Microsoft Store.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Button asChild size="lg" className={PRIMARY_CTA}>
+            <Link to="/register">
+              Criar conta grátis
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className={SECONDARY_CTA}>
+            <a href={STORE_URL} target="_blank" rel="noreferrer">
+              <Monitor data-icon="inline-start" />
+              Microsoft Store
+              <ArrowUpRight data-icon="inline-end" />
+            </a>
+          </Button>
         </div>
-        <OrbitArt className="mx-auto w-48 sm:w-60" />
       </div>
     </section>
   )
@@ -373,7 +359,7 @@ function LandingContent() {
         <DesktopShowcase />
         <StackedShowcase />
         <Features />
-        <CtaCard />
+        <Closing />
       </main>
       <Footer />
     </div>
