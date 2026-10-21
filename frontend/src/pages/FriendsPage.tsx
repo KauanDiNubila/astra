@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { motion } from "motion/react"
 import { Check, Copy, MessageCircle, MoreHorizontal, UserMinus, UserPlus, Users, X } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useFriends } from "@/context/FriendsContext"
-import { formatMinutes } from "@/lib/format"
-import { fetchJson, queryKeys } from "@/lib/queryClient"
-import type { Friendship, RankingEntry } from "@/lib/types"
+import type { Friendship } from "@/lib/types"
 import { cn, gridItem, gridStagger } from "@/lib/utils"
 import { AdminBadge } from "@/components/AdminBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
@@ -59,15 +56,7 @@ function HandleChip({ handle }: { handle: string }) {
   )
 }
 
-function FriendCard({
-  friend,
-  stats,
-  onRemove,
-}: {
-  friend: Friendship
-  stats: RankingEntry | undefined
-  onRemove: () => Promise<void>
-}) {
+function FriendCard({ friend, onRemove }: { friend: Friendship; onRemove: () => Promise<void> }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -132,14 +121,7 @@ function FriendCard({
         </Popover>
       </div>
 
-      <div className="mt-auto flex items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Esta semana</p>
-          <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
-            {formatMinutes(stats?.minutes ?? 0)}
-            {stats && <span className="ml-2 text-sm font-medium text-muted-foreground">{stats.position}º</span>}
-          </p>
-        </div>
+      <div className="mt-auto flex justify-end">
         <Button
           type="button"
           variant="outline"
@@ -161,11 +143,6 @@ export function FriendsPage() {
   const [handle, setHandle] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const rankingQuery = useQuery({
-    queryKey: queryKeys.ranking("WEEKLY", "FRIENDS"),
-    queryFn: fetchJson<RankingEntry[]>("/ranking", { period: "WEEKLY", scope: "FRIENDS" }),
-  })
-  const statsByUser = new Map((rankingQuery.data ?? []).map((entry) => [entry.userId, entry]))
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -205,9 +182,7 @@ export function FriendsPage() {
   const received = requests.filter((r) => r.incoming)
   const sent = requests.filter((r) => !r.incoming)
   const myHandle = user ? `${user.name}#${user.tag}` : ""
-  const sortedFriends = [...friends].sort(
-    (a, b) => (statsByUser.get(b.friendUserId)?.minutes ?? 0) - (statsByUser.get(a.friendUserId)?.minutes ?? 0),
-  )
+  const sortedFriends = [...friends].sort((a, b) => a.friendName.localeCompare(b.friendName))
 
   return (
     <div className="flex flex-col gap-8">
@@ -286,7 +261,7 @@ export function FriendsPage() {
         <motion.div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" variants={gridStagger} initial="hidden" animate="show">
           {sortedFriends.map((friend) => (
             <motion.div key={friend.id} variants={gridItem}>
-              <FriendCard friend={friend} stats={statsByUser.get(friend.friendUserId)} onRemove={() => remove(friend.id)} />
+              <FriendCard friend={friend} onRemove={() => remove(friend.id)} />
             </motion.div>
           ))}
         </motion.div>
