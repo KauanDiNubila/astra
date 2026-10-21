@@ -28,7 +28,6 @@
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
-    "shadcn": "^4.16.2",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
@@ -41,6 +40,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "playwright-core": "1.63.0",
+    "shadcn": "^4.22.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }
