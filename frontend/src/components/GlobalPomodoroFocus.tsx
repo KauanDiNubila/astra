@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { FocusModeOverlay } from "@/components/FocusModeOverlay"
@@ -27,6 +28,10 @@ export function GlobalPomodoroFocus() {
     setSelectedModuleId,
     loadCourseDetail,
   } = usePomodoro()
+
+  useEffect(() => {
+    if (focusMode && pathname !== "/sessions") setFocusMode(false)
+  }, [focusMode, pathname, setFocusMode])
 
   const allLessons = courseDetail?.modules.flatMap((m) =>
     m.lessons.map((l) => ({ ...l, moduleTitle: m.title })),
