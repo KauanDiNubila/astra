@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronsUpDown, LogOut, Sparkle, UserPen } from "lucide-react"
 import { motion } from "motion/react"
 import { NavLink, useLocation } from "react-router-dom"
@@ -139,7 +139,15 @@ export function AppSidebar() {
   const totalUnread = totalDmUnread + totalGroupUnread
   const { pathname } = useLocation()
   const visibleGroups = navGroupsFor(user?.role)
-  const { isMobile } = useSidebar()
+  const { isMobile, state } = useSidebar()
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.appSidebar = state
+    return () => {
+      delete root.dataset.appSidebar
+    }
+  }, [state])
 
   return (
     <Sidebar collapsible="icon">

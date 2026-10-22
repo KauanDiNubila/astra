@@ -134,8 +134,15 @@ function TitleBar() {
   return (
     <div
       data-slot="desktop-title-bar"
-      className="fixed inset-x-0 top-0 z-[200] h-(--titlebar-h) bg-sidebar text-sidebar-foreground select-none"
+      className="fixed inset-x-0 top-0 z-[200] h-(--titlebar-h) bg-background text-foreground select-none"
     >
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 w-0 bg-sidebar transition-[width] duration-200 ease-linear max-md:hidden",
+          "[html[data-app-sidebar]_&]:border-r [html[data-app-sidebar=collapsed]_&]:w-12 [html[data-app-sidebar=expanded]_&]:w-64",
+        )}
+      />
       <div
         className="relative flex h-full items-center"
         style={{ marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" }}
@@ -149,7 +156,7 @@ function TitleBar() {
           </NavButton>
         </div>
         <div data-slot="title-bar-drag" className="h-full flex-1 [-webkit-app-region:drag]" />
-        <p className="pointer-events-none absolute inset-x-0 text-center text-[11px] font-medium text-muted-foreground">
+        <p className="pointer-events-none absolute inset-x-0 text-center text-[11px] font-medium text-muted-foreground/60">
           {pageTitleFor(pathname) ?? "Astra"}
         </p>
         <WindowControls />
