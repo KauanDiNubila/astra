@@ -61,11 +61,18 @@ function NavButton({
   )
 }
 
-function Glyph({ children }: { children: React.ReactNode }) {
+const WINDOW_GLYPHS = {
+  minimize: "\uE921",
+  maximize: "\uE922",
+  restore: "\uE923",
+  close: "\uE8BB",
+}
+
+function Glyph({ name }: { name: keyof typeof WINDOW_GLYPHS }) {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden>
-      {children}
-    </svg>
+    <span aria-hidden className="font-['Segoe_Fluent_Icons','Segoe_MDL2_Assets'] text-[10px] leading-none">
+      {WINDOW_GLYPHS[name]}
+    </span>
   )
 }
 
@@ -89,14 +96,12 @@ function WindowControls() {
   if (!controls) return null
 
   const button =
-    "flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+    "flex h-full w-[46px] items-center justify-center text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.06]"
 
   return (
     <div className="flex h-full items-stretch">
       <button type="button" aria-label="Minimizar" className={button} onClick={() => controls.minimize()}>
-        <Glyph>
-          <path d="M0.5 5.5h9" />
-        </Glyph>
+        <Glyph name="minimize" />
       </button>
       <button
         type="button"
@@ -104,19 +109,15 @@ function WindowControls() {
         className={button}
         onClick={() => controls.toggleMaximize()}
       >
-        <Glyph>
-          <rect x="1.5" y="1.5" width="7" height="7" />
-        </Glyph>
+        <Glyph name={maximized ? "restore" : "maximize"} />
       </button>
       <button
         type="button"
         aria-label="Fechar"
-        className={cn(button, "hover:bg-red-600 hover:text-white")}
+        className={cn(button, "hover:bg-[#c42b1c] hover:text-white dark:hover:bg-[#c42b1c]")}
         onClick={() => controls.close()}
       >
-        <Glyph>
-          <path d="M0.5 0.5l9 9M9.5 0.5l-9 9" />
-        </Glyph>
+        <Glyph name="close" />
       </button>
     </div>
   )
