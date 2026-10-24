@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import axios from "axios"
+import { RefreshCw } from "lucide-react"
 import { motion } from "motion/react"
 import { fetchJson, queryKeys } from "@/lib/queryClient"
 import { useAuth } from "@/context/AuthContext"
@@ -9,6 +11,8 @@ import { AdminBadge } from "@/components/AdminBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
 import { UserAvatar } from "@/components/UserAvatar"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 const MEDAL_STYLES: Record<number, string> = {
   1: "bg-amber-400/15 text-amber-500 dark:text-amber-400",
@@ -86,6 +90,11 @@ const scopes = [
 
 type Scope = (typeof scopes)[number]["key"]
 
+function errorCode(error: unknown) {
+  if (axios.isAxiosError(error)) return error.response ? `erro ${error.response.status}` : "sem conexão"
+  return "erro inesperado"
+}
+
 export function RankingPage() {
   const { user } = useAuth()
   const [period, setPeriod] = useState<Period>("DAILY")
@@ -102,6 +111,8 @@ export function RankingPage() {
     setRenderKey((k) => k + 1)
   }
   const entries = query.data ?? []
+  const failed = query.isError && query.data === undefined
+  const switching = query.isPlaceholderData
 
   if (query.isPending) {
     return <PageSkeleton rows={5} />
@@ -142,14 +153,34 @@ export function RankingPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border">
+      <div
+        aria-busy={switching}
+        className={cn("overflow-hidden rounded-2xl border transition-opacity duration-200", switching && "opacity-50")}
+      >
           <motion.div
             key={renderKey}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            {entries.length === 0 ? (
+            {failed ? (
+              <div className="flex flex-col items-start gap-3 p-6">
+                <p className="text-sm text-muted-foreground">
+                  Não foi possível carregar o ranking ({errorCode(query.error)}).
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  disabled={query.isFetching}
+                  onClick={() => void query.refetch()}
+                >
+                  <RefreshCw className={cn("size-4", query.isFetching && "animate-spin")} />
+                  Tentar de novo
+                </Button>
+              </div>
+            ) : entries.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
                 {scope === "FRIENDS"
                   ? "Ninguém do seu grupo de amigos registrou tempo neste período ainda."
