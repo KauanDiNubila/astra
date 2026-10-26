@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import type { ChangeEvent, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { CheckCircle2, Clock, ImagePlus, Maximize, Minimize, Palette, Sparkles, Target, X, Zap } from "lucide-react"
+import { CheckCircle2, Clock, Maximize, Minimize, Palette, Sparkles, Target, X, Zap } from "lucide-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { useBatteryStatus } from "@/hooks/useBatteryStatus"
@@ -12,145 +12,45 @@ import { formatMinutes } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { dashboardQuery } from "@/lib/queryClient"
-import {
-  clearCustomFocusImage,
-  getCustomFocusImage,
-  resizeImageForFocusBackground,
-  setCustomFocusImage,
-} from "@/lib/customFocusImage"
-import { FOCUS_BACKGROUND_LIBRARY, findLibraryBackground } from "@/lib/focusBackgroundLibrary"
 import { Particles } from "@/components/magicui/particles"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 
-type FocusTheme = "default" | "custom" | `library:${string}`
-
-const LIBRARY_ID_PREFIX = "library:"
-
-// Sem sintonia fina por foto (seriam dezenas com a biblioteca crescendo) —
-// um overlay escuro neutro cobre texto legível na maioria das imagens.
-const PHOTO_OVERLAY = "linear-gradient(rgba(10, 10, 12, 0.5), rgba(10, 10, 12, 0.5))"
-const PHOTO_PARTICLE_COLOR = "#ffffff"
-
-const FOCUS_THEME_KEY = "astra:focus-theme"
-
-function loadFocusTheme(): FocusTheme {
-  if (typeof window === "undefined") return "default"
-  const raw = localStorage.getItem(FOCUS_THEME_KEY)
-  if (raw === "default" || raw === "custom") return raw
-  if (raw?.startsWith(LIBRARY_ID_PREFIX) && findLibraryBackground(raw.slice(LIBRARY_ID_PREFIX.length))) {
-    return raw as FocusTheme
-  }
-  return "default"
-}
-
-function ThemePicker({
-  theme,
-  customImageUrl,
-  onChange,
-  onUploadFile,
-  onRemoveCustom,
+function AppearanceMenu({
+  particlesEnabled,
+  onToggleParticles,
+  isDark,
+  onToggleTheme,
 }: {
-  theme: FocusTheme
-  customImageUrl: string | null
-  onChange: (theme: FocusTheme) => void
-  onUploadFile: (file: File) => void
-  onRemoveCustom: () => void
+  particlesEnabled: boolean
+  onToggleParticles: () => void
+  isDark: boolean
+  onToggleTheme: () => void
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  function handleCustomClick() {
-    if (customImageUrl) {
-      onChange("custom")
-    } else {
-      fileInputRef.current?.click()
-    }
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (file) onUploadFile(file)
-    event.target.value = ""
-  }
-
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          title="Atmosfera de fundo"
-        >
-          <Palette className={cn("size-4", theme === "default" && "text-muted-foreground/50")} />
+        <Button type="button" variant="ghost" size="icon" title="Aparência">
+          <Palette className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="z-[110] max-h-96 w-64 overflow-y-auto" align="end">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              title="Padrão"
-              onClick={() => onChange("default")}
-              className={cn(
-                "size-8 shrink-0 rounded-full border-2 bg-muted transition-transform hover:scale-110",
-                theme === "default" ? "border-primary" : "border-transparent",
-              )}
-            />
-
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                title={customImageUrl ? "Sua foto" : "Enviar sua foto"}
-                onClick={handleCustomClick}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-full border-2 bg-cover bg-center transition-transform hover:scale-110",
-                  theme === "custom" ? "border-primary" : "border-transparent",
-                  !customImageUrl && "bg-muted",
-                )}
-                style={customImageUrl ? { backgroundImage: `url(${customImageUrl})` } : undefined}
-              >
-                {!customImageUrl && <ImagePlus className="size-4 text-muted-foreground" />}
-              </button>
-              {customImageUrl && (
-                <button
-                  type="button"
-                  title="Remover sua foto"
-                  onClick={onRemoveCustom}
-                  className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-2.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {FOCUS_BACKGROUND_LIBRARY.map((category) => (
-            <div key={category.id} className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-muted-foreground">{category.label}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {category.backgrounds.map((bg) => {
-                  const value: FocusTheme = `${LIBRARY_ID_PREFIX}${bg.id}`
-                  return (
-                    <button
-                      key={bg.id}
-                      type="button"
-                      title={bg.label}
-                      onClick={() => onChange(value)}
-                      className={cn(
-                        "size-8 shrink-0 rounded-full border-2 bg-cover bg-center transition-transform hover:scale-110",
-                        theme === value ? "border-primary" : "border-transparent",
-                      )}
-                      style={{ backgroundImage: `url(${bg.image})` }}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <PopoverContent className="z-[110] w-56 gap-0 p-1" align="end">
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-accent">
+          <span className="flex items-center gap-2.5">
+            <Sparkles className="size-4 text-muted-foreground" />
+            Partículas
+          </span>
+          <Switch checked={particlesEnabled} onCheckedChange={onToggleParticles} />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-accent">
+          <span className="flex items-center gap-2.5">
+            <ThemeToggleIcon isDark={isDark} className="size-4 text-muted-foreground" />
+            Modo escuro
+          </span>
+          <Switch checked={isDark} onCheckedChange={onToggleTheme} />
+        </label>
       </PopoverContent>
     </Popover>
   )
@@ -413,8 +313,6 @@ export function FocusModeOverlay({
   const scrollRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
   const [particlesEnabled, setParticlesEnabled] = useState(loadParticlesEnabled)
-  const [focusTheme, setFocusTheme] = useState<FocusTheme>(loadFocusTheme)
-  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement)
   const [fullscreenTransitioning, setFullscreenTransitioning] = useState(false)
   const [goalPanelOpen, setGoalPanelOpen] = useState(false)
@@ -485,61 +383,7 @@ export function FocusModeOverlay({
     })
   }
 
-  function changeFocusTheme(next: FocusTheme) {
-    setFocusTheme(next)
-    localStorage.setItem(FOCUS_THEME_KEY, next)
-  }
-
-  useEffect(() => {
-    let objectUrl: string | null = null
-    getCustomFocusImage()
-      .then((blob) => {
-        if (!blob) {
-          if (focusTheme === "custom") changeFocusTheme("default")
-          return
-        }
-        objectUrl = URL.createObjectURL(blob)
-        setCustomImageUrl(objectUrl)
-      })
-      .catch(() => {
-        if (focusTheme === "custom") changeFocusTheme("default")
-      })
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function handleUploadFile(file: File) {
-    const resized = await resizeImageForFocusBackground(file)
-    await setCustomFocusImage(resized)
-    setCustomImageUrl((previous) => {
-      if (previous) URL.revokeObjectURL(previous)
-      return URL.createObjectURL(resized)
-    })
-    changeFocusTheme("custom")
-  }
-
-  async function handleRemoveCustom() {
-    await clearCustomFocusImage()
-    setCustomImageUrl((previous) => {
-      if (previous) URL.revokeObjectURL(previous)
-      return null
-    })
-    if (focusTheme === "custom") changeFocusTheme("default")
-  }
-
-  const activeTheme = (() => {
-    if (focusTheme === "custom") {
-      return customImageUrl ? { image: customImageUrl, overlay: PHOTO_OVERLAY, particleColor: PHOTO_PARTICLE_COLOR } : null
-    }
-    if (focusTheme.startsWith(LIBRARY_ID_PREFIX)) {
-      const bg = findLibraryBackground(focusTheme.slice(LIBRARY_ID_PREFIX.length))
-      return bg ? { image: bg.image, overlay: PHOTO_OVERLAY, particleColor: PHOTO_PARTICLE_COLOR } : null
-    }
-    return null
-  })()
-  const particleColor = activeTheme?.particleColor ?? (theme === "dark" ? "#ffffff" : "#000000")
+  const particleColor = theme === "dark" ? "#ffffff" : "#000000"
 
   useEffect(() => {
     if (!open) return
@@ -578,14 +422,6 @@ export function FocusModeOverlay({
               fullscreenTransitioning ? "opacity-0" : "opacity-100",
             )}
           >
-            {activeTheme && (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-                style={{ backgroundImage: `${activeTheme.overlay}, url(${activeTheme.image})` }}
-              />
-            )}
-
             <AnimatePresence>
               {particlesEnabled && !reducedMotion && (
                 <motion.div
@@ -610,31 +446,12 @@ export function FocusModeOverlay({
 
             <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-1">
               <div className="flex items-center gap-1">
-                <ThemePicker
-                  theme={focusTheme}
-                  customImageUrl={customImageUrl}
-                  onChange={changeFocusTheme}
-                  onUploadFile={handleUploadFile}
-                  onRemoveCustom={handleRemoveCustom}
+                <AppearanceMenu
+                  particlesEnabled={particlesEnabled}
+                  onToggleParticles={toggleParticles}
+                  isDark={theme === "dark"}
+                  onToggleTheme={toggleTheme}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title={particlesEnabled ? "Desligar partículas" : "Ligar partículas"}
-                  onClick={toggleParticles}
-                >
-                  <Sparkles className={cn("size-4", !particlesEnabled && "text-muted-foreground/50")} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title={theme === "dark" ? "Modo claro" : "Modo escuro"}
-                  onClick={toggleTheme}
-                >
-                  <ThemeToggleIcon isDark={theme === "dark"} className="size-5" />
-                </Button>
                 {document.fullscreenEnabled && (
                   <Button
                     type="button"
