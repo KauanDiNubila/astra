@@ -194,7 +194,7 @@ export function PomodoroTimer() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button type="button" size="lg" className="h-11 min-w-36 rounded-full px-6 text-[15px]" onClick={handlePrimaryClick}>
+          <Button type="button" size="lg" className="h-11 min-w-36 rounded-full px-6 text-[15px] has-data-[icon=inline-start]:pl-6" onClick={handlePrimaryClick}>
             {running ? <Pause data-icon="inline-start" /> : <Play data-icon="inline-start" className="fill-current" />}
             {running ? "Pausar" : started ? "Continuar" : "Iniciar foco"}
           </Button>
