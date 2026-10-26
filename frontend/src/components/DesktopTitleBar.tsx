@@ -142,6 +142,7 @@ function TitleBar() {
         className={cn(
           "pointer-events-none absolute inset-y-0 left-0 w-0 bg-sidebar transition-[width] duration-200 ease-linear max-md:hidden",
           "[html[data-app-sidebar]_&]:border-r [html[data-app-sidebar=collapsed]_&]:w-12 [html[data-app-sidebar=expanded]_&]:w-64",
+          "[html[data-app-covered]_&]:w-0! [html[data-app-covered]_&]:border-r-0!",
         )}
       />
       <div

@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, ImagePlus, Maximize, Minimize, Palette, Sparkles, 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { useBatteryStatus } from "@/hooks/useBatteryStatus"
+import { useCoversApp } from "@/hooks/useCoversApp"
 import { useCountUp } from "@/hooks/use-count-up"
 import { useTheme } from "@/context/ThemeContext"
 import { formatMinutes } from "@/lib/format"
@@ -407,6 +408,7 @@ export function FocusModeOverlay({
   sessionCaption,
   children,
 }: Props) {
+  useCoversApp(open)
   const reducedMotion = useReducedMotion()
   const scrollRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()

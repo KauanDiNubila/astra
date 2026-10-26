@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
 import type { CallContextValue } from "@/context/CallContext"
+import { useCoversApp } from "@/hooks/useCoversApp"
 import { useDelayedUnmount, useFrozen } from "@/hooks/useDelayedUnmount"
 import { cn } from "@/lib/utils"
 import { deviceLabel, supportsSpeakerSelection } from "@/lib/callDevices"
@@ -521,6 +522,7 @@ function Presence({
 }
 
 function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
+  useCoversApp(visible)
   const { setMinimized, setWatchingScreen } = useCall()
   const [pinnedKey, setPinnedKey] = useState<string | null>(null)
   const { tiles } = view
