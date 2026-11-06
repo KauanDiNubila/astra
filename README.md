@@ -1,6 +1,6 @@
 # Astra
 
-[![CI](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml/badge.svg?branch=development)](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml)
+[![CI](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KauanDiNubila/astra/actions/workflows/ci.yml)
 
 App web para organizar estudos e trabalho: sessões de foco (Pomodoro ou manual),
 categorias, cursos com módulos, metas e roadmaps de aprendizado. Tem uma camada
