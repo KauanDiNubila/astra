@@ -1,8 +1,8 @@
 package com.astra.stats.controller;
 
 import com.astra.stats.dto.DashboardResponse;
-import com.astra.tracking.session.dto.CategoryMinutes;
-import com.astra.tracking.session.dto.DailyMinutes;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.CategoryMinutes;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.DailyMinutes;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

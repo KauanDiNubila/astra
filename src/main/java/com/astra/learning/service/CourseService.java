@@ -18,7 +18,7 @@ import com.astra.github.dto.GitHubRepositoryInsight;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.tracking.session.service.SessionStatsService;
+import com.astra.tracking.session.application.port.in.GetLastStudiedQuery;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,19 +45,19 @@ public class CourseService {
     private final GitHubRepositoryRepository githubRepositoryRepository;
     private final CourseGithubRepoRepository courseGithubRepoRepository;
     private final CurrentUserProvider currentUserProvider;
-    private final SessionStatsService sessionStatsService;
+    private final GetLastStudiedQuery getLastStudiedQuery;
 
     public CourseService(CourseRepository courseRepository, CourseModuleRepository moduleRepository,
                          LessonRepository lessonRepository, GitHubRepositoryRepository githubRepositoryRepository,
                          CourseGithubRepoRepository courseGithubRepoRepository,
-                         CurrentUserProvider currentUserProvider, SessionStatsService sessionStatsService) {
+                         CurrentUserProvider currentUserProvider, GetLastStudiedQuery getLastStudiedQuery) {
         this.courseRepository = courseRepository;
         this.moduleRepository = moduleRepository;
         this.lessonRepository = lessonRepository;
         this.githubRepositoryRepository = githubRepositoryRepository;
         this.courseGithubRepoRepository = courseGithubRepoRepository;
         this.currentUserProvider = currentUserProvider;
-        this.sessionStatsService = sessionStatsService;
+        this.getLastStudiedQuery = getLastStudiedQuery;
     }
 
     @Transactional
@@ -103,7 +103,7 @@ public class CourseService {
             }
         }
 
-        Map<UUID, OffsetDateTime> lastStudied = sessionStatsService.lastStudiedByCourse(userId, courseIds);
+        Map<UUID, OffsetDateTime> lastStudied = getLastStudiedQuery.byCourse(userId, courseIds);
 
         return courses.stream()
                 .map(c -> {

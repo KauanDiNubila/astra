@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.astra.social.entity.Friendship;
 import com.astra.social.repository.FriendshipRepository;
-import com.astra.tracking.session.service.SessionService;
 
 @Service
 public class FriendshipService {
@@ -62,7 +61,6 @@ public class FriendshipService {
 
         Friendship created = new Friendship(me, target.getId());
         // saveAndFlush pra @CreationTimestamp popular createdAt antes do toDto
-        // (mesmo gotcha já documentado em SessionService)
         Friendship saved = friendshipRepository.saveAndFlush(created);
         return toDto(saved, me, nameBioMap(List.of(saved.otherUserId(me))));
     }

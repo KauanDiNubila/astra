@@ -8,7 +8,7 @@ import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.tracking.category.dto.CategoryResponse;
 import com.astra.tracking.category.dto.CreateCategoryRequest;
-import com.astra.tracking.session.repository.SessionRepository;
+import com.astra.tracking.session.application.port.in.HasSessionsInCategoryQuery;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -24,13 +24,13 @@ public class CategoryService {
     private static final List<String> DEFAULT_CATEGORY_NAMES = List.of("Trabalho", "Estudo");
 
     private final CategoryRepository categoryRepository;
-    private final SessionRepository sessionRepository;
+    private final HasSessionsInCategoryQuery hasSessionsInCategoryQuery;
     private final CurrentUserProvider currentUserProvider;
 
-    public CategoryService(CategoryRepository categoryRepository, SessionRepository sessionRepository,
+    public CategoryService(CategoryRepository categoryRepository, HasSessionsInCategoryQuery hasSessionsInCategoryQuery,
                            CurrentUserProvider currentUserProvider) {
         this.categoryRepository = categoryRepository;
-        this.sessionRepository = sessionRepository;
+        this.hasSessionsInCategoryQuery = hasSessionsInCategoryQuery;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -64,7 +64,7 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .filter(c -> c.getUserId().equals(userId))
                 .orElseThrow(() -> new NotFoundException("Category not found"));
-        if (sessionRepository.existsByCategoryId(id)) {
+        if (hasSessionsInCategoryQuery.hasSessionsInCategory(id)) {
             throw new ConflictException("Category has sessions and cannot be deleted");
         }
         categoryRepository.delete(category);
