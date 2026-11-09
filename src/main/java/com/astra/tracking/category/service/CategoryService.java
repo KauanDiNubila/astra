@@ -45,6 +45,9 @@ public class CategoryService {
     @Transactional
     public CategoryResponse create(CreateCategoryRequest request) {
         UUID userId = currentUserProvider.currentUserId();
+        if (categoryRepository.existsByUserIdAndName(userId, request.name())) {
+            throw new CategoryNameTakenException(request.name());
+        }
         Category category = new Category(userId, request.name(), request.color());
         Category saved = categoryRepository.save(category);
         return toDto(saved);
