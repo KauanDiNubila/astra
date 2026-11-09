@@ -54,7 +54,7 @@ public class RankingService {
         for (UserMinutes row : rows) {
             UserRepository.NameBioView user = users.get(row.userId());
             String name = user != null ? user.getName() : "";
-            boolean admin = user != null && User.ROLE_ADMIN.equals(user.getRole());
+            boolean admin = user != null && User.isStaff(user.getRole());
             entries.add(new RankingEntry(position++, row.userId(), name, row.minutes(), admin));
         }
         return entries;
