@@ -39,6 +39,10 @@ public class Roadmap {
         return Collections.unmodifiableList(steps);
     }
 
+    public boolean isOwnedBy(UUID userId) {
+        return userId.equals(ownerId);
+    }
+
     public RoadmapOutline outline() {
         return new RoadmapOutline(id, ownerId, title, source, steps.stream().map(RoadmapStep::node).toList());
     }
