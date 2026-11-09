@@ -33,6 +33,6 @@ class UserDirectoryAdapter implements FindUserByHandlePort, LoadUserSummariesPor
         return userRepository.findNameBioByIdIn(userIds).stream()
                 .collect(Collectors.toMap(UserRepository.NameBioView::getId,
                         v -> new UserSummary(v.getId(), v.getName(), v.getTag(), v.getBio(),
-                                User.ROLE_ADMIN.equals(v.getRole()))));
+                                User.isStaff(v.getRole()))));
     }
 }

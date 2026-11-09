@@ -33,6 +33,10 @@ public class User {
         };
     }
 
+    public static boolean isStaff(String role) {
+        return rankOf(role) >= rankOf(ROLE_ADMIN);
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

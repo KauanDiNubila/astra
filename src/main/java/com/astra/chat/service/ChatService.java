@@ -330,8 +330,7 @@ public class ChatService {
                     String friendName = user != null ? user.getName() : "";
                     String friendTag = user != null ? user.getTag() : "";
                     String friendBio = user != null ? user.getBio() : null;
-                    boolean friendAdmin = user != null
-                            && (User.ROLE_ADMIN.equals(user.getRole()) || User.ROLE_OWNER.equals(user.getRole()));
+                    boolean friendAdmin = user != null && User.isStaff(user.getRole());
                     GitHubConnection friendGithub = githubConnectionByFriend.get(friendId);
                     String friendGithubLogin = friendGithub != null ? friendGithub.getGithubLogin() : null;
                     String friendGithubAvatarUrl = friendGithub != null ? friendGithub.getGithubAvatarUrl() : null;
