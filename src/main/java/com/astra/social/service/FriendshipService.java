@@ -4,7 +4,7 @@ import com.astra.shared.ExportRow;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.social.dto.FriendshipResponse;
+import com.astra.social.application.port.in.FriendshipResponse;
 import com.astra.social.dto.SendFriendRequest;
 import com.astra.user.entity.User;
 import com.astra.user.repository.UserRepository;

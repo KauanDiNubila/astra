@@ -1,6 +1,6 @@
 package com.astra.social.controller;
 
-import com.astra.social.dto.FriendshipResponse;
+import com.astra.social.application.port.in.FriendshipResponse;
 import com.astra.social.dto.SendFriendRequest;
 import jakarta.validation.Valid;
 import java.util.List;
