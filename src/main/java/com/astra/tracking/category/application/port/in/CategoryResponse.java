@@ -1,4 +1,4 @@
-package com.astra.tracking.category.dto;
+package com.astra.tracking.category.application.port.in;
 
 import java.util.UUID;
 

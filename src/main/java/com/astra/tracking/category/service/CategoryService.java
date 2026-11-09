@@ -5,7 +5,7 @@ import java.util.Map;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.event.UserRegisteredEvent;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.tracking.category.dto.CategoryResponse;
+import com.astra.tracking.category.application.port.in.CategoryResponse;
 import com.astra.tracking.category.dto.CreateCategoryRequest;
 import com.astra.tracking.session.application.port.in.HasSessionsInCategoryQuery;
 import java.util.List;

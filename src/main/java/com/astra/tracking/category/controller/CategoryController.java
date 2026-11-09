@@ -1,6 +1,6 @@
 package com.astra.tracking.category.controller;
 
-import com.astra.tracking.category.dto.CategoryResponse;
+import com.astra.tracking.category.application.port.in.CategoryResponse;
 import com.astra.tracking.category.dto.CreateCategoryRequest;
 import jakarta.validation.Valid;
 import java.util.List;
