@@ -1,6 +1,6 @@
 # ADR 0008: Atalhos conscientes nos módulos de cadastro
 
-- Status: Aceito
+- Status: Substituído por ADR 0015
 - Data: 2026-11-06
 
 ## Contexto

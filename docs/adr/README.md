@@ -11,13 +11,14 @@ Cada arquivo registra uma decisão: o contexto, o que foi decidido e o que isso 
 | [0005](0005-dominio-rico.md) | Domínio rico nos módulos com regra de negócio | Aceito |
 | [0006](0006-estrategia-de-mapeamento.md) | Estratégia de mapeamento por tipo de caso de uso | Aceito |
 | [0007](0007-comunicacao-entre-modulos.md) | Módulos conversam só por portas | Aceito |
-| [0008](0008-atalhos-conscientes.md) | Atalhos conscientes nos módulos de cadastro | Aceito |
+| [0008](0008-atalhos-conscientes.md) | Atalhos conscientes nos módulos de cadastro | Substituído por [0015](0015-sem-atalho-de-porta-de-entrada.md) |
 | [0009](0009-validacao-e-excecoes.md) | Onde validar e quais exceções lançar | Aceito |
 | [0010](0010-estrategia-de-testes.md) | Estratégia de testes | Aceito |
 | [0011](0011-protecao-das-fronteiras.md) | Proteção das fronteiras com visibilidade e ArchUnit | Aceito |
 | [0012](0012-tempo-real-e-integracoes-externas.md) | Tempo real, APIs externas e hora do sistema atrás de portas | Aceito |
 | [0013](0013-agregados-e-concorrencia.md) | Agregados e concorrência | Proposto |
 | [0014](0014-fluxo-de-trabalho-da-migracao.md) | Fluxo de trabalho no Git durante a migração | Aceito |
+| [0015](0015-sem-atalho-de-porta-de-entrada.md) | Todo módulo tem porta de entrada; cadastro só dispensa o mapeamento | Aceito |
 
 ## Modelo
 
