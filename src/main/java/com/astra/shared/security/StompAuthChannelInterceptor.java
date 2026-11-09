@@ -1,6 +1,9 @@
 package com.astra.shared.security;
 
+import com.astra.user.dto.AuthInfo;
+import com.astra.user.service.UserService;
 import java.security.Principal;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -13,10 +16,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
-    private final JwtService jwtService;
+    private static final Set<String> DESTINATIONS_FOR_ACTIVE_USERS = Set.of("/app/call.start", "/app/call.join");
 
-    public StompAuthChannelInterceptor(JwtService jwtService) {
+    private final JwtService jwtService;
+    private final UserService userService;
+
+    public StompAuthChannelInterceptor(JwtService jwtService, UserService userService) {
         this.jwtService = jwtService;
+        this.userService = userService;
     }
 
     @Override
@@ -27,13 +34,27 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             if (header == null || !header.startsWith("Bearer ")) {
                 throw new StompAuthenticationException("Token ausente");
             }
+            UUID userId;
             try {
-                UUID userId = jwtService.extractUserId(header.substring(7));
-                accessor.setUser((Principal) () -> userId.toString());
+                userId = jwtService.extractUserId(header.substring(7));
             } catch (Exception ex) {
                 throw new StompAuthenticationException("Token invalido");
             }
+            requireActive(userId);
+            accessor.setUser((Principal) () -> userId.toString());
+        }
+        if (accessor != null && StompCommand.SEND.equals(accessor.getCommand())
+                && DESTINATIONS_FOR_ACTIVE_USERS.contains(accessor.getDestination())
+                && accessor.getUser() != null) {
+            requireActive(UUID.fromString(accessor.getUser().getName()));
         }
         return message;
+    }
+
+    private void requireActive(UUID userId) {
+        AuthInfo info = userService.authInfo(userId);
+        if (info == null || info.banned()) {
+            throw new StompAuthenticationException("Conta banida");
+        }
     }
 }
