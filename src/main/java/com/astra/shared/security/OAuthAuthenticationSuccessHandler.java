@@ -1,6 +1,7 @@
 package com.astra.shared.security;
 
 import com.astra.user.service.DesktopLoginService;
+import com.astra.user.service.UserService;
 import com.astra.user.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,12 +17,15 @@ public class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessH
 
     private final RefreshTokenService refreshTokenService;
     private final DesktopLoginService desktopLoginService;
+    private final UserService userService;
     private final String frontendUrl;
 
     public OAuthAuthenticationSuccessHandler(RefreshTokenService refreshTokenService,
-            DesktopLoginService desktopLoginService, @Value("${astra.frontend-url}") String frontendUrl) {
+            DesktopLoginService desktopLoginService, UserService userService,
+            @Value("${astra.frontend-url}") String frontendUrl) {
         this.refreshTokenService = refreshTokenService;
         this.desktopLoginService = desktopLoginService;
+        this.userService = userService;
         this.frontendUrl = frontendUrl;
     }
 
@@ -35,6 +39,12 @@ public class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessH
                 : (String) session.getAttribute(DesktopLoginService.SESSION_ATTRIBUTE);
         if (challenge != null) {
             session.removeAttribute(DesktopLoginService.SESSION_ATTRIBUTE);
+        }
+        if (!userService.canSignIn(principal.getUserId())) {
+            response.sendRedirect(frontendUrl + "/login?oauthError=1");
+            return;
+        }
+        if (challenge != null) {
             String code = desktopLoginService.createCode(principal.getUserId(), challenge);
             writeDesktopReturnPage(response, code);
             return;
