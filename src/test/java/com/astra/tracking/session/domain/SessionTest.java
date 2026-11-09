@@ -52,8 +52,8 @@ class SessionTest {
     void sabeQuemEDono() {
         Session session = session(30);
 
-        assertThat(session.isOwnedBy(USER)).isTrue();
-        assertThat(session.isOwnedBy(UUID.randomUUID())).isFalse();
+        assertThat(session.belongsTo(USER)).isTrue();
+        assertThat(session.belongsTo(UUID.randomUUID())).isFalse();
     }
 
     @Test

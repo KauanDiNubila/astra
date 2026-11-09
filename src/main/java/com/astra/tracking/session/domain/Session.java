@@ -45,7 +45,7 @@ public class Session {
                 focusedMinutes, startedAt, note, createdAt);
     }
 
-    public boolean isOwnedBy(UUID userId) {
+    public boolean belongsTo(UUID userId) {
         return this.userId.equals(userId);
     }
 
