@@ -10,7 +10,7 @@ import com.astra.roadmap.service.RoadmapService;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.ExportRow;
 import com.astra.social.service.FriendshipService;
-import com.astra.tracking.category.service.CategoryService;
+import com.astra.tracking.category.application.port.in.ListCategoriesQuery;
 import com.astra.tracking.session.application.port.in.ListSessionsQuery;
 import com.astra.user.service.UserService;
 import java.time.OffsetDateTime;
@@ -24,7 +24,7 @@ public class DataExportService {
 
     private final CurrentUserProvider currentUserProvider;
     private final UserService userService;
-    private final CategoryService categoryService;
+    private final ListCategoriesQuery listCategoriesQuery;
     private final ListSessionsQuery listSessionsQuery;
     private final CourseService courseService;
     private final GoalService goalService;
@@ -36,13 +36,13 @@ public class DataExportService {
     private final GitHubConnectionService gitHubConnectionService;
 
     public DataExportService(CurrentUserProvider currentUserProvider, UserService userService,
-            CategoryService categoryService, ListSessionsQuery listSessionsQuery, CourseService courseService,
+            ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, CourseService courseService,
             GoalService goalService, RoadmapService roadmapService, PinService pinService,
             FriendshipService friendshipService, ChatService chatService, ChatGroupService chatGroupService,
             GitHubConnectionService gitHubConnectionService) {
         this.currentUserProvider = currentUserProvider;
         this.userService = userService;
-        this.categoryService = categoryService;
+        this.listCategoriesQuery = listCategoriesQuery;
         this.listSessionsQuery = listSessionsQuery;
         this.courseService = courseService;
         this.goalService = goalService;
@@ -60,7 +60,7 @@ public class DataExportService {
         return ExportRow.of(
                 "exportedAt", OffsetDateTime.now(),
                 "profile", userService.exportData(userId),
-                "categories", categoryService.exportData(userId),
+                "categories", listCategoriesQuery.list(userId),
                 "sessions", listSessionsQuery.listAll(userId),
                 "courses", courseService.exportData(userId),
                 "goals", goalService.exportData(userId),

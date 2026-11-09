@@ -5,6 +5,7 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsid
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -17,12 +18,15 @@ import java.util.stream.Stream;
 class ArchitectureTest {
 
     private static final List<String> MIGRATED_MODULES = List.of(
-            "com.astra.tracking.session"
+            "com.astra.tracking.session",
+            "com.astra.tracking.category"
+    );
+
+    private static final List<String> NO_MAPPING_MODULES = List.of(
+            "com.astra.tracking.category"
     );
 
     private static final String[] KNOWN_EXCEPTIONS = {
-            "com.astra.tracking.category.repository..",
-            "com.astra.tracking.category.entity..",
             "com.astra.learning.service..",
             "com.astra.github.repository..",
             "com.astra.github.entity..",
@@ -30,34 +34,33 @@ class ArchitectureTest {
             "com.astra.github.dto.."
     };
 
+    private static final String SHARED = "com.astra.shared..";
+
     private static String[] inMigrated(String... layers) {
         return MIGRATED_MODULES.stream()
                 .flatMap(module -> Arrays.stream(layers).map(layer -> module + layer))
                 .toArray(String[]::new);
     }
 
-    private static String[] inMigratedOrShared() {
-        return Stream.concat(Arrays.stream(inMigrated("..")), Stream.of("com.astra.shared.."))
-                .toArray(String[]::new);
-    }
-
-    private static String[] allowedForAdapters() {
-        return Stream.of(
-                        Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "lombok..",
-                                "com.astra.shared..", "..application.port.in.."),
-                        MIGRATED_MODULES.stream().map(module -> module + ".."),
-                        Arrays.stream(KNOWN_EXCEPTIONS))
-                .flatMap(s -> s)
+    private static String[] domainsWithMapping() {
+        return MIGRATED_MODULES.stream()
+                .filter(module -> !NO_MAPPING_MODULES.contains(module))
+                .map(module -> module + ".domain..")
                 .toArray(String[]::new);
     }
 
     @ArchTest
-    static final ArchRule domainHasNoFrameworksNorOuterLayers = noClasses()
+    static final ArchRule domainHasNoSpringNorOuterLayers = noClasses()
             .that().resideInAnyPackage(inMigrated(".domain.."))
             .should().dependOnClassesThat().resideInAnyPackage(
-                    "org.springframework..", "jakarta.persistence..", "org.hibernate..",
-                    "..application..", "..adapter..")
-            .because("ADR 0003: o domínio não conhece Spring, JPA nem as camadas de fora");
+                    "org.springframework..", "..application..", "..adapter..")
+            .because("ADR 0003: o domínio não conhece Spring nem as camadas de fora");
+
+    @ArchTest
+    static final ArchRule domainHasNoJpaUnlessNoMapping = noClasses()
+            .that().resideInAnyPackage(domainsWithMapping())
+            .should().dependOnClassesThat().resideInAnyPackage("jakarta.persistence..", "org.hibernate..")
+            .because("ADR 0006: o domínio não conhece JPA; ADR 0015: exceto nos cadastros de NO_MAPPING_MODULES");
 
     @ArchTest
     static final ArchRule applicationDoesNotDependOnAdapters = noClasses()
@@ -66,11 +69,34 @@ class ArchitectureTest {
             .because("ADR 0003: a aplicação só conhece portas");
 
     @ArchTest
-    static final ArchRule coreUsesOnlyItsModuleAndShared = noClasses()
-            .that().resideInAnyPackage(inMigrated(".domain..", ".application.."))
-            .should().dependOnClassesThat(resideInAPackage("com.astra..")
-                    .and(resideOutsideOfPackages(inMigratedOrShared())))
-            .because("ADR 0007: o núcleo fala com outros módulos só por portas de saída");
+    static void coreUsesOnlyItsModuleAndShared(JavaClasses classes) {
+        for (String module : MIGRATED_MODULES) {
+            noClasses()
+                    .that().resideInAnyPackage(module + ".domain..", module + ".application..")
+                    .should().dependOnClassesThat(resideInAPackage("com.astra..")
+                            .and(resideOutsideOfPackages(module + "..", SHARED)))
+                    .because("ADR 0007: o núcleo fala com outros módulos só por portas de saída")
+                    .check(classes);
+        }
+    }
+
+    @ArchTest
+    static void adaptersReachOtherModulesOnlyThroughPortIn(JavaClasses classes) {
+        for (String module : MIGRATED_MODULES) {
+            String[] allowed = Stream.of(
+                            Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "lombok..",
+                                    SHARED, module + "..", "..application.port.in.."),
+                            Arrays.stream(KNOWN_EXCEPTIONS))
+                    .flatMap(s -> s)
+                    .toArray(String[]::new);
+            classes()
+                    .that().resideInAPackage(module + ".adapter..")
+                    .should().onlyDependOnClassesThat().resideInAnyPackage(allowed)
+                    .because("ADR 0007: adaptadores usam a porta de entrada do outro módulo; "
+                            + "KNOWN_EXCEPTIONS lista o que ainda não é possível e só pode diminuir")
+                    .check(classes);
+        }
+    }
 
     @ArchTest
     static final ArchRule outsidersUseOnlyPortIn = noClasses()
@@ -78,13 +104,6 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                     inMigrated(".domain..", ".application.service..", ".application.port.out..", ".adapter.."))
             .because("ADR 0007: de fora, um módulo migrado só é usado pela application.port.in");
-
-    @ArchTest
-    static final ArchRule adaptersReachOtherModulesOnlyThroughPortIn = classes()
-            .that().resideInAnyPackage(inMigrated(".adapter.."))
-            .should().onlyDependOnClassesThat().resideInAnyPackage(allowedForAdapters())
-            .because("ADR 0007: adaptadores usam a porta de entrada do outro módulo; "
-                    + "KNOWN_EXCEPTIONS lista o que ainda não é possível e só pode diminuir");
 
     @ArchTest
     static final ArchRule servicesAndAdaptersArePackagePrivate = classes()
