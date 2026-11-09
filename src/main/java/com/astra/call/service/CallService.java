@@ -9,8 +9,8 @@ import com.astra.chat.service.ChatGroupService;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.social.application.port.in.CheckFriendshipQuery;
-import com.astra.user.repository.UserRepository;
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.LoadUserSummariesQuery;
+import com.astra.user.application.port.in.UserSummary;
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public class CallService {
 
     private final CheckFriendshipQuery checkFriendshipQuery;
     private final ChatGroupService chatGroupService;
-    private final UserService userService;
+    private final LoadUserSummariesQuery loadUserSummariesQuery;
     private final SimpMessagingTemplate messagingTemplate;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "call-scheduler");
@@ -55,10 +55,10 @@ public class CallService {
     private final Map<UUID, SignalWindow> signalWindows = new HashMap<>();
 
     public CallService(CheckFriendshipQuery checkFriendshipQuery, ChatGroupService chatGroupService,
-            UserService userService, SimpMessagingTemplate messagingTemplate) {
+            LoadUserSummariesQuery loadUserSummariesQuery, SimpMessagingTemplate messagingTemplate) {
         this.checkFriendshipQuery = checkFriendshipQuery;
         this.chatGroupService = chatGroupService;
-        this.userService = userService;
+        this.loadUserSummariesQuery = loadUserSummariesQuery;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -305,8 +305,8 @@ public class CallService {
     }
 
     private String nameOf(UUID userId) {
-        UserRepository.NameBioView view = userService.nameBioByIds(List.of(userId)).get(userId);
-        return view != null ? view.getName() : "";
+        UserSummary user = loadUserSummariesQuery.summaries(List.of(userId)).get(userId);
+        return user != null ? user.name() : "";
     }
 
     private void send(UUID userId, CallEvent event) {

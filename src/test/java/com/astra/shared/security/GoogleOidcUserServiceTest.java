@@ -8,7 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.OAuthLogInCommand;
+import com.astra.user.application.port.in.OAuthLogInUseCase;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -24,8 +25,8 @@ class GoogleOidcUserServiceTest {
 
     private static final String EMAIL = "vitima@astra.local";
 
-    private final UserService userService = mock(UserService.class);
-    private final GoogleOidcUserService service = new GoogleOidcUserService(userService);
+    private final OAuthLogInUseCase oAuthLogIn = mock(OAuthLogInUseCase.class);
+    private final GoogleOidcUserService service = new GoogleOidcUserService(oAuthLogIn);
 
     private static OidcUser googleUser(Object emailVerified) {
         Map<String, Object> claims = new HashMap<>();
@@ -42,7 +43,7 @@ class GoogleOidcUserServiceTest {
     @Test
     void emailVerificadoEntra() {
         UUID userId = UUID.randomUUID();
-        when(userService.oauthLogin("google", "google-123", EMAIL, "Pessoa")).thenReturn(userId);
+        when(oAuthLogIn.logIn(new OAuthLogInCommand("google", "google-123", EMAIL, "Pessoa"))).thenReturn(userId);
 
         OidcUser user = service.toAstraUser("google", googleUser(true));
 
@@ -53,13 +54,13 @@ class GoogleOidcUserServiceTest {
     void emailNaoVerificadoNaoVinculaConta() {
         assertThatThrownBy(() -> service.toAstraUser("google", googleUser(false)))
                 .isInstanceOf(OAuth2AuthenticationException.class);
-        verify(userService, never()).oauthLogin(any(), any(), any(), any());
+        verify(oAuthLogIn, never()).logIn(any());
     }
 
     @Test
     void semInformacaoDeVerificacaoNaoVinculaConta() {
         assertThatThrownBy(() -> service.toAstraUser("google", googleUser(null)))
                 .isInstanceOf(OAuth2AuthenticationException.class);
-        verify(userService, never()).oauthLogin(any(), any(), any(), any());
+        verify(oAuthLogIn, never()).logIn(any());
     }
 }

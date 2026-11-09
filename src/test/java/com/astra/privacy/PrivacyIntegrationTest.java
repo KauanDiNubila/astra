@@ -12,8 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.astra.TestcontainersConfiguration;
 import com.astra.shared.security.JwtService;
-import com.astra.user.entity.User;
-import com.astra.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import com.jayway.jsonpath.JsonPath;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,15 @@ class PrivacyIntegrationTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserRepository userRepository;
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    private boolean exists(UUID userId) {
+        entityManager.flush();
+        return jdbcTemplate.queryForObject("select count(*) from users where id = ?", Integer.class, userId) == 1;
+    }
 
     private UUID register(boolean acceptTerms) throws Exception {
         String email = "privacy-" + UUID.randomUUID() + "@astra.local";
@@ -65,7 +73,9 @@ class PrivacyIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.termsAccepted").value(true))
                 .andExpect(jsonPath("$.hasPassword").value(true));
-        assertThat(userRepository.findById(userId).orElseThrow().getTermsAcceptedAt()).isNotNull();
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("select terms_accepted_at from users where id = ?",
+                java.time.OffsetDateTime.class, userId)).isNotNull();
     }
 
     @Test
@@ -131,47 +141,49 @@ class PrivacyIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"senha-errada\"}"))
                 .andExpect(status().isConflict());
-        assertThat(userRepository.findById(userId)).isPresent();
+        assertThat(exists(userId)).isTrue();
 
         mockMvc.perform(delete("/me")
                         .header("Authorization", bearer(userId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"" + PASSWORD + "\"}"))
                 .andExpect(status().isNoContent());
-        assertThat(userRepository.findById(userId)).isEmpty();
+        assertThat(exists(userId)).isFalse();
     }
 
     @Test
     void accountWithoutPasswordConfirmsByTypingTheEmail() throws Exception {
         String email = "oauth-" + UUID.randomUUID() + "@astra.local";
-        User user = userRepository.save(User.createFromOAuth("OAuth", email, "1234"));
+        UUID oauthUserId = UUID.randomUUID();
+        jdbcTemplate.update("insert into users (id, name, email, tag) values (?, 'OAuth', ?, '1234')",
+                oauthUserId, email);
 
         mockMvc.perform(delete("/me")
-                        .header("Authorization", bearer(user.getId()))
+                        .header("Authorization", bearer(oauthUserId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"confirmation\":\"outro@astra.local\"}"))
                 .andExpect(status().isConflict());
 
         mockMvc.perform(delete("/me")
-                        .header("Authorization", bearer(user.getId()))
+                        .header("Authorization", bearer(oauthUserId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"confirmation\":\" " + email.toUpperCase() + " \"}"))
                 .andExpect(status().isNoContent());
-        assertThat(userRepository.findById(user.getId())).isEmpty();
+        assertThat(exists(oauthUserId)).isFalse();
     }
 
     @Test
     void ownerCannotDeleteTheirOwnAccount() throws Exception {
         UUID userId = register(true);
-        User owner = userRepository.findById(userId).orElseThrow();
-        owner.setRole(User.ROLE_OWNER);
-        userRepository.saveAndFlush(owner);
+        entityManager.flush();
+        jdbcTemplate.update("update users set role = 'OWNER' where id = ?", userId);
+        entityManager.clear();
 
         mockMvc.perform(delete("/me")
                         .header("Authorization", bearer(userId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"" + PASSWORD + "\"}"))
                 .andExpect(status().isConflict());
-        assertThat(userRepository.findById(userId)).isPresent();
+        assertThat(exists(userId)).isTrue();
     }
 }

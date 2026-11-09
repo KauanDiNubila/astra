@@ -1,8 +1,7 @@
 package com.astra.stats.adapter.out.user;
 
 import com.astra.stats.application.port.out.LoadRankedUsersPort;
-import com.astra.user.entity.User;
-import com.astra.user.repository.UserRepository;
+import com.astra.user.application.port.in.LoadUserSummariesQuery;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -12,19 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 class RankedUsersAdapter implements LoadRankedUsersPort {
 
-    private final UserRepository userRepository;
+    private final LoadUserSummariesQuery loadUserSummariesQuery;
 
-    RankedUsersAdapter(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    RankedUsersAdapter(LoadUserSummariesQuery loadUserSummariesQuery) {
+        this.loadUserSummariesQuery = loadUserSummariesQuery;
     }
 
     @Override
     public Map<UUID, RankedUser> loadByIds(Collection<UUID> userIds) {
-        if (userIds.isEmpty()) {
-            return Map.of();
-        }
-        return userRepository.findNameBioByIdIn(userIds).stream()
-                .collect(Collectors.toMap(UserRepository.NameBioView::getId,
-                        v -> new RankedUser(v.getName(), User.isStaff(v.getRole()))));
+        return loadUserSummariesQuery.summaries(userIds).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> new RankedUser(e.getValue().name(), e.getValue().staff())));
     }
 }

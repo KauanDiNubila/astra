@@ -1,13 +1,15 @@
-package com.astra.user.controller;
+package com.astra.user.adapter.in.web;
 
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.UnauthorizedException;
 import com.astra.shared.security.JwtService;
-import com.astra.user.dto.AuthResponse;
-import com.astra.user.dto.DesktopExchangeRequest;
-import com.astra.user.dto.LoginRequest;
-import com.astra.user.dto.RegisterRequest;
-import com.astra.user.dto.UserResponse;
+import com.astra.user.application.port.in.GetAuthInfoQuery;
+import com.astra.user.application.port.in.GetUserQuery;
+import com.astra.user.application.port.in.LogInUseCase;
+import com.astra.user.application.port.in.RegisterUserUseCase;
+import com.astra.user.application.port.in.UserResponse;
+import com.astra.user.service.DesktopLoginService;
+import com.astra.user.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -23,59 +25,60 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import com.astra.user.service.DesktopLoginService;
-import com.astra.user.service.RefreshTokenService;
-import com.astra.user.service.UserService;
 
 @RestController
 @RequestMapping("/auth")
-public class AuthController {
+class AuthController {
 
     private static final String REFRESH_COOKIE = RefreshTokenService.REFRESH_COOKIE;
     private static final Set<String> DESKTOP_PROVIDERS = Set.of("google", "github");
 
-    private final UserService userService;
+    private final RegisterUserUseCase registerUserUseCase;
+    private final LogInUseCase logInUseCase;
+    private final GetUserQuery getUserQuery;
+    private final GetAuthInfoQuery getAuthInfoQuery;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final DesktopLoginService desktopLoginService;
 
-    public AuthController(UserService userService, JwtService jwtService, RefreshTokenService refreshTokenService,
-            DesktopLoginService desktopLoginService) {
-        this.desktopLoginService = desktopLoginService;
-        this.userService = userService;
+    AuthController(RegisterUserUseCase registerUserUseCase, LogInUseCase logInUseCase, GetUserQuery getUserQuery,
+                   GetAuthInfoQuery getAuthInfoQuery, JwtService jwtService, RefreshTokenService refreshTokenService,
+                   DesktopLoginService desktopLoginService) {
+        this.registerUserUseCase = registerUserUseCase;
+        this.logInUseCase = logInUseCase;
+        this.getUserQuery = getUserQuery;
+        this.getAuthInfoQuery = getAuthInfoQuery;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.desktopLoginService = desktopLoginService;
     }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
-        return userService.register(request);
+    UserResponse register(@Valid @RequestBody RegisterRequest request) {
+        return registerUserUseCase.register(request.toCommand());
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        UserResponse user = userService.login(request);
+    AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        UserResponse user = logInUseCase.logIn(request.toCommand());
         return issueTokens(user.id(), user, response);
     }
 
     @PostMapping("/refresh")
-    public AuthResponse refresh(@CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
-            HttpServletResponse response) {
+    AuthResponse refresh(@CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
+                         HttpServletResponse response) {
         if (refreshToken == null) {
             throw new UnauthorizedException("Refresh token ausente");
         }
         UUID userId = refreshTokenService.rotate(refreshToken);
-        // Devolve o usuário junto do token novo — evita o front precisar de
-        // uma chamada extra a /me toda vez que a aba recarrega.
-        UserResponse user = userService.get(userId);
-        return issueTokens(userId, user, response);
+        return issueTokens(userId, getUserQuery.get(userId), response);
     }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(@CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
-            HttpServletResponse response) {
+    void logout(@CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
+                HttpServletResponse response) {
         if (refreshToken != null) {
             refreshTokenService.revoke(refreshToken);
         }
@@ -83,8 +86,8 @@ public class AuthController {
     }
 
     @GetMapping("/desktop/login")
-    public void desktopLogin(@RequestParam String provider, @RequestParam String challenge,
-            HttpServletRequest request, HttpServletResponse response) throws IOException {
+    void desktopLogin(@RequestParam String provider, @RequestParam String challenge, HttpServletRequest request,
+                      HttpServletResponse response) throws IOException {
         if (!DESKTOP_PROVIDERS.contains(provider) || !DesktopLoginService.isValidChallenge(challenge)) {
             throw new ConflictException("Pedido de login do app inválido");
         }
@@ -93,14 +96,13 @@ public class AuthController {
     }
 
     @PostMapping("/desktop/exchange")
-    public AuthResponse desktopExchange(@Valid @RequestBody DesktopExchangeRequest request,
-            HttpServletResponse response) {
+    AuthResponse desktopExchange(@Valid @RequestBody DesktopExchangeRequest request, HttpServletResponse response) {
         UUID userId = desktopLoginService.redeem(request.code(), request.verifier());
-        return issueTokens(userId, userService.get(userId), response);
+        return issueTokens(userId, getUserQuery.get(userId), response);
     }
 
     private AuthResponse issueTokens(UUID userId, UserResponse user, HttpServletResponse response) {
-        if (!userService.canSignIn(userId)) {
+        if (!getAuthInfoQuery.canSignIn(userId)) {
             throw new UnauthorizedException("Conta banida");
         }
         String accessToken = jwtService.generateToken(userId);

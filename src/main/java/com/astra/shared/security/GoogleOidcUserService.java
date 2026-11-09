@@ -1,6 +1,7 @@
 package com.astra.shared.security;
 
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.OAuthLogInCommand;
+import com.astra.user.application.port.in.OAuthLogInUseCase;
 import java.util.UUID;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -11,10 +12,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class GoogleOidcUserService extends OidcUserService {
 
-    private final UserService userService;
+    private final OAuthLogInUseCase oAuthLogInUseCase;
 
-    public GoogleOidcUserService(UserService userService) {
-        this.userService = userService;
+    public GoogleOidcUserService(OAuthLogInUseCase oAuthLogInUseCase) {
+        this.oAuthLogInUseCase = oAuthLogInUseCase;
     }
 
     @Override
@@ -29,7 +30,7 @@ public class GoogleOidcUserService extends OidcUserService {
         }
         String name = oidcUser.getFullName() != null ? oidcUser.getFullName() : email;
 
-        UUID userId = userService.oauthLogin(provider, oidcUser.getSubject(), email, name);
+        UUID userId = oAuthLogInUseCase.logIn(new OAuthLogInCommand(provider, oidcUser.getSubject(), email, name));
         return new AstraOidcUser(userId, oidcUser);
     }
 }

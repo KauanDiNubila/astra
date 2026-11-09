@@ -23,7 +23,8 @@ class ArchitectureTest {
             "com.astra.social",
             "com.astra.stats",
             "com.astra.learning",
-            "com.astra.roadmap"
+            "com.astra.roadmap",
+            "com.astra.user"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
@@ -34,9 +35,7 @@ class ArchitectureTest {
             "com.astra.github.repository..",
             "com.astra.github.entity..",
             "com.astra.github.service..",
-            "com.astra.github.dto..",
-            "com.astra.user.repository..",
-            "com.astra.user.entity.."
+            "com.astra.github.dto.."
     };
 
     private static final String SHARED = "com.astra.shared..";
@@ -89,7 +88,7 @@ class ArchitectureTest {
     static void adaptersReachOtherModulesOnlyThroughPortIn(JavaClasses classes) {
         for (String module : MIGRATED_MODULES) {
             String[] allowed = Stream.of(
-                            Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "lombok..",
+                            Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "org.slf4j..", "lombok..",
                                     SHARED, module + "..", "..application.port.in.."),
                             Arrays.stream(KNOWN_EXCEPTIONS))
                     .flatMap(s -> s)

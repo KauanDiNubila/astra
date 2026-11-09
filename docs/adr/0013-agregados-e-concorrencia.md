@@ -17,6 +17,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 | `chat` | `ChatGroup` → `GroupMember`; `Message` separado | a confirmar |
 | `call` | `Call` → `CallMember` | sim |
 | `social` | `Friendship` | sim, entidade sozinha |
+| `user` | `User`; `OAuthConnection` e `RefreshToken` separados; avatar fora do agregado | sim, decidido na migração (#121): moderação e hierarquia de papéis ficam no `User`; o login OAuth acha a conexão antes de saber o usuário, e os refresh tokens são muitos por pessoa e giram a cada renovação; o avatar (até 2 MB) só é lido e gravado pelo seu adaptador |
 
 - Um adaptador de persistência por agregado.
 - Concorrência no `call`: as transições de estado (`start`, `join`, `leave`, `decline`) ficam no domínio `Call`, e o acesso ao estado em memória passa por uma porta (`StoreCallPort`) cuja implementação garante exclusão mútua por chamada.
