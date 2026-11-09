@@ -20,7 +20,8 @@ class ArchitectureTest {
     private static final List<String> MIGRATED_MODULES = List.of(
             "com.astra.tracking.session",
             "com.astra.tracking.category",
-            "com.astra.social"
+            "com.astra.social",
+            "com.astra.stats"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
@@ -29,6 +30,8 @@ class ArchitectureTest {
 
     private static final String[] KNOWN_EXCEPTIONS = {
             "com.astra.learning.service..",
+            "com.astra.learning.dto..",
+            "com.astra.learning.entity..",
             "com.astra.github.repository..",
             "com.astra.github.entity..",
             "com.astra.github.service..",

@@ -1,4 +1,4 @@
-package com.astra.stats.dto;
+package com.astra.stats.application.port.in;
 
 public enum RankingScope {
     GLOBAL,
