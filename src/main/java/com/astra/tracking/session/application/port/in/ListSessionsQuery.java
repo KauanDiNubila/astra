@@ -6,4 +6,6 @@ import java.util.UUID;
 public interface ListSessionsQuery {
 
     List<SessionResponse> list(UUID userId, int page, int size);
+
+    List<SessionResponse> listAll(UUID userId);
 }

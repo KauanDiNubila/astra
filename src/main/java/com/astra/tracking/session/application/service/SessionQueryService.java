@@ -47,6 +47,13 @@ class SessionQueryService implements ListSessionsQuery, GetSessionWindowQuery, G
     }
 
     @Override
+    public List<SessionResponse> listAll(UUID userId) {
+        return listSessionsPort.listAllNewestFirst(userId).stream()
+                .map(SessionResponse::from)
+                .toList();
+    }
+
+    @Override
     public SessionWindow get(UUID userId, UUID sessionId) {
         Session session = OwnedSession.load(loadSessionPort, userId, sessionId);
         return new SessionWindow(session.getStartedAt(), session.endedAt(), session.getGithubRepositoryId());

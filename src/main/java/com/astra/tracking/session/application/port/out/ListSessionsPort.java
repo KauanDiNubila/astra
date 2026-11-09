@@ -7,4 +7,6 @@ import java.util.UUID;
 public interface ListSessionsPort {
 
     List<Session> listNewestFirst(UUID userId, int page, int size);
+
+    List<Session> listAllNewestFirst(UUID userId);
 }

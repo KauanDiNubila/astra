@@ -14,6 +14,8 @@ interface SpringDataSessionRepository extends JpaRepository<SessionJpaEntity, UU
 
     List<SessionJpaEntity> findByUserId(UUID userId, Pageable pageable);
 
+    List<SessionJpaEntity> findByUserIdOrderByStartedAtDesc(UUID userId);
+
     boolean existsByCategoryId(UUID categoryId);
 
     @Query("select coalesce(sum(s.focusedMinutes), 0) from SessionJpaEntity s where s.userId = :userId")

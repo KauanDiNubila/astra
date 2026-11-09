@@ -52,6 +52,13 @@ class SessionPersistenceAdapter implements CreateSessionPort, LoadSessionPort, L
     }
 
     @Override
+    public List<Session> listAllNewestFirst(UUID userId) {
+        return repository.findByUserIdOrderByStartedAtDesc(userId).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public void updateRepository(Session session) {
         repository.findById(session.getId())
                 .orElseThrow()

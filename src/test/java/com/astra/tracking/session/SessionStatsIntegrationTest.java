@@ -6,10 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.tracking.session.dto.CategoryMinutes;
-import com.astra.tracking.session.dto.DailyMinutes;
-import com.astra.tracking.session.dto.UserMinutes;
-import com.astra.tracking.session.service.SessionStatsService;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.CategoryMinutes;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.DailyMinutes;
+import com.astra.tracking.session.application.port.in.GetLastStudiedQuery;
+import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery;
+import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery.UserMinutes;
 import com.jayway.jsonpath.JsonPath;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -38,7 +40,13 @@ class SessionStatsIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private SessionStatsService sessionStatsService;
+    private GetFocusedMinutesQuery getFocusedMinutesQuery;
+
+    @Autowired
+    private GetMinutesByUserQuery getMinutesByUserQuery;
+
+    @Autowired
+    private GetLastStudiedQuery getLastStudiedQuery;
 
     private record TestUser(UUID id, String token) {
     }
@@ -103,16 +111,16 @@ class SessionStatsIntegrationTest {
         session(user, category, null, 25, "2099-01-10T12:00:00-03:00");
         session(user, category, null, 15, "2099-01-11T12:00:00-03:00");
 
-        assertThat(sessionStatsService.totalFocusedMinutes(user.id())).isEqualTo(80);
-        assertThat(sessionStatsService.focusedMinutesSince(user.id(), START)).isEqualTo(40);
+        assertThat(getFocusedMinutesQuery.total(user.id())).isEqualTo(80);
+        assertThat(getFocusedMinutesQuery.since(user.id(), START)).isEqualTo(40);
     }
 
     @Test
     void usuarioSemSessaoTemZeroMinutos() throws Exception {
         TestUser user = newUser();
 
-        assertThat(sessionStatsService.totalFocusedMinutes(user.id())).isZero();
-        assertThat(sessionStatsService.focusedMinutesSince(user.id(), START)).isZero();
+        assertThat(getFocusedMinutesQuery.total(user.id())).isZero();
+        assertThat(getFocusedMinutesQuery.since(user.id(), START)).isZero();
     }
 
     @Test
@@ -123,7 +131,7 @@ class SessionStatsIntegrationTest {
         session(user, category, null, 20, "2099-01-11T01:00:00Z");
         session(user, category, null, 10, "2099-01-11T09:00:00-03:00");
 
-        assertThat(sessionStatsService.dailyMinutesSince(user.id(), START)).containsExactly(
+        assertThat(getFocusedMinutesQuery.dailySince(user.id(), START)).containsExactly(
                 new DailyMinutes(LocalDate.parse("2099-01-10"), 50),
                 new DailyMinutes(LocalDate.parse("2099-01-11"), 10));
     }
@@ -138,7 +146,7 @@ class SessionStatsIntegrationTest {
         session(user, trabalho, null, 45, "2099-01-11T10:00:00-03:00");
         session(user, trabalho, null, 99, "2099-01-09T10:00:00-03:00");
 
-        assertThat(sessionStatsService.categoryMinutesSince(user.id(), START)).containsExactlyInAnyOrder(
+        assertThat(getFocusedMinutesQuery.byCategorySince(user.id(), START)).containsExactlyInAnyOrder(
                 new CategoryMinutes(estudo, 50),
                 new CategoryMinutes(trabalho, 45));
     }
@@ -154,7 +162,7 @@ class SessionStatsIntegrationTest {
         session(bia, biaCategory, null, 20, "2099-01-11T10:00:00-03:00");
         session(caio, createCategory(caio), null, 500, "2099-01-09T10:00:00-03:00");
 
-        List<UserMinutes> ranking = sessionStatsService.rankingSince(START).stream()
+        List<UserMinutes> ranking = getMinutesByUserQuery.since(START).stream()
                 .filter(r -> Set.of(ana.id(), bia.id(), caio.id()).contains(r.userId()))
                 .toList();
 
@@ -170,9 +178,9 @@ class SessionStatsIntegrationTest {
         session(bia, createCategory(bia), null, 50, "2099-01-10T10:00:00-03:00");
         session(caio, createCategory(caio), null, 90, "2099-01-10T10:00:00-03:00");
 
-        assertThat(sessionStatsService.rankingSinceForUsers(START, Set.of(ana.id(), bia.id())))
+        assertThat(getMinutesByUserQuery.sinceForUsers(START, Set.of(ana.id(), bia.id())))
                 .containsExactly(new UserMinutes(bia.id(), 50), new UserMinutes(ana.id(), 30));
-        assertThat(sessionStatsService.rankingSinceForUsers(START, Set.of())).isEmpty();
+        assertThat(getMinutesByUserQuery.sinceForUsers(START, Set.of())).isEmpty();
     }
 
     @Test
@@ -184,11 +192,11 @@ class SessionStatsIntegrationTest {
         session(user, category, estudado, 30, "2099-01-10T10:00:00-03:00");
         session(user, category, estudado, 30, "2099-01-12T10:00:00-03:00");
 
-        var lastStudied = sessionStatsService.lastStudiedByCourse(user.id(), Set.of(estudado, intocado));
+        var lastStudied = getLastStudiedQuery.byCourse(user.id(), Set.of(estudado, intocado));
 
         assertThat(lastStudied).containsOnlyKeys(estudado);
         assertThat(lastStudied.get(estudado).toInstant())
                 .isEqualTo(OffsetDateTime.parse("2099-01-12T10:00:00-03:00").toInstant());
-        assertThat(sessionStatsService.lastStudiedByCourse(user.id(), Set.of())).isEmpty();
+        assertThat(getLastStudiedQuery.byCourse(user.id(), Set.of())).isEmpty();
     }
 }

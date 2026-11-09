@@ -5,9 +5,9 @@ import com.astra.learning.entity.GoalType;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.stats.dto.DashboardResponse;
 import com.astra.stats.dto.GoalProgress;
-import com.astra.tracking.session.dto.CategoryMinutes;
-import com.astra.tracking.session.dto.DailyMinutes;
-import com.astra.tracking.session.service.SessionStatsService;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.CategoryMinutes;
+import com.astra.tracking.session.application.port.in.GetFocusedMinutesQuery.DailyMinutes;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -25,13 +25,13 @@ public class StatsService {
     private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int HEATMAP_DAYS = 365;
 
-    private final SessionStatsService sessionStatsService;
+    private final GetFocusedMinutesQuery getFocusedMinutesQuery;
     private final GoalService goalService;
     private final CurrentUserProvider currentUserProvider;
 
-    public StatsService(SessionStatsService sessionStatsService, GoalService goalService,
+    public StatsService(GetFocusedMinutesQuery getFocusedMinutesQuery, GoalService goalService,
                         CurrentUserProvider currentUserProvider) {
-        this.sessionStatsService = sessionStatsService;
+        this.getFocusedMinutesQuery = getFocusedMinutesQuery;
         this.goalService = goalService;
         this.currentUserProvider = currentUserProvider;
     }
@@ -44,10 +44,10 @@ public class StatsService {
 
         // hoje/semana/streak vêm todos do mesmo intervalo de 366 dias — uma query só,
         // em vez de uma SUM separada pra cada, economiza viagens ao banco
-        List<DailyMinutes> dailyMinutes = sessionStatsService.dailyMinutesSince(userId, streakWindow);
+        List<DailyMinutes> dailyMinutes = getFocusedMinutesQuery.dailySince(userId, streakWindow);
         long todayMinutes = minutesForDay(dailyMinutes, today);
         long weekMinutes = sumMinutesSince(dailyMinutes, weekStart);
-        long totalMinutes = sessionStatsService.totalFocusedMinutes(userId);
+        long totalMinutes = getFocusedMinutesQuery.total(userId);
         int streak = currentStreak(dailyMinutes, today);
         long previousWeekMinutes = sumMinutesBetween(dailyMinutes, weekStart.minusWeeks(1), today.minusWeeks(1));
         long last30DaysMinutes = sumMinutesSince(dailyMinutes, today.minusDays(29));
@@ -84,14 +84,14 @@ public class StatsService {
         UUID userId = currentUserProvider.currentUserId();
         LocalDate today = LocalDate.now(ZONE);
         OffsetDateTime start = today.minusDays(HEATMAP_DAYS).atStartOfDay(ZONE).toOffsetDateTime();
-        return sessionStatsService.dailyMinutesSince(userId, start);
+        return getFocusedMinutesQuery.dailySince(userId, start);
     }
 
     public List<CategoryMinutes> categoryBreakdown(int days) {
         UUID userId = currentUserProvider.currentUserId();
         LocalDate today = LocalDate.now(ZONE);
         OffsetDateTime start = today.minusDays(days - 1L).atStartOfDay(ZONE).toOffsetDateTime();
-        return sessionStatsService.categoryMinutesSince(userId, start);
+        return getFocusedMinutesQuery.byCategorySince(userId, start);
     }
 
     private List<GoalProgress> goalProgress(UUID userId, long todayMinutes, long weekMinutes) {

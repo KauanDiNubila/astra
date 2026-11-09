@@ -3,8 +3,8 @@ package com.astra.stats.service;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.social.service.FriendshipService;
 import com.astra.stats.dto.RankingEntry;
-import com.astra.tracking.session.service.SessionStatsService;
-import com.astra.tracking.session.dto.UserMinutes;
+import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery;
+import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery.UserMinutes;
 import com.astra.user.entity.User;
 import com.astra.user.repository.UserRepository;
 import com.astra.user.service.UserService;
@@ -28,14 +28,14 @@ public class RankingService {
 
     private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
-    private final SessionStatsService sessionStatsService;
+    private final GetMinutesByUserQuery getMinutesByUserQuery;
     private final UserService userService;
     private final FriendshipService friendshipService;
     private final CurrentUserProvider currentUserProvider;
 
-    public RankingService(SessionStatsService sessionStatsService, UserService userService,
+    public RankingService(GetMinutesByUserQuery getMinutesByUserQuery, UserService userService,
                           FriendshipService friendshipService, CurrentUserProvider currentUserProvider) {
-        this.sessionStatsService = sessionStatsService;
+        this.getMinutesByUserQuery = getMinutesByUserQuery;
         this.userService = userService;
         this.friendshipService = friendshipService;
         this.currentUserProvider = currentUserProvider;
@@ -45,7 +45,7 @@ public class RankingService {
         OffsetDateTime start = startOf(period);
         List<UserMinutes> rows = scope == RankingScope.FRIENDS
                 ? friendsRanking(start)
-                : sessionStatsService.rankingSince(start);
+                : getMinutesByUserQuery.since(start);
         Map<UUID, UserRepository.NameBioView> users = userService.nameBioByIds(
                 rows.stream().map(UserMinutes::userId).toList());
 
@@ -64,7 +64,7 @@ public class RankingService {
         UUID me = currentUserProvider.currentUserId();
         Set<UUID> ids = new LinkedHashSet<>(friendshipService.friendIdsOf(me));
         ids.add(me);
-        return sessionStatsService.rankingSinceForUsers(start, ids);
+        return getMinutesByUserQuery.sinceForUsers(start, ids);
     }
 
     private OffsetDateTime startOf(RankingPeriod period) {
