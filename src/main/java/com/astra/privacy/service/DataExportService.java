@@ -3,8 +3,8 @@ package com.astra.privacy.service;
 import com.astra.chat.service.ChatGroupService;
 import com.astra.chat.service.ChatService;
 import com.astra.github.service.GitHubConnectionService;
-import com.astra.learning.service.CourseService;
-import com.astra.learning.service.GoalService;
+import com.astra.learning.application.port.in.ExportCoursesQuery;
+import com.astra.learning.application.port.in.ExportGoalsQuery;
 import com.astra.roadmap.service.PinService;
 import com.astra.roadmap.service.RoadmapService;
 import com.astra.shared.CurrentUserProvider;
@@ -26,8 +26,8 @@ public class DataExportService {
     private final UserService userService;
     private final ListCategoriesQuery listCategoriesQuery;
     private final ListSessionsQuery listSessionsQuery;
-    private final CourseService courseService;
-    private final GoalService goalService;
+    private final ExportCoursesQuery exportCoursesQuery;
+    private final ExportGoalsQuery exportGoalsQuery;
     private final RoadmapService roadmapService;
     private final PinService pinService;
     private final ExportFriendshipsQuery exportFriendshipsQuery;
@@ -36,16 +36,16 @@ public class DataExportService {
     private final GitHubConnectionService gitHubConnectionService;
 
     public DataExportService(CurrentUserProvider currentUserProvider, UserService userService,
-            ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, CourseService courseService,
-            GoalService goalService, RoadmapService roadmapService, PinService pinService,
+            ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, ExportCoursesQuery exportCoursesQuery,
+            ExportGoalsQuery exportGoalsQuery, RoadmapService roadmapService, PinService pinService,
             ExportFriendshipsQuery exportFriendshipsQuery, ChatService chatService, ChatGroupService chatGroupService,
             GitHubConnectionService gitHubConnectionService) {
         this.currentUserProvider = currentUserProvider;
         this.userService = userService;
         this.listCategoriesQuery = listCategoriesQuery;
         this.listSessionsQuery = listSessionsQuery;
-        this.courseService = courseService;
-        this.goalService = goalService;
+        this.exportCoursesQuery = exportCoursesQuery;
+        this.exportGoalsQuery = exportGoalsQuery;
         this.roadmapService = roadmapService;
         this.pinService = pinService;
         this.exportFriendshipsQuery = exportFriendshipsQuery;
@@ -62,8 +62,8 @@ public class DataExportService {
                 "profile", userService.exportData(userId),
                 "categories", listCategoriesQuery.list(userId),
                 "sessions", listSessionsQuery.listAll(userId),
-                "courses", courseService.exportData(userId),
-                "goals", goalService.exportData(userId),
+                "courses", exportCoursesQuery.exportCourses(userId),
+                "goals", exportGoalsQuery.exportGoals(userId),
                 "roadmaps", roadmapService.exportData(userId),
                 "coursePins", pinService.exportData(userId),
                 "friendships", exportFriendshipsQuery.export(userId),

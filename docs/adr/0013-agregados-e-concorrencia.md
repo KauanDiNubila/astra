@@ -12,7 +12,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 | Módulo | Agregado | Muda só pela raiz? |
 |---|---|---|
 | `tracking.session` | `Session` | sim, entidade sozinha |
-| `learning` | `Course` → `CourseModule` → `Lesson` | a confirmar: aulas e módulos mudam pelo `Course` ou têm portas próprias |
+| `learning` | `Course` → `CourseModule` → `Lesson`; `Goal` separado | sim, decidido na migração (#121): módulos e aulas só mudam por métodos do `Course`, e um adaptador grava o agregado inteiro em cascata |
 | `roadmap` | `Roadmap` → `RoadmapStep`; `StepCompletion` por usuário | a confirmar |
 | `chat` | `ChatGroup` → `GroupMember`; `Message` separado | a confirmar |
 | `call` | `Call` → `CallMember` | sim |
@@ -21,6 +21,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 - Um adaptador de persistência por agregado.
 - Concorrência no `call`: as transições de estado (`start`, `join`, `leave`, `decline`) ficam no domínio `Call`, e o acesso ao estado em memória passa por uma porta (`StoreCallPort`) cuja implementação garante exclusão mútua por chamada.
 - Nos agregados guardados no banco, conflito de escrita simultânea será tratado quando aparecer um caso real, com `@Version` na entidade JPA.
+- Partes do agregado criadas dentro da raiz (como módulo e aula no `Course`) recebem o id no domínio, para a resposta sair com o id sem reler o banco.
 
 Este ADR passa a "Aceito" (ou é substituído) quando o módulo correspondente for migrado.
 

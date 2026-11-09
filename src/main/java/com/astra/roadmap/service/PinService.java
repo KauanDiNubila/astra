@@ -1,7 +1,8 @@
 package com.astra.roadmap.service;
 
 import com.astra.shared.ExportRow;
-import com.astra.learning.service.CourseService;
+import com.astra.learning.application.port.in.CheckCourseOwnerQuery;
+import com.astra.learning.application.port.in.ListCourseIdsQuery;
 import com.astra.roadmap.dto.PinRequest;
 import com.astra.roadmap.dto.PinResponse;
 import com.astra.shared.CurrentUserProvider;
@@ -12,7 +13,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.astra.learning.entity.Course;
 import com.astra.roadmap.entity.CourseStepLink;
 import com.astra.roadmap.entity.Roadmap;
 import com.astra.roadmap.entity.RoadmapStep;
@@ -26,16 +26,19 @@ public class PinService {
     private final CourseStepLinkRepository linkRepository;
     private final RoadmapRepository roadmapRepository;
     private final RoadmapStepRepository stepRepository;
-    private final CourseService courseService;
+    private final CheckCourseOwnerQuery checkCourseOwnerQuery;
+    private final ListCourseIdsQuery listCourseIdsQuery;
     private final CurrentUserProvider currentUserProvider;
 
     public PinService(CourseStepLinkRepository linkRepository, RoadmapRepository roadmapRepository,
-                      RoadmapStepRepository stepRepository, CourseService courseService,
+                      RoadmapStepRepository stepRepository, CheckCourseOwnerQuery checkCourseOwnerQuery,
+                      ListCourseIdsQuery listCourseIdsQuery,
                       CurrentUserProvider currentUserProvider) {
         this.linkRepository = linkRepository;
         this.roadmapRepository = roadmapRepository;
         this.stepRepository = stepRepository;
-        this.courseService = courseService;
+        this.checkCourseOwnerQuery = checkCourseOwnerQuery;
+        this.listCourseIdsQuery = listCourseIdsQuery;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -43,7 +46,7 @@ public class PinService {
     public PinResponse pin(UUID stepId, PinRequest request) {
         UUID userId = currentUserProvider.currentUserId();
         RoadmapStep step = accessibleStep(stepId, userId);
-        if (!courseService.existsForUser(request.courseId(), userId)) {
+        if (!checkCourseOwnerQuery.isOwner(request.courseId(), userId)) {
             throw new NotFoundException("Course not found");
         }
 
@@ -64,7 +67,7 @@ public class PinService {
         if (!link.getStep().getId().equals(stepId)) {
             throw new NotFoundException("Pin not found");
         }
-        if (!courseService.existsForUser(link.getCourseId(), userId)) {
+        if (!checkCourseOwnerQuery.isOwner(link.getCourseId(), userId)) {
             throw new NotFoundException("Pin not found");
         }
         linkRepository.delete(link);
@@ -80,7 +83,7 @@ public class PinService {
         if (stepIds.isEmpty()) {
             return Map.of();
         }
-        List<UUID> courseIds = courseService.courseIdsForUser(userId);
+        List<UUID> courseIds = listCourseIdsQuery.courseIdsOf(userId);
         if (courseIds.isEmpty()) {
             return Map.of();
         }
@@ -114,7 +117,7 @@ public class PinService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> exportData(UUID userId) {
-        List<UUID> courseIds = courseService.courseIdsForUser(userId);
+        List<UUID> courseIds = listCourseIdsQuery.courseIdsOf(userId);
         if (courseIds.isEmpty()) {
             return List.of();
         }
