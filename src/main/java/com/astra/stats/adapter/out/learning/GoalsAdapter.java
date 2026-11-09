@@ -1,6 +1,6 @@
 package com.astra.stats.adapter.out.learning;
 
-import com.astra.learning.service.GoalService;
+import com.astra.learning.application.port.in.ListGoalsQuery;
 import com.astra.stats.application.port.out.LoadGoalsPort;
 import com.astra.stats.domain.Goal;
 import com.astra.stats.domain.GoalType;
@@ -11,16 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 class GoalsAdapter implements LoadGoalsPort {
 
-    private final GoalService goalService;
+    private final ListGoalsQuery listGoalsQuery;
 
-    GoalsAdapter(GoalService goalService) {
-        this.goalService = goalService;
+    GoalsAdapter(ListGoalsQuery listGoalsQuery) {
+        this.listGoalsQuery = listGoalsQuery;
     }
 
     @Override
     public List<Goal> goalsOf(UUID userId) {
-        return goalService.goalsForUser(userId).stream()
-                .map(g -> new Goal(GoalType.valueOf(g.type().name()), g.targetHours()))
+        return listGoalsQuery.list(userId).stream()
+                .map(g -> new Goal(GoalType.valueOf(g.type()), g.targetHours()))
                 .toList();
     }
 }
