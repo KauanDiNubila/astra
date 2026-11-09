@@ -1,7 +1,7 @@
 package com.astra.stats.service;
 
 import com.astra.shared.CurrentUserProvider;
-import com.astra.social.service.FriendshipService;
+import com.astra.social.application.port.in.GetFriendIdsQuery;
 import com.astra.stats.dto.RankingEntry;
 import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery;
 import com.astra.tracking.session.application.port.in.GetMinutesByUserQuery.UserMinutes;
@@ -30,14 +30,14 @@ public class RankingService {
 
     private final GetMinutesByUserQuery getMinutesByUserQuery;
     private final UserService userService;
-    private final FriendshipService friendshipService;
+    private final GetFriendIdsQuery getFriendIdsQuery;
     private final CurrentUserProvider currentUserProvider;
 
     public RankingService(GetMinutesByUserQuery getMinutesByUserQuery, UserService userService,
-                          FriendshipService friendshipService, CurrentUserProvider currentUserProvider) {
+                          GetFriendIdsQuery getFriendIdsQuery, CurrentUserProvider currentUserProvider) {
         this.getMinutesByUserQuery = getMinutesByUserQuery;
         this.userService = userService;
-        this.friendshipService = friendshipService;
+        this.getFriendIdsQuery = getFriendIdsQuery;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -62,7 +62,7 @@ public class RankingService {
 
     private List<UserMinutes> friendsRanking(OffsetDateTime start) {
         UUID me = currentUserProvider.currentUserId();
-        Set<UUID> ids = new LinkedHashSet<>(friendshipService.friendIdsOf(me));
+        Set<UUID> ids = new LinkedHashSet<>(getFriendIdsQuery.friendIdsOf(me));
         ids.add(me);
         return getMinutesByUserQuery.sinceForUsers(start, ids);
     }

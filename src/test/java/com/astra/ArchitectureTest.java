@@ -19,7 +19,8 @@ class ArchitectureTest {
 
     private static final List<String> MIGRATED_MODULES = List.of(
             "com.astra.tracking.session",
-            "com.astra.tracking.category"
+            "com.astra.tracking.category",
+            "com.astra.social"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
@@ -31,7 +32,9 @@ class ArchitectureTest {
             "com.astra.github.repository..",
             "com.astra.github.entity..",
             "com.astra.github.service..",
-            "com.astra.github.dto.."
+            "com.astra.github.dto..",
+            "com.astra.user.repository..",
+            "com.astra.user.entity.."
     };
 
     private static final String SHARED = "com.astra.shared..";
