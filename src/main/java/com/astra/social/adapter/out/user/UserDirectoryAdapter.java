@@ -2,8 +2,8 @@ package com.astra.social.adapter.out.user;
 
 import com.astra.social.application.port.out.FindUserByHandlePort;
 import com.astra.social.application.port.out.LoadUserSummariesPort;
-import com.astra.user.entity.User;
-import com.astra.user.repository.UserRepository;
+import com.astra.user.application.port.in.FindUserByHandleQuery;
+import com.astra.user.application.port.in.LoadUserSummariesQuery;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -14,25 +14,23 @@ import org.springframework.stereotype.Component;
 @Component
 class UserDirectoryAdapter implements FindUserByHandlePort, LoadUserSummariesPort {
 
-    private final UserRepository userRepository;
+    private final FindUserByHandleQuery findUserByHandleQuery;
+    private final LoadUserSummariesQuery loadUserSummariesQuery;
 
-    UserDirectoryAdapter(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    UserDirectoryAdapter(FindUserByHandleQuery findUserByHandleQuery, LoadUserSummariesQuery loadUserSummariesQuery) {
+        this.findUserByHandleQuery = findUserByHandleQuery;
+        this.loadUserSummariesQuery = loadUserSummariesQuery;
     }
 
     @Override
     public Optional<UUID> findIdByHandle(String name, String tag) {
-        return userRepository.findByNameAndTag(name, tag).map(User::getId);
+        return findUserByHandleQuery.findIdByHandle(name, tag);
     }
 
     @Override
     public Map<UUID, UserSummary> loadByIds(Collection<UUID> userIds) {
-        if (userIds.isEmpty()) {
-            return Map.of();
-        }
-        return userRepository.findNameBioByIdIn(userIds).stream()
-                .collect(Collectors.toMap(UserRepository.NameBioView::getId,
-                        v -> new UserSummary(v.getId(), v.getName(), v.getTag(), v.getBio(),
-                                User.isStaff(v.getRole()))));
+        return loadUserSummariesQuery.summaries(userIds).values().stream()
+                .collect(Collectors.toMap(com.astra.user.application.port.in.UserSummary::id,
+                        v -> new UserSummary(v.id(), v.name(), v.tag(), v.bio(), v.staff())));
     }
 }

@@ -1,7 +1,6 @@
 package com.astra.shared.security;
 
-import com.astra.user.dto.AuthInfo;
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.GetAuthInfoQuery;
 import java.security.Principal;
 import java.util.Set;
 import java.util.UUID;
@@ -19,11 +18,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     private static final Set<String> DESTINATIONS_FOR_ACTIVE_USERS = Set.of("/app/call.start", "/app/call.join");
 
     private final JwtService jwtService;
-    private final UserService userService;
+    private final GetAuthInfoQuery getAuthInfoQuery;
 
-    public StompAuthChannelInterceptor(JwtService jwtService, UserService userService) {
+    public StompAuthChannelInterceptor(JwtService jwtService, GetAuthInfoQuery getAuthInfoQuery) {
         this.jwtService = jwtService;
-        this.userService = userService;
+        this.getAuthInfoQuery = getAuthInfoQuery;
     }
 
     @Override
@@ -52,8 +51,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private void requireActive(UUID userId) {
-        AuthInfo info = userService.authInfo(userId);
-        if (info == null || info.banned()) {
+        if (!getAuthInfoQuery.canSignIn(userId)) {
             throw new StompAuthenticationException("Conta banida");
         }
     }

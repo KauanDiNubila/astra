@@ -5,7 +5,7 @@ import com.astra.chat.dto.CreateGroupRequest;
 import com.astra.chat.dto.GroupConversationSummary;
 import com.astra.chat.dto.GroupMemberResponse;
 import com.astra.chat.dto.MessageResponse;
-import com.astra.user.dto.AvatarData;
+import com.astra.chat.dto.GroupAvatar;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.List;
@@ -77,7 +77,7 @@ public class ChatGroupController {
 
     @GetMapping("/{groupId}/avatar")
     public ResponseEntity<byte[]> avatar(@PathVariable UUID groupId) {
-        AvatarData avatar = chatGroupService.avatar(groupId);
+        GroupAvatar avatar = chatGroupService.avatar(groupId);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
                 .contentType(MediaType.parseMediaType(avatar.contentType()))

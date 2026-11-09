@@ -9,8 +9,9 @@ import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.social.application.port.in.CheckFriendshipQuery;
-import com.astra.user.repository.UserRepository;
-import com.astra.user.dto.AvatarData;
+import com.astra.chat.dto.GroupAvatar;
+import com.astra.user.application.port.in.LoadUserSummariesQuery;
+import com.astra.user.application.port.in.UserSummary;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,7 +28,6 @@ import com.astra.chat.entity.Message;
 import com.astra.chat.repository.ChatGroupMemberRepository;
 import com.astra.chat.repository.ChatGroupRepository;
 import com.astra.chat.repository.MessageRepository;
-import com.astra.user.service.UserService;
 
 // Criar grupo, adicionar membro, listar membros/conversas de grupo — fica
 // separado de ChatService de propósito: mensagem (criptografia, anexo,
@@ -38,19 +38,19 @@ public class ChatGroupService {
     private final ChatGroupRepository chatGroupRepository;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
     private final MessageRepository messageRepository;
-    private final UserRepository userRepository;
+    private final LoadUserSummariesQuery loadUserSummariesQuery;
     private final CheckFriendshipQuery checkFriendshipQuery;
     private final EncryptionService chatEncryptionService;
     private final CurrentUserProvider currentUserProvider;
 
     public ChatGroupService(ChatGroupRepository chatGroupRepository,
             ChatGroupMemberRepository chatGroupMemberRepository, MessageRepository messageRepository,
-            UserRepository userRepository, CheckFriendshipQuery checkFriendshipQuery,
+            LoadUserSummariesQuery loadUserSummariesQuery, CheckFriendshipQuery checkFriendshipQuery,
             EncryptionService chatEncryptionService, CurrentUserProvider currentUserProvider) {
         this.chatGroupRepository = chatGroupRepository;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
         this.messageRepository = messageRepository;
-        this.userRepository = userRepository;
+        this.loadUserSummariesQuery = loadUserSummariesQuery;
         this.checkFriendshipQuery = checkFriendshipQuery;
         this.chatEncryptionService = chatEncryptionService;
         this.currentUserProvider = currentUserProvider;
@@ -114,11 +114,11 @@ public class ChatGroupService {
         }
     }
 
-    // GET também passa por requireMember (diferente de UserService.avatar,
+    // GET também passa por requireMember (diferente do avatar de usuário,
     // que é público entre autenticados) — o resto do grupo já esconde a
     // existência de quem não é membro, a foto segue a mesma regra.
     @Transactional(readOnly = true)
-    public AvatarData avatar(UUID groupId) {
+    public GroupAvatar avatar(UUID groupId) {
         UUID me = currentUserProvider.currentUserId();
         requireMember(groupId, me);
         ChatGroup group = chatGroupRepository.findById(groupId)
@@ -126,7 +126,7 @@ public class ChatGroupService {
         if (group.getAvatar() == null) {
             throw new NotFoundException("Grupo não encontrado");
         }
-        return new AvatarData(group.getAvatar(), group.getAvatarContentType());
+        return new GroupAvatar(group.getAvatar(), group.getAvatarContentType());
     }
 
     @Transactional(readOnly = true)
@@ -134,7 +134,7 @@ public class ChatGroupService {
         UUID me = currentUserProvider.currentUserId();
         requireMember(groupId, me);
         List<ChatGroupMember> members = chatGroupMemberRepository.findByGroupId(groupId);
-        Map<UUID, UserRepository.NameBioView> usersById = nameBioMap(
+        Map<UUID, UserSummary> usersById = nameBioMap(
                 members.stream().map(ChatGroupMember::getUserId).toList());
         return members.stream()
                 .map(m -> new GroupMemberResponse(m.getUserId(), nameOf(usersById, m.getUserId()), m.getJoinedAt()))
@@ -155,7 +155,7 @@ public class ChatGroupService {
                 .collect(Collectors.toMap(ChatGroup::getId, g -> g));
         Map<UUID, List<ChatGroupMember>> membersByGroup = chatGroupMemberRepository.findByGroupIdIn(groupIds).stream()
                 .collect(Collectors.groupingBy(ChatGroupMember::getGroupId));
-        Map<UUID, UserRepository.NameBioView> usersById = nameBioMap(membersByGroup.values().stream()
+        Map<UUID, UserSummary> usersById = nameBioMap(membersByGroup.values().stream()
                 .flatMap(List::stream)
                 .map(ChatGroupMember::getUserId)
                 .distinct()
@@ -206,21 +206,17 @@ public class ChatGroupService {
     }
 
     private List<String> memberNames(List<UUID> memberIds) {
-        Map<UUID, UserRepository.NameBioView> usersById = nameBioMap(memberIds);
+        Map<UUID, UserSummary> usersById = nameBioMap(memberIds);
         return memberIds.stream().map(id -> nameOf(usersById, id)).toList();
     }
 
-    private String nameOf(Map<UUID, UserRepository.NameBioView> usersById, UUID userId) {
-        UserRepository.NameBioView user = usersById.get(userId);
-        return user != null ? user.getName() : "";
+    private String nameOf(Map<UUID, UserSummary> usersById, UUID userId) {
+        UserSummary user = usersById.get(userId);
+        return user != null ? user.name() : "";
     }
 
-    private Map<UUID, UserRepository.NameBioView> nameBioMap(List<UUID> ids) {
-        if (ids.isEmpty()) {
-            return Map.of();
-        }
-        return userRepository.findNameBioByIdIn(ids).stream()
-                .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
+    private Map<UUID, UserSummary> nameBioMap(List<UUID> ids) {
+        return loadUserSummariesQuery.summaries(ids);
     }
 
     @Transactional(readOnly = true)

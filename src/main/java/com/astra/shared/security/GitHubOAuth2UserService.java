@@ -1,6 +1,7 @@
 package com.astra.shared.security;
 
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.OAuthLogInCommand;
+import com.astra.user.application.port.in.OAuthLogInUseCase;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -16,11 +17,11 @@ import org.springframework.web.client.RestClient;
 @Service
 public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final UserService userService;
+    private final OAuthLogInUseCase oAuthLogInUseCase;
     private final RestClient restClient = RestClient.create();
 
-    public GitHubOAuth2UserService(UserService userService) {
-        this.userService = userService;
+    public GitHubOAuth2UserService(OAuthLogInUseCase oAuthLogInUseCase) {
+        this.oAuthLogInUseCase = oAuthLogInUseCase;
     }
 
     @Override
@@ -38,7 +39,7 @@ public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
         }
         String name = (String) oAuth2User.getAttributes().getOrDefault("name", email);
 
-        UUID userId = userService.oauthLogin(provider, providerUserId, email, name);
+        UUID userId = oAuthLogInUseCase.logIn(new OAuthLogInCommand(provider, providerUserId, email, name));
         return new AstraOAuth2User(userId, oAuth2User);
     }
 

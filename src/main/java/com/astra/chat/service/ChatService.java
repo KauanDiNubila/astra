@@ -13,8 +13,8 @@ import com.astra.github.entity.GitHubConnection;
 import com.astra.github.repository.GitHubConnectionRepository;
 import com.astra.social.application.port.in.CheckFriendshipQuery;
 import com.astra.social.application.port.in.GetFriendIdsQuery;
-import com.astra.user.entity.User;
-import com.astra.user.repository.UserRepository;
+import com.astra.user.application.port.in.LoadUserSummariesQuery;
+import com.astra.user.application.port.in.UserSummary;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -47,7 +47,7 @@ public class ChatService {
 
     private final MessageRepository messageRepository;
     private final MessageAttachmentRepository messageAttachmentRepository;
-    private final UserRepository userRepository;
+    private final LoadUserSummariesQuery loadUserSummariesQuery;
     private final CheckFriendshipQuery checkFriendshipQuery;
     private final GetFriendIdsQuery getFriendIdsQuery;
     private final CurrentUserProvider currentUserProvider;
@@ -56,12 +56,12 @@ public class ChatService {
     private final GitHubConnectionRepository githubConnectionRepository;
 
     public ChatService(MessageRepository messageRepository, MessageAttachmentRepository messageAttachmentRepository,
-            UserRepository userRepository, CheckFriendshipQuery checkFriendshipQuery, GetFriendIdsQuery getFriendIdsQuery,
+            LoadUserSummariesQuery loadUserSummariesQuery, CheckFriendshipQuery checkFriendshipQuery, GetFriendIdsQuery getFriendIdsQuery,
             CurrentUserProvider currentUserProvider, EncryptionService chatEncryptionService,
             ChatGroupMemberRepository chatGroupMemberRepository, GitHubConnectionRepository githubConnectionRepository) {
         this.messageRepository = messageRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
-        this.userRepository = userRepository;
+        this.loadUserSummariesQuery = loadUserSummariesQuery;
         this.checkFriendshipQuery = checkFriendshipQuery;
         this.getFriendIdsQuery = getFriendIdsQuery;
         this.currentUserProvider = currentUserProvider;
@@ -310,8 +310,7 @@ public class ChatService {
             return List.of();
         }
 
-        Map<UUID, UserRepository.NameBioView> usersById = userRepository.findNameBioByIdIn(friendIds).stream()
-                .collect(Collectors.toMap(UserRepository.NameBioView::getId, v -> v));
+        Map<UUID, UserSummary> usersById = loadUserSummariesQuery.summaries(friendIds);
         Map<UUID, GitHubConnection> githubConnectionByFriend = githubConnectionRepository.findByUserIdIn(friendIds)
                 .stream()
                 .filter(GitHubConnection::isVisibleToFriends)
@@ -326,11 +325,11 @@ public class ChatService {
 
         return friendIds.stream()
                 .map(friendId -> {
-                    UserRepository.NameBioView user = usersById.get(friendId);
-                    String friendName = user != null ? user.getName() : "";
-                    String friendTag = user != null ? user.getTag() : "";
-                    String friendBio = user != null ? user.getBio() : null;
-                    boolean friendAdmin = user != null && User.isStaff(user.getRole());
+                    UserSummary user = usersById.get(friendId);
+                    String friendName = user != null ? user.name() : "";
+                    String friendTag = user != null ? user.tag() : "";
+                    String friendBio = user != null ? user.bio() : null;
+                    boolean friendAdmin = user != null && user.staff();
                     GitHubConnection friendGithub = githubConnectionByFriend.get(friendId);
                     String friendGithubLogin = friendGithub != null ? friendGithub.getGithubLogin() : null;
                     String friendGithubAvatarUrl = friendGithub != null ? friendGithub.getGithubAvatarUrl() : null;

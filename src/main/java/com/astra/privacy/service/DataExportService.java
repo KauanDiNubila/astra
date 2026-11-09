@@ -12,7 +12,7 @@ import com.astra.shared.ExportRow;
 import com.astra.social.application.port.in.ExportFriendshipsQuery;
 import com.astra.tracking.category.application.port.in.ListCategoriesQuery;
 import com.astra.tracking.session.application.port.in.ListSessionsQuery;
-import com.astra.user.service.UserService;
+import com.astra.user.application.port.in.ExportProfileQuery;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataExportService {
 
     private final CurrentUserProvider currentUserProvider;
-    private final UserService userService;
+    private final ExportProfileQuery exportProfileQuery;
     private final ListCategoriesQuery listCategoriesQuery;
     private final ListSessionsQuery listSessionsQuery;
     private final ExportCoursesQuery exportCoursesQuery;
@@ -35,14 +35,14 @@ public class DataExportService {
     private final ChatGroupService chatGroupService;
     private final GitHubConnectionService gitHubConnectionService;
 
-    public DataExportService(CurrentUserProvider currentUserProvider, UserService userService,
+    public DataExportService(CurrentUserProvider currentUserProvider, ExportProfileQuery exportProfileQuery,
             ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, ExportCoursesQuery exportCoursesQuery,
             ExportGoalsQuery exportGoalsQuery, ExportRoadmapsQuery exportRoadmapsQuery,
             ExportCoursePinsQuery exportCoursePinsQuery,
             ExportFriendshipsQuery exportFriendshipsQuery, ChatService chatService, ChatGroupService chatGroupService,
             GitHubConnectionService gitHubConnectionService) {
         this.currentUserProvider = currentUserProvider;
-        this.userService = userService;
+        this.exportProfileQuery = exportProfileQuery;
         this.listCategoriesQuery = listCategoriesQuery;
         this.listSessionsQuery = listSessionsQuery;
         this.exportCoursesQuery = exportCoursesQuery;
@@ -60,7 +60,7 @@ public class DataExportService {
         UUID userId = currentUserProvider.currentUserId();
         return ExportRow.of(
                 "exportedAt", OffsetDateTime.now(),
-                "profile", userService.exportData(userId),
+                "profile", exportProfileQuery.exportProfile(userId),
                 "categories", listCategoriesQuery.list(userId),
                 "sessions", listSessionsQuery.listAll(userId),
                 "courses", exportCoursesQuery.exportCourses(userId),
