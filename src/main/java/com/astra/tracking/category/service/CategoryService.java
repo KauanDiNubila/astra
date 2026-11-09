@@ -4,7 +4,6 @@ import com.astra.shared.ExportRow;
 import java.util.Map;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.event.UserRegisteredEvent;
-import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.tracking.category.dto.CategoryResponse;
 import com.astra.tracking.category.dto.CreateCategoryRequest;
@@ -15,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
-import com.astra.tracking.category.entity.Category;
+import com.astra.tracking.category.domain.Category;
+import com.astra.tracking.category.domain.CategoryInUseException;
+import com.astra.tracking.category.domain.CategoryNameTakenException;
 import com.astra.tracking.category.repository.CategoryRepository;
 
 @Service
@@ -65,10 +66,10 @@ public class CategoryService {
     public void delete(UUID id) {
         UUID userId = currentUserProvider.currentUserId();
         Category category = categoryRepository.findById(id)
-                .filter(c -> c.getUserId().equals(userId))
+                .filter(c -> c.belongsTo(userId))
                 .orElseThrow(() -> new NotFoundException("Category not found"));
         if (hasSessionsInCategoryQuery.hasSessionsInCategory(id)) {
-            throw new ConflictException("Category has sessions and cannot be deleted");
+            throw new CategoryInUseException();
         }
         categoryRepository.delete(category);
     }

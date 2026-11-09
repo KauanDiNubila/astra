@@ -22,7 +22,7 @@ class ArchitectureTest {
 
     private static final String[] KNOWN_EXCEPTIONS = {
             "com.astra.tracking.category.repository..",
-            "com.astra.tracking.category.entity..",
+            "com.astra.tracking.category.domain..",
             "com.astra.learning.service..",
             "com.astra.github.repository..",
             "com.astra.github.entity..",

@@ -1,4 +1,4 @@
-package com.astra.tracking.category.entity;
+package com.astra.tracking.category.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,12 +10,10 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "category")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Category {
 
@@ -36,5 +34,9 @@ public class Category {
         this.userId = userId;
         this.name = name;
         this.color = color;
+    }
+
+    public boolean belongsTo(UUID userId) {
+        return this.userId.equals(userId);
     }
 }

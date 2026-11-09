@@ -1,4 +1,4 @@
-package com.astra.tracking.category.service;
+package com.astra.tracking.category.domain;
 
 import com.astra.shared.exception.ConflictException;
 
