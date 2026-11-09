@@ -1,4 +1,4 @@
-package com.astra.social.dto;
+package com.astra.social.application.port.in;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

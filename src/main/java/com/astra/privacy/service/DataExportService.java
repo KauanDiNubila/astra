@@ -9,7 +9,7 @@ import com.astra.roadmap.service.PinService;
 import com.astra.roadmap.service.RoadmapService;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.ExportRow;
-import com.astra.social.service.FriendshipService;
+import com.astra.social.application.port.in.ExportFriendshipsQuery;
 import com.astra.tracking.category.application.port.in.ListCategoriesQuery;
 import com.astra.tracking.session.application.port.in.ListSessionsQuery;
 import com.astra.user.service.UserService;
@@ -30,7 +30,7 @@ public class DataExportService {
     private final GoalService goalService;
     private final RoadmapService roadmapService;
     private final PinService pinService;
-    private final FriendshipService friendshipService;
+    private final ExportFriendshipsQuery exportFriendshipsQuery;
     private final ChatService chatService;
     private final ChatGroupService chatGroupService;
     private final GitHubConnectionService gitHubConnectionService;
@@ -38,7 +38,7 @@ public class DataExportService {
     public DataExportService(CurrentUserProvider currentUserProvider, UserService userService,
             ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, CourseService courseService,
             GoalService goalService, RoadmapService roadmapService, PinService pinService,
-            FriendshipService friendshipService, ChatService chatService, ChatGroupService chatGroupService,
+            ExportFriendshipsQuery exportFriendshipsQuery, ChatService chatService, ChatGroupService chatGroupService,
             GitHubConnectionService gitHubConnectionService) {
         this.currentUserProvider = currentUserProvider;
         this.userService = userService;
@@ -48,7 +48,7 @@ public class DataExportService {
         this.goalService = goalService;
         this.roadmapService = roadmapService;
         this.pinService = pinService;
-        this.friendshipService = friendshipService;
+        this.exportFriendshipsQuery = exportFriendshipsQuery;
         this.chatService = chatService;
         this.chatGroupService = chatGroupService;
         this.gitHubConnectionService = gitHubConnectionService;
@@ -66,7 +66,7 @@ public class DataExportService {
                 "goals", goalService.exportData(userId),
                 "roadmaps", roadmapService.exportData(userId),
                 "coursePins", pinService.exportData(userId),
-                "friendships", friendshipService.exportData(userId),
+                "friendships", exportFriendshipsQuery.export(userId),
                 "groups", chatGroupService.exportData(userId),
                 "messages", chatService.exportData(userId),
                 "github", gitHubConnectionService.exportData(userId));

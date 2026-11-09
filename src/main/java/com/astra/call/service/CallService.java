@@ -8,7 +8,7 @@ import com.astra.call.dto.StartCallRequest;
 import com.astra.chat.service.ChatGroupService;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.social.service.FriendshipService;
+import com.astra.social.application.port.in.CheckFriendshipQuery;
 import com.astra.user.repository.UserRepository;
 import com.astra.user.service.UserService;
 import jakarta.annotation.PreDestroy;
@@ -39,7 +39,7 @@ public class CallService {
     static final long SIGNAL_WINDOW_MILLIS = 10_000;
     static final Set<String> SIGNAL_TYPES = Set.of("offer", "answer", "ice", "meta");
 
-    private final FriendshipService friendshipService;
+    private final CheckFriendshipQuery checkFriendshipQuery;
     private final ChatGroupService chatGroupService;
     private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -54,9 +54,9 @@ public class CallService {
     private final Map<UUID, UUID> callByGroup = new HashMap<>();
     private final Map<UUID, SignalWindow> signalWindows = new HashMap<>();
 
-    public CallService(FriendshipService friendshipService, ChatGroupService chatGroupService,
+    public CallService(CheckFriendshipQuery checkFriendshipQuery, ChatGroupService chatGroupService,
             UserService userService, SimpMessagingTemplate messagingTemplate) {
-        this.friendshipService = friendshipService;
+        this.checkFriendshipQuery = checkFriendshipQuery;
         this.chatGroupService = chatGroupService;
         this.userService = userService;
         this.messagingTemplate = messagingTemplate;
@@ -84,7 +84,7 @@ public class CallService {
             if (target.equals(me)) {
                 throw new ConflictException("Não é possível ligar para si mesmo");
             }
-            if (!friendshipService.areFriends(me, target)) {
+            if (!checkFriendshipQuery.areFriends(me, target)) {
                 throw new ConflictException("Você só pode ligar para amigos");
             }
             if (callByUser.containsKey(target)) {

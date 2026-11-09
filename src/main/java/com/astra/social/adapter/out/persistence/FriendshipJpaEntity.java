@@ -1,4 +1,4 @@
-package com.astra.social.entity;
+package com.astra.social.adapter.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,12 +18,9 @@ import org.hibernate.annotations.CreationTimestamp;
 @Entity
 @Table(name = "friendship")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Friendship {
-
-    public static final String PENDING = "PENDING";
-    public static final String ACCEPTED = "ACCEPTED";
+@AllArgsConstructor
+class FriendshipJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,20 +32,11 @@ public class Friendship {
     @Column(name = "addressee_id", nullable = false)
     private UUID addresseeId;
 
+    @Setter
     @Column(length = 20, nullable = false)
     private String status;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
-
-    public Friendship(UUID requesterId, UUID addresseeId) {
-        this.requesterId = requesterId;
-        this.addresseeId = addresseeId;
-        this.status = PENDING;
-    }
-
-    public UUID otherUserId(UUID viewerId) {
-        return requesterId.equals(viewerId) ? addresseeId : requesterId;
-    }
 }

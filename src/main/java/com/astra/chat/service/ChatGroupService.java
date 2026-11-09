@@ -8,7 +8,7 @@ import com.astra.chat.dto.GroupMemberResponse;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.social.service.FriendshipService;
+import com.astra.social.application.port.in.CheckFriendshipQuery;
 import com.astra.user.repository.UserRepository;
 import com.astra.user.dto.AvatarData;
 import java.io.IOException;
@@ -39,19 +39,19 @@ public class ChatGroupService {
     private final ChatGroupMemberRepository chatGroupMemberRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final FriendshipService friendshipService;
+    private final CheckFriendshipQuery checkFriendshipQuery;
     private final EncryptionService chatEncryptionService;
     private final CurrentUserProvider currentUserProvider;
 
     public ChatGroupService(ChatGroupRepository chatGroupRepository,
             ChatGroupMemberRepository chatGroupMemberRepository, MessageRepository messageRepository,
-            UserRepository userRepository, FriendshipService friendshipService,
+            UserRepository userRepository, CheckFriendshipQuery checkFriendshipQuery,
             EncryptionService chatEncryptionService, CurrentUserProvider currentUserProvider) {
         this.chatGroupRepository = chatGroupRepository;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
-        this.friendshipService = friendshipService;
+        this.checkFriendshipQuery = checkFriendshipQuery;
         this.chatEncryptionService = chatEncryptionService;
         this.currentUserProvider = currentUserProvider;
     }
@@ -61,7 +61,7 @@ public class ChatGroupService {
         UUID me = currentUserProvider.currentUserId();
         List<UUID> memberIds = request.memberIds().stream().distinct().filter(id -> !id.equals(me)).toList();
         for (UUID memberId : memberIds) {
-            if (!friendshipService.areFriends(me, memberId)) {
+            if (!checkFriendshipQuery.areFriends(me, memberId)) {
                 throw new ConflictException("Só é possível adicionar amigos ao grupo");
             }
         }
@@ -83,7 +83,7 @@ public class ChatGroupService {
     public void addMember(UUID groupId, UUID userId) {
         UUID me = currentUserProvider.currentUserId();
         requireMember(groupId, me);
-        if (!friendshipService.areFriends(me, userId)) {
+        if (!checkFriendshipQuery.areFriends(me, userId)) {
             throw new ConflictException("Só é possível adicionar amigos ao grupo");
         }
         if (chatGroupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {

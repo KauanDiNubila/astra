@@ -11,7 +11,8 @@ import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.github.entity.GitHubConnection;
 import com.astra.github.repository.GitHubConnectionRepository;
-import com.astra.social.service.FriendshipService;
+import com.astra.social.application.port.in.CheckFriendshipQuery;
+import com.astra.social.application.port.in.GetFriendIdsQuery;
 import com.astra.user.entity.User;
 import com.astra.user.repository.UserRepository;
 import java.io.IOException;
@@ -47,20 +48,22 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final MessageAttachmentRepository messageAttachmentRepository;
     private final UserRepository userRepository;
-    private final FriendshipService friendshipService;
+    private final CheckFriendshipQuery checkFriendshipQuery;
+    private final GetFriendIdsQuery getFriendIdsQuery;
     private final CurrentUserProvider currentUserProvider;
     private final EncryptionService chatEncryptionService;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
     private final GitHubConnectionRepository githubConnectionRepository;
 
     public ChatService(MessageRepository messageRepository, MessageAttachmentRepository messageAttachmentRepository,
-            UserRepository userRepository, FriendshipService friendshipService,
+            UserRepository userRepository, CheckFriendshipQuery checkFriendshipQuery, GetFriendIdsQuery getFriendIdsQuery,
             CurrentUserProvider currentUserProvider, EncryptionService chatEncryptionService,
             ChatGroupMemberRepository chatGroupMemberRepository, GitHubConnectionRepository githubConnectionRepository) {
         this.messageRepository = messageRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
         this.userRepository = userRepository;
-        this.friendshipService = friendshipService;
+        this.checkFriendshipQuery = checkFriendshipQuery;
+        this.getFriendIdsQuery = getFriendIdsQuery;
         this.currentUserProvider = currentUserProvider;
         this.chatEncryptionService = chatEncryptionService;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
@@ -302,7 +305,7 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<ConversationSummary> conversations() {
         UUID me = currentUserProvider.currentUserId();
-        List<UUID> friendIds = friendshipService.friendIdsOf(me);
+        List<UUID> friendIds = getFriendIdsQuery.friendIdsOf(me);
         if (friendIds.isEmpty()) {
             return List.of();
         }
@@ -352,7 +355,7 @@ public class ChatService {
     }
 
     private void requireFriends(UUID a, UUID b) {
-        if (!friendshipService.areFriends(a, b)) {
+        if (!checkFriendshipQuery.areFriends(a, b)) {
             throw new NotFoundException("Conversa não encontrada");
         }
     }
