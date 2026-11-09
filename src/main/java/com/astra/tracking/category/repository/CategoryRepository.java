@@ -8,4 +8,6 @@ import com.astra.tracking.category.entity.Category;
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
     List<Category> findByUserId(UUID userId);
+
+    boolean existsByUserIdAndName(UUID userId, String name);
 }
