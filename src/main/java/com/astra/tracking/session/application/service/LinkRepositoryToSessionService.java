@@ -8,8 +8,10 @@ import com.astra.tracking.session.application.port.out.LoadSessionPort;
 import com.astra.tracking.session.application.port.out.UpdateSessionRepositoryPort;
 import com.astra.tracking.session.domain.Session;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 class LinkRepositoryToSessionService implements LinkRepositoryToSessionUseCase {
 
     private final LoadSessionPort loadSessionPort;

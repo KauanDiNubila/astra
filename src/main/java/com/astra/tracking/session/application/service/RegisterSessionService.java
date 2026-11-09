@@ -8,8 +8,10 @@ import com.astra.tracking.session.application.port.out.CheckCategoryOwnerPort;
 import com.astra.tracking.session.application.port.out.CheckCourseOwnerPort;
 import com.astra.tracking.session.application.port.out.CreateSessionPort;
 import com.astra.tracking.session.domain.Session;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 class RegisterSessionService implements RegisterSessionUseCase {
 
     private final CheckCategoryOwnerPort checkCategoryOwnerPort;

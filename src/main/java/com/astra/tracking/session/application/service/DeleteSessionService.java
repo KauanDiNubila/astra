@@ -4,8 +4,10 @@ import com.astra.tracking.session.application.port.in.DeleteSessionUseCase;
 import com.astra.tracking.session.application.port.out.DeleteSessionPort;
 import com.astra.tracking.session.application.port.out.LoadSessionPort;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 class DeleteSessionService implements DeleteSessionUseCase {
 
     private final LoadSessionPort loadSessionPort;
