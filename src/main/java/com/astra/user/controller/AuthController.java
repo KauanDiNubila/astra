@@ -100,6 +100,9 @@ public class AuthController {
     }
 
     private AuthResponse issueTokens(UUID userId, UserResponse user, HttpServletResponse response) {
+        if (!userService.canSignIn(userId)) {
+            throw new UnauthorizedException("Conta banida");
+        }
         String accessToken = jwtService.generateToken(userId);
         refreshTokenService.issueAndAttachCookie(userId, response);
         return new AuthResponse(accessToken, user);

@@ -245,6 +245,12 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public boolean canSignIn(UUID userId) {
+        AuthInfo info = authInfo(userId);
+        return info != null && !info.banned();
+    }
+
+    @Transactional(readOnly = true)
     public AuthInfo authInfo(UUID userId) {
         return userRepository.findAuthInfoById(userId)
                 .map(v -> new AuthInfo(v.getRole(), v.getBannedAt() != null))
