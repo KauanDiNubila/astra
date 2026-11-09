@@ -13,7 +13,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 |---|---|---|
 | `tracking.session` | `Session` | sim, entidade sozinha |
 | `learning` | `Course` → `CourseModule` → `Lesson`; `Goal` separado | sim, decidido na migração (#121): módulos e aulas só mudam por métodos do `Course`, e um adaptador grava o agregado inteiro em cascata |
-| `roadmap` | `Roadmap` → `RoadmapStep`; `StepCompletion` por usuário | a confirmar |
+| `roadmap` | `Roadmap` → `RoadmapStep` → links; `StepProgress` (status por pessoa) e `CoursePin` separados | sim, decidido na migração (#121): passos e links só mudam pelo `Roadmap`; status e pin ficam fora porque também valem nos roadmaps prontos, compartilhados por todos |
 | `chat` | `ChatGroup` → `GroupMember`; `Message` separado | a confirmar |
 | `call` | `Call` → `CallMember` | sim |
 | `social` | `Friendship` | sim, entidade sozinha |
@@ -21,6 +21,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 - Um adaptador de persistência por agregado.
 - Concorrência no `call`: as transições de estado (`start`, `join`, `leave`, `decline`) ficam no domínio `Call`, e o acesso ao estado em memória passa por uma porta (`StoreCallPort`) cuja implementação garante exclusão mútua por chamada.
 - Nos agregados guardados no banco, conflito de escrita simultânea será tratado quando aparecer um caso real, com `@Version` na entidade JPA.
+- Leituras que não precisam do agregado inteiro (listar roadmaps, localizar um passo) usam modelos de leitura próprios (`RoadmapOutline`, `LocatedStep`), para não carregar centenas de passos e links à toa.
 - Partes do agregado criadas dentro da raiz (como módulo e aula no `Course`) recebem o id no domínio, para a resposta sair com o id sem reler o banco.
 
 Este ADR passa a "Aceito" (ou é substituído) quando o módulo correspondente for migrado.

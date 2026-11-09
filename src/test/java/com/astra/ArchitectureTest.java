@@ -22,7 +22,8 @@ class ArchitectureTest {
             "com.astra.tracking.category",
             "com.astra.social",
             "com.astra.stats",
-            "com.astra.learning"
+            "com.astra.learning",
+            "com.astra.roadmap"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
