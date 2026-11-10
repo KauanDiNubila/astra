@@ -20,7 +20,7 @@ await loginInBrowser(page, APP, ana.email)
 const betoSocket = await stompSession(beto.token)
 const sendToAna = (content) => betoSocket.send("/app/chat.send", { recipientId: ana.id, content, replyToMessageId: null })
 
-{
+try {
   const offline = await context.newPage()
   await offline.routeWebSocket(/\/ws$/, (ws) => ws.close())
   await offline.goto(`${APP}/chat/${beto.id}`)
@@ -31,15 +31,28 @@ const sendToAna = (content) => betoSocket.send("/app/chat.send", { recipientId: 
   await sleep(500)
   check((await composer.inputValue()) === "mensagem que não pode sumir", "sem conexão, o rascunho continua no campo")
   await offline.close()
+} catch (error) {
+  check(false, "cenário abortou", error.message.split(String.fromCharCode(10))[0])
 }
 
-{
+try {
   for (let i = 1; i <= 40; i++) sendToAna(`mensagem ${i}`)
   await page.goto(`${APP}/chat/${beto.id}`)
   await page.locator(".overlay-scroll p", { hasText: /^mensagem 40$/ }).waitFor()
   const container = page.locator(".overlay-scroll").filter({ has: page.locator("p", { hasText: /^mensagem 40$/ }) })
   await container.hover()
   await page.mouse.wheel(0, -900)
+  await container.evaluate(
+    (el) =>
+      new Promise((resolve) => {
+        const deadline = performance.now() + 3000
+        const waitForScroll = () => {
+          if (el.scrollHeight - el.scrollTop - el.clientHeight > 200 || performance.now() > deadline) resolve()
+          else requestAnimationFrame(waitForScroll)
+        }
+        waitForScroll()
+      }),
+  )
   const distance = await container.evaluate(
     (el) =>
       new Promise((resolve) => {
@@ -54,9 +67,11 @@ const sendToAna = (content) => betoSocket.send("/app/chat.send", { recipientId: 
       }),
   )
   check(distance > 200, "subir a conversa logo depois de abrir não volta sozinho para o fim", `(menor distância do fim: ${Math.round(distance)}px)`)
+} catch (error) {
+  check(false, "cenário abortou", error.message.split(String.fromCharCode(10))[0])
 }
 
-{
+try {
   await page.goto(`${APP}/chat`)
   const item = page.getByRole("link", { name: /Beto/ })
   await item.getByText("mensagem 40").waitFor()
@@ -70,6 +85,8 @@ const sendToAna = (content) => betoSocket.send("/app/chat.send", { recipientId: 
   await sleep(300)
   const counted = (await unread()) - before
   check(counted === 6, "6 mensagens em rajada contam 6 não lidas", `(contou ${counted})`)
+} catch (error) {
+  check(false, "cenário abortou", error.message.split(String.fromCharCode(10))[0])
 }
 
 betoSocket.close()
