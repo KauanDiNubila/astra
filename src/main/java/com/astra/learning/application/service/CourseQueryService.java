@@ -14,6 +14,7 @@ import com.astra.learning.application.port.out.CourseRepositoryLinksPort;
 import com.astra.learning.application.port.out.ListCoursesPort;
 import com.astra.learning.application.port.out.LoadCoursePort;
 import com.astra.learning.application.port.out.LoadLastStudiedPort;
+import com.astra.learning.application.port.out.LoadLinkedRepositoriesPort;
 import com.astra.learning.domain.Course;
 import com.astra.learning.domain.CourseModule;
 import com.astra.shared.ExportRow;
@@ -34,15 +35,18 @@ class CourseQueryService implements ListCoursesQuery, GetCourseQuery, GetCourseR
     private final LoadLastStudiedPort loadLastStudiedPort;
     private final CheckCourseOwnershipPort checkCourseOwnershipPort;
     private final CourseRepositoryLinksPort courseRepositoryLinksPort;
+    private final LoadLinkedRepositoriesPort loadLinkedRepositoriesPort;
 
     CourseQueryService(ListCoursesPort listCoursesPort, LoadCoursePort loadCoursePort,
                        LoadLastStudiedPort loadLastStudiedPort, CheckCourseOwnershipPort checkCourseOwnershipPort,
-                       CourseRepositoryLinksPort courseRepositoryLinksPort) {
+                       CourseRepositoryLinksPort courseRepositoryLinksPort,
+                       LoadLinkedRepositoriesPort loadLinkedRepositoriesPort) {
         this.listCoursesPort = listCoursesPort;
         this.loadCoursePort = loadCoursePort;
         this.loadLastStudiedPort = loadLastStudiedPort;
         this.checkCourseOwnershipPort = checkCourseOwnershipPort;
         this.courseRepositoryLinksPort = courseRepositoryLinksPort;
+        this.loadLinkedRepositoriesPort = loadLinkedRepositoriesPort;
     }
 
     @Override
@@ -66,7 +70,8 @@ class CourseQueryService implements ListCoursesQuery, GetCourseQuery, GetCourseR
     @Override
     public CourseRepositoriesResponse repositories(UUID userId, UUID courseId) {
         OwnedCourse.load(loadCoursePort, userId, courseId);
-        return CourseRepositoriesResponse.of(courseRepositoryLinksPort.repositoriesOf(courseId));
+        return CourseRepositoriesResponse.of(
+                loadLinkedRepositoriesPort.repositories(courseRepositoryLinksPort.repositoryIdsOf(courseId)));
     }
 
     @Override

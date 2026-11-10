@@ -10,14 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.github.entity.GitHubRepository;
-import com.astra.github.repository.GitHubRepositoryRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -37,7 +36,7 @@ class CourseIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private GitHubRepositoryRepository githubRepositoryRepository;
+    private JdbcTemplate jdbcTemplate;
 
     private record TestUser(String token, UUID id) {
     }
@@ -96,9 +95,14 @@ class CourseIntegrationTest {
     }
 
     private UUID githubRepository(UUID ownerId) {
-        long githubRepoId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
-        return githubRepositoryRepository.saveAndFlush(new GitHubRepository(ownerId, githubRepoId, "dono", "repo",
-                "dono/repo", null, "Java", "https://github.com/dono/repo", false, 0, 0, "main", null, null)).getId();
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("""
+                insert into github_repository (id, user_id, github_repo_id, owner, name, full_name, primary_language,
+                        html_url, private, star_count, fork_count, default_branch, recent_commit_count, synced_at)
+                values (?, ?, ?, 'dono', 'repo', 'dono/repo', 'Java', 'https://github.com/dono/repo', false, 0, 0,
+                        'main', 0, now())
+                """, id, ownerId, ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE));
+        return id;
     }
 
     @Test

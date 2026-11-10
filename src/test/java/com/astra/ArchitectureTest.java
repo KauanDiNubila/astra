@@ -26,19 +26,15 @@ class ArchitectureTest {
             "com.astra.roadmap",
             "com.astra.user",
             "com.astra.chat",
-            "com.astra.call"
+            "com.astra.call",
+            "com.astra.github"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
             "com.astra.tracking.category"
     );
 
-    private static final String[] KNOWN_EXCEPTIONS = {
-            "com.astra.github.repository..",
-            "com.astra.github.entity..",
-            "com.astra.github.service..",
-            "com.astra.github.dto.."
-    };
+    private static final String[] KNOWN_EXCEPTIONS = {};
 
     private static final String SHARED = "com.astra.shared..";
 

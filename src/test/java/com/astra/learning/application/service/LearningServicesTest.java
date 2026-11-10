@@ -16,6 +16,7 @@ import com.astra.learning.application.port.in.UpdateModuleCommand;
 import com.astra.learning.application.port.out.CheckCourseOwnershipPort;
 import com.astra.learning.application.port.out.CheckGithubRepositoryOwnerPort;
 import com.astra.learning.application.port.out.CourseRepositoryLinksPort;
+import com.astra.learning.application.port.out.LoadLinkedRepositoriesPort;
 import com.astra.learning.application.port.out.CreateCoursePort;
 import com.astra.learning.application.port.out.ListCoursesPort;
 import com.astra.learning.application.port.out.LoadCoursePort;
@@ -45,7 +46,7 @@ class LearningServicesTest {
     private final CourseRepositoryLinksPort linksPort = mock(CourseRepositoryLinksPort.class);
 
     private final CourseQueryService queryService = new CourseQueryService(listCoursesPort, loadCoursePort,
-            lastStudiedPort, mock(CheckCourseOwnershipPort.class), linksPort);
+            lastStudiedPort, mock(CheckCourseOwnershipPort.class), linksPort, mock(LoadLinkedRepositoriesPort.class));
 
     private Course stored(int modules) {
         Course course = Course.plan(ANA, "Spring", null, modules);
