@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.astra.chat.application.port.in.ImageUpload;
-import com.astra.chat.application.port.in.PinChange;
+import com.astra.chat.application.port.in.MessageResponse;
 import com.astra.chat.application.port.in.SendDirectMessageCommand;
 import com.astra.chat.application.port.out.CheckFriendshipPort;
 import com.astra.chat.application.port.out.CheckGroupMemberPort;
@@ -18,6 +18,7 @@ import com.astra.chat.application.port.out.CreateMessagePort;
 import com.astra.chat.application.port.out.ListMessagesPort;
 import com.astra.chat.application.port.out.LoadAttachmentPort;
 import com.astra.chat.application.port.out.LoadMessagePort;
+import com.astra.chat.application.port.out.NotifyChatPort;
 import com.astra.chat.application.port.out.UpdateMessagePinPort;
 import com.astra.chat.domain.Destination;
 import com.astra.chat.domain.EmptyMessageException;
@@ -47,12 +48,13 @@ class ChatServicesTest {
     private final CreateMessagePort createMessagePort = mock(CreateMessagePort.class);
     private final ListMessagesPort listMessagesPort = mock(ListMessagesPort.class);
     private final UpdateMessagePinPort updatePinPort = mock(UpdateMessagePinPort.class);
+    private final NotifyChatPort notify = mock(NotifyChatPort.class);
     private final MessageResponses responses = new MessageResponses(mock(LoadAttachmentPort.class), loadMessagePort);
 
     private final SendDirectMessageService send =
-            new SendDirectMessageService(friendship, loadMessagePort, createMessagePort, responses);
+            new SendDirectMessageService(friendship, loadMessagePort, createMessagePort, responses, notify);
     private final PinMessageService pin = new PinMessageService(loadMessagePort, listMessagesPort, updatePinPort,
-            friendship, membership, responses, CLOCK);
+            friendship, membership, responses, notify, CLOCK);
 
     private static Message stored(UUID sender, Destination destination) {
         return Message.withId(UUID.randomUUID(), sender, destination, "oi", null, NOW, null, null, null);
@@ -83,10 +85,10 @@ class ChatServicesTest {
         when(friendship.areFriends(BETO, ANA)).thenReturn(true);
         when(listMessagesPort.pinnedDirect(BETO, ANA)).thenReturn(List.of());
 
-        PinChange change = pin.setPinned(BETO, message.getId(), true);
+        MessageResponse response = pin.setPinned(BETO, message.getId(), true);
 
-        assertThat(change.audience()).containsExactly(ANA, BETO);
-        assertThat(change.message().pinnedBy()).isEqualTo(BETO);
+        assertThat(response.pinnedBy()).isEqualTo(BETO);
+        verify(notify).messageChanged(response, List.of(ANA, BETO));
         verify(updatePinPort).updatePin(message);
     }
 
@@ -99,5 +101,6 @@ class ChatServicesTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Mensagem não encontrada");
         verify(updatePinPort, never()).updatePin(any());
+        verifyNoInteractions(notify);
     }
 }

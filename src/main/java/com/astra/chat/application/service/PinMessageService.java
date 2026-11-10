@@ -1,11 +1,12 @@
 package com.astra.chat.application.service;
 
-import com.astra.chat.application.port.in.PinChange;
+import com.astra.chat.application.port.in.MessageResponse;
 import com.astra.chat.application.port.in.PinMessageUseCase;
 import com.astra.chat.application.port.out.CheckFriendshipPort;
 import com.astra.chat.application.port.out.CheckGroupMemberPort;
 import com.astra.chat.application.port.out.ListMessagesPort;
 import com.astra.chat.application.port.out.LoadMessagePort;
+import com.astra.chat.application.port.out.NotifyChatPort;
 import com.astra.chat.application.port.out.UpdateMessagePinPort;
 import com.astra.chat.domain.Message;
 import com.astra.shared.exception.NotFoundException;
@@ -25,23 +26,26 @@ class PinMessageService implements PinMessageUseCase {
     private final CheckFriendshipPort checkFriendshipPort;
     private final CheckGroupMemberPort checkGroupMemberPort;
     private final MessageResponses messageResponses;
+    private final NotifyChatPort notifyChatPort;
     private final Clock clock;
 
     PinMessageService(LoadMessagePort loadMessagePort, ListMessagesPort listMessagesPort,
                       UpdateMessagePinPort updateMessagePinPort, CheckFriendshipPort checkFriendshipPort,
-                      CheckGroupMemberPort checkGroupMemberPort, MessageResponses messageResponses, Clock clock) {
+                      CheckGroupMemberPort checkGroupMemberPort, MessageResponses messageResponses,
+                      NotifyChatPort notifyChatPort, Clock clock) {
         this.loadMessagePort = loadMessagePort;
         this.listMessagesPort = listMessagesPort;
         this.updateMessagePinPort = updateMessagePinPort;
         this.checkFriendshipPort = checkFriendshipPort;
         this.checkGroupMemberPort = checkGroupMemberPort;
         this.messageResponses = messageResponses;
+        this.notifyChatPort = notifyChatPort;
         this.clock = clock;
     }
 
     @Override
     @Transactional
-    public PinChange setPinned(UUID userId, UUID messageId, boolean pinned) {
+    public MessageResponse setPinned(UUID userId, UUID messageId, boolean pinned) {
         Message message = loadMessagePort.load(messageId)
                 .orElseThrow(() -> new NotFoundException("Mensagem não encontrada"));
         List<UUID> audience;
@@ -65,6 +69,8 @@ class PinMessageService implements PinMessageUseCase {
             message.unpin();
         }
         updateMessagePinPort.updatePin(message);
-        return new PinChange(messageResponses.one(message), audience.stream().distinct().toList());
+        MessageResponse response = messageResponses.one(message);
+        notifyChatPort.messageChanged(response, audience.stream().distinct().toList());
+        return response;
     }
 }

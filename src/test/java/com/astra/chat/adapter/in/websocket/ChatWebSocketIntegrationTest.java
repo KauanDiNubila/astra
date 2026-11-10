@@ -1,13 +1,12 @@
-package com.astra.chat;
+package com.astra.chat.adapter.in.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.chat.controller.ChatWebSocketController;
-import com.astra.chat.dto.SendGroupMessageRequest;
-import com.astra.chat.dto.SendMessageRequest;
+import com.astra.chat.application.port.in.MessageResponse;
+import com.astra.chat.application.port.out.NotifyChatPort;
 import com.jayway.jsonpath.JsonPath;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -41,6 +40,9 @@ class ChatWebSocketIntegrationTest {
 
     @MockitoSpyBean
     private SimpMessagingTemplate messagingTemplate;
+
+    @MockitoSpyBean
+    private NotifyChatPort notifyChatPort;
 
     private record TestUser(UUID id, String token, String handle) {
     }
@@ -92,16 +94,28 @@ class ChatWebSocketIntegrationTest {
         return user.id()::toString;
     }
 
-    private List<Object> sentTo(UUID userId, String destination) {
+    private List<Object> errorsTo(UUID userId) {
         List<Object> payloads = new ArrayList<>();
         Mockito.mockingDetails(messagingTemplate).getInvocations().forEach(invocation -> {
             Object[] args = invocation.getArguments();
             if (invocation.getMethod().getName().equals("convertAndSendToUser") && args.length == 3
-                    && userId.toString().equals(args[0]) && destination.equals(args[1])) {
+                    && userId.toString().equals(args[0]) && "/queue/errors".equals(args[1])) {
                 payloads.add(args[2]);
             }
         });
         return payloads;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<MessageResponse> messagesTo(UUID userId) {
+        List<MessageResponse> messages = new ArrayList<>();
+        Mockito.mockingDetails(notifyChatPort).getInvocations().forEach(invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("messageSent") && ((List<UUID>) args[1]).contains(userId)) {
+                messages.add((MessageResponse) args[0]);
+            }
+        });
+        return messages;
     }
 
     @Test
@@ -112,9 +126,9 @@ class ChatWebSocketIntegrationTest {
 
         controller.send(new SendMessageRequest(beto.id(), "olá", null), principal(ana));
 
-        assertThat(sentTo(beto.id(), "/queue/messages")).singleElement()
-                .extracting(m -> ((com.astra.chat.dto.MessageResponse) m).content()).isEqualTo("olá");
-        assertThat(sentTo(ana.id(), "/queue/messages")).hasSize(1);
+        assertThat(messagesTo(beto.id())).singleElement()
+                .extracting(MessageResponse::content).isEqualTo("olá");
+        assertThat(messagesTo(ana.id())).hasSize(1);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
@@ -128,10 +142,10 @@ class ChatWebSocketIntegrationTest {
         controller.send(new SendMessageRequest(beto.id(), "  ", null), principal(ana));
         controller.send(new SendMessageRequest(estranho.id(), "oi", null), principal(ana));
 
-        assertThat(sentTo(ana.id(), "/queue/errors"))
+        assertThat(errorsTo(ana.id()))
                 .containsExactly("Mensagem precisa ter texto", "Conversa não encontrada");
-        assertThat(sentTo(beto.id(), "/queue/messages")).isEmpty();
-        assertThat(sentTo(estranho.id(), "/queue/messages")).isEmpty();
+        assertThat(messagesTo(beto.id())).isEmpty();
+        assertThat(messagesTo(estranho.id())).isEmpty();
     }
 
     @Test
@@ -145,8 +159,8 @@ class ChatWebSocketIntegrationTest {
         controller.sendGroup(new SendGroupMessageRequest(groupId, "bom dia", null), principal(beto));
         controller.sendGroup(new SendGroupMessageRequest(groupId, "oi", null), principal(estranho));
 
-        assertThat(sentTo(ana.id(), "/queue/messages")).hasSize(1);
-        assertThat(sentTo(beto.id(), "/queue/messages")).hasSize(1);
-        assertThat(sentTo(estranho.id(), "/queue/errors")).containsExactly("Grupo não encontrado");
+        assertThat(messagesTo(ana.id())).hasSize(1);
+        assertThat(messagesTo(beto.id())).hasSize(1);
+        assertThat(errorsTo(estranho.id())).containsExactly("Grupo não encontrado");
     }
 }

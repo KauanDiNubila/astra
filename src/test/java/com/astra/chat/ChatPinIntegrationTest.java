@@ -9,14 +9,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.chat.dto.MessageResponse;
-import com.astra.chat.service.ChatService;
+import com.astra.chat.application.port.in.MessageResponse;
+import com.astra.chat.application.port.in.SendDirectMessageCommand;
+import com.astra.chat.application.port.in.SendDirectMessageUseCase;
+import com.astra.chat.application.port.in.SendGroupMessageCommand;
+import com.astra.chat.application.port.in.SendGroupMessageUseCase;
+import com.astra.chat.application.port.out.NotifyChatPort;
+import com.astra.chat.domain.Message;
 import com.jayway.jsonpath.JsonPath;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +28,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,17 +42,15 @@ class ChatPinIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ChatService chatService;
+    private SendDirectMessageUseCase sendDirectMessage;
+
+    @Autowired
+    private SendGroupMessageUseCase sendGroupMessage;
 
     @MockitoSpyBean
-    private SimpMessagingTemplate messagingTemplate;
+    private NotifyChatPort notifyChatPort;
 
     private record TestUser(UUID id, String token, String handle) {
-    }
-
-    @AfterEach
-    void clearSecurity() {
-        SecurityContextHolder.clearContext();
     }
 
     private TestUser newUser() throws Exception {
@@ -100,33 +99,21 @@ class ChatPinIntegrationTest {
     }
 
     private UUID sendAs(TestUser sender, UUID recipientId, String content) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(sender.id(), null, List.of()));
-        try {
-            return chatService.send(recipientId, content, null).id();
-        } finally {
-            SecurityContextHolder.clearContext();
-        }
+        return sendDirectMessage.send(new SendDirectMessageCommand(sender.id(), recipientId, content, null, null)).id();
     }
 
     private UUID sendToGroupAs(TestUser sender, UUID groupId, String content) {
-        SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(sender.id(), null, List.of()));
-        try {
-            return chatService.sendGroupMessage(groupId, content, null).id();
-        } finally {
-            SecurityContextHolder.clearContext();
-        }
+        return sendGroupMessage.send(new SendGroupMessageCommand(sender.id(), groupId, content, null, null)).id();
     }
 
+    @SuppressWarnings("unchecked")
     private List<MessageResponse> updatesFor(UUID userId) {
         List<MessageResponse> updates = new ArrayList<>();
-        Mockito.mockingDetails(messagingTemplate).getInvocations().forEach(invocation -> {
+        Mockito.mockingDetails(notifyChatPort).getInvocations().forEach(invocation -> {
             Object[] args = invocation.getArguments();
-            if (invocation.getMethod().getName().equals("convertAndSendToUser") && args.length == 3
-                    && userId.toString().equals(args[0]) && "/queue/message-updates".equals(args[1])
-                    && args[2] instanceof MessageResponse message) {
-                updates.add(message);
+            if (invocation.getMethod().getName().equals("messageChanged")
+                    && ((List<UUID>) args[1]).contains(userId)) {
+                updates.add((MessageResponse) args[0]);
             }
         });
         return updates;
@@ -184,23 +171,23 @@ class ChatPinIntegrationTest {
         TestUser beto = newUser();
         befriend(ana, beto);
         List<UUID> ids = new ArrayList<>();
-        for (int i = 1; i <= ChatService.MAX_PINNED_PER_CONVERSATION + 1; i++) {
+        for (int i = 1; i <= Message.MAX_PINNED_PER_CONVERSATION + 1; i++) {
             ids.add(sendAs(ana, beto.id(), "Mensagem " + i));
         }
-        for (int i = 0; i < ChatService.MAX_PINNED_PER_CONVERSATION; i++) {
+        for (int i = 0; i < Message.MAX_PINNED_PER_CONVERSATION; i++) {
             mockMvc.perform(put("/chat/messages/" + ids.get(i) + "/pin").header("Authorization", "Bearer " + ana.token()))
                     .andExpect(status().isOk());
         }
         mockMvc.perform(put("/chat/messages/" + ids.get(0) + "/pin").header("Authorization", "Bearer " + ana.token()))
                 .andExpect(status().isOk());
 
-        UUID extra = ids.get(ChatService.MAX_PINNED_PER_CONVERSATION);
+        UUID extra = ids.get(Message.MAX_PINNED_PER_CONVERSATION);
         mockMvc.perform(put("/chat/messages/" + extra + "/pin").header("Authorization", "Bearer " + ana.token()))
                 .andExpect(status().isConflict());
 
         mockMvc.perform(get("/chat/" + beto.id() + "/pins").header("Authorization", "Bearer " + ana.token()))
-                .andExpect(jsonPath("$.length()").value(ChatService.MAX_PINNED_PER_CONVERSATION))
-                .andExpect(jsonPath("$[0].id").value(ids.get(ChatService.MAX_PINNED_PER_CONVERSATION - 1).toString()));
+                .andExpect(jsonPath("$.length()").value(Message.MAX_PINNED_PER_CONVERSATION))
+                .andExpect(jsonPath("$[0].id").value(ids.get(Message.MAX_PINNED_PER_CONVERSATION - 1).toString()));
     }
 
     @Test
