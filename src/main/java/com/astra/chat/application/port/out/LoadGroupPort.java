@@ -10,4 +10,6 @@ public interface LoadGroupPort {
     Optional<ChatGroup> load(UUID groupId);
 
     List<ChatGroup> listForMember(UUID userId);
+
+    Optional<String> nameOf(UUID groupId);
 }

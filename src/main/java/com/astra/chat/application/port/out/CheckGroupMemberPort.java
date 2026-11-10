@@ -8,4 +8,6 @@ public interface CheckGroupMemberPort {
     boolean isMember(UUID groupId, UUID userId);
 
     List<UUID> memberIds(UUID groupId);
+
+    List<UUID> groupIdsOf(UUID userId);
 }
