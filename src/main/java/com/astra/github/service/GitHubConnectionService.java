@@ -8,7 +8,7 @@ import com.astra.shared.CurrentUserProvider;
 import com.astra.shared.crypto.EncryptionService;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
-import com.astra.shared.security.JwtService;
+import com.astra.shared.crypto.JwtService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

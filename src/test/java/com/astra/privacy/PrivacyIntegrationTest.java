@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.shared.security.JwtService;
+import com.astra.shared.crypto.JwtService;
 import jakarta.persistence.EntityManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.jayway.jsonpath.JsonPath;
