@@ -95,7 +95,7 @@ public class GitHubSyncService {
         this.activitySummaryRepository = activitySummaryRepository;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {GitHubApiException.class, ConflictException.class})
     public void sync(UUID userId) {
         GitHubConnection connection = connectionService.requireConnection(userId);
         if (connection.getLastSyncedAt() != null

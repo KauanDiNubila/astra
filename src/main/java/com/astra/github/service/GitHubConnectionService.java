@@ -135,7 +135,7 @@ public class GitHubConnectionService {
         connectionRepository.deleteByUserId(userId);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ConflictException.class)
     public String validAccessToken(UUID userId) {
         GitHubConnection connection = connectionRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException("GitHub não conectado"));
