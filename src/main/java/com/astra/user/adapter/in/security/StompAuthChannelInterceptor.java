@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 class StompAuthChannelInterceptor implements ChannelInterceptor {
 
-    private static final Set<String> DESTINATIONS_FOR_ACTIVE_USERS = Set.of("/app/call.start", "/app/call.join");
+    private static final Set<String> DESTINATIONS_FOR_ACTIVE_USERS = Set.of("/app/call.start", "/app/call.join",
+            "/app/chat.send", "/app/chat.sendGroup");
 
     private final JwtService jwtService;
     private final GetAuthInfoQuery getAuthInfoQuery;

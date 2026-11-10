@@ -101,4 +101,17 @@ class StompBanIntegrationTest {
                 .isInstanceOf(StompAuthenticationException.class);
         assertThat(interceptor.preSend(send(userId, "/app/call.leave"), null)).isNotNull();
     }
+
+    @Test
+    void banidoComConexaoAbertaNaoMandaMensagem() throws Exception {
+        UUID userId = register();
+        assertThat(interceptor.preSend(send(userId, "/app/chat.send"), null)).isNotNull();
+
+        ban(userId);
+
+        assertThatThrownBy(() -> interceptor.preSend(send(userId, "/app/chat.send"), null))
+                .isInstanceOf(StompAuthenticationException.class);
+        assertThatThrownBy(() -> interceptor.preSend(send(userId, "/app/chat.sendGroup"), null))
+                .isInstanceOf(StompAuthenticationException.class);
+    }
 }
