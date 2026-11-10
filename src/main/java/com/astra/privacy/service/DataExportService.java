@@ -1,7 +1,7 @@
 package com.astra.privacy.service;
 
-import com.astra.chat.service.ChatGroupService;
-import com.astra.chat.service.ChatService;
+import com.astra.chat.application.port.in.ExportGroupsQuery;
+import com.astra.chat.application.port.in.ExportMessagesQuery;
 import com.astra.github.service.GitHubConnectionService;
 import com.astra.learning.application.port.in.ExportCoursesQuery;
 import com.astra.learning.application.port.in.ExportGoalsQuery;
@@ -31,15 +31,16 @@ public class DataExportService {
     private final ExportRoadmapsQuery exportRoadmapsQuery;
     private final ExportCoursePinsQuery exportCoursePinsQuery;
     private final ExportFriendshipsQuery exportFriendshipsQuery;
-    private final ChatService chatService;
-    private final ChatGroupService chatGroupService;
+    private final ExportMessagesQuery exportMessagesQuery;
+    private final ExportGroupsQuery exportGroupsQuery;
     private final GitHubConnectionService gitHubConnectionService;
 
     public DataExportService(CurrentUserProvider currentUserProvider, ExportProfileQuery exportProfileQuery,
             ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, ExportCoursesQuery exportCoursesQuery,
             ExportGoalsQuery exportGoalsQuery, ExportRoadmapsQuery exportRoadmapsQuery,
             ExportCoursePinsQuery exportCoursePinsQuery,
-            ExportFriendshipsQuery exportFriendshipsQuery, ChatService chatService, ChatGroupService chatGroupService,
+            ExportFriendshipsQuery exportFriendshipsQuery, ExportMessagesQuery exportMessagesQuery,
+            ExportGroupsQuery exportGroupsQuery,
             GitHubConnectionService gitHubConnectionService) {
         this.currentUserProvider = currentUserProvider;
         this.exportProfileQuery = exportProfileQuery;
@@ -50,8 +51,8 @@ public class DataExportService {
         this.exportRoadmapsQuery = exportRoadmapsQuery;
         this.exportCoursePinsQuery = exportCoursePinsQuery;
         this.exportFriendshipsQuery = exportFriendshipsQuery;
-        this.chatService = chatService;
-        this.chatGroupService = chatGroupService;
+        this.exportMessagesQuery = exportMessagesQuery;
+        this.exportGroupsQuery = exportGroupsQuery;
         this.gitHubConnectionService = gitHubConnectionService;
     }
 
@@ -68,8 +69,8 @@ public class DataExportService {
                 "roadmaps", exportRoadmapsQuery.exportRoadmaps(userId),
                 "coursePins", exportCoursePinsQuery.exportPins(userId),
                 "friendships", exportFriendshipsQuery.export(userId),
-                "groups", chatGroupService.exportData(userId),
-                "messages", chatService.exportData(userId),
+                "groups", exportGroupsQuery.exportGroups(userId),
+                "messages", exportMessagesQuery.exportMessages(userId),
                 "github", gitHubConnectionService.exportData(userId));
     }
 }

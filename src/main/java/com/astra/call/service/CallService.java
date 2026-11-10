@@ -5,7 +5,7 @@ import com.astra.call.dto.CallEvent;
 import com.astra.call.dto.CallParticipant;
 import com.astra.call.dto.SignalRequest;
 import com.astra.call.dto.StartCallRequest;
-import com.astra.chat.service.ChatGroupService;
+import com.astra.chat.application.port.in.GetGroupInfoQuery;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.astra.social.application.port.in.CheckFriendshipQuery;
@@ -40,7 +40,7 @@ public class CallService {
     static final Set<String> SIGNAL_TYPES = Set.of("offer", "answer", "ice", "meta");
 
     private final CheckFriendshipQuery checkFriendshipQuery;
-    private final ChatGroupService chatGroupService;
+    private final GetGroupInfoQuery getGroupInfoQuery;
     private final LoadUserSummariesQuery loadUserSummariesQuery;
     private final SimpMessagingTemplate messagingTemplate;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
@@ -54,10 +54,10 @@ public class CallService {
     private final Map<UUID, UUID> callByGroup = new HashMap<>();
     private final Map<UUID, SignalWindow> signalWindows = new HashMap<>();
 
-    public CallService(CheckFriendshipQuery checkFriendshipQuery, ChatGroupService chatGroupService,
+    public CallService(CheckFriendshipQuery checkFriendshipQuery, GetGroupInfoQuery getGroupInfoQuery,
             LoadUserSummariesQuery loadUserSummariesQuery, SimpMessagingTemplate messagingTemplate) {
         this.checkFriendshipQuery = checkFriendshipQuery;
-        this.chatGroupService = chatGroupService;
+        this.getGroupInfoQuery = getGroupInfoQuery;
         this.loadUserSummariesQuery = loadUserSummariesQuery;
         this.messagingTemplate = messagingTemplate;
     }
@@ -93,7 +93,7 @@ public class CallService {
             eligible.add(me);
             eligible.add(target);
         } else {
-            List<UUID> members = chatGroupService.memberIds(groupId);
+            List<UUID> members = getGroupInfoQuery.memberIds(groupId);
             if (!members.contains(me)) {
                 throw new NotFoundException("Grupo não encontrado");
             }
@@ -103,7 +103,7 @@ public class CallService {
                 return;
             }
             eligible.addAll(members);
-            groupName = chatGroupService.groupName(groupId);
+            groupName = getGroupInfoQuery.name(groupId);
         }
 
         Call call = new Call(UUID.randomUUID(), groupId, me, eligible);

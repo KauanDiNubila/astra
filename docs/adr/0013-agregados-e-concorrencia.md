@@ -14,7 +14,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 | `tracking.session` | `Session` | sim, entidade sozinha |
 | `learning` | `Course` → `CourseModule` → `Lesson`; `Goal` separado | sim, decidido na migração (#121): módulos e aulas só mudam por métodos do `Course`, e um adaptador grava o agregado inteiro em cascata |
 | `roadmap` | `Roadmap` → `RoadmapStep` → links; `StepProgress` (status por pessoa) e `CoursePin` separados | sim, decidido na migração (#121): passos e links só mudam pelo `Roadmap`; status e pin ficam fora porque também valem nos roadmaps prontos, compartilhados por todos |
-| `chat` | `ChatGroup` → `GroupMember`; `Message` separado | a confirmar |
+| `chat` | `ChatGroup` → `GroupMember`; `Message` separado (anexo à parte); foto do grupo fora do agregado | sim, decidido na migração (#121): entrar no grupo e quem pode adicionar ficam no `ChatGroup`; resposta e fixação ficam na `Message`; o limite de 3 fixadas por conversa é conferido no service, contando pela porta, por ser uma regra entre várias mensagens |
 | `call` | `Call` → `CallMember` | sim |
 | `social` | `Friendship` | sim, entidade sozinha |
 | `user` | `User`; `OAuthConnection` e `RefreshToken` separados; avatar fora do agregado | sim, decidido na migração (#121): moderação e hierarquia de papéis ficam no `User`; o login OAuth acha a conexão antes de saber o usuário, e os refresh tokens são muitos por pessoa e giram a cada renovação; o avatar (até 2 MB) só é lido e gravado pelo seu adaptador |
