@@ -21,7 +21,9 @@ o [instalador direto](https://github.com/KauanDiNubila/astra/releases/latest)
 "O Windows protegeu seu PC", e é só clicar em **Mais informações** e depois em
 **Executar assim mesmo**. Detalhes em [`desktop/README.md`](desktop/README.md).
 
-> Projeto de portfólio. Interface em português, código em inglês.
+> Projeto de portfólio. Interface em português, código em inglês. O backend segue
+> **arquitetura hexagonal** (portas e adaptadores), com as decisões registradas em
+> [`docs/adr`](docs/adr/README.md).
 
 ## Funcionalidades
 
@@ -134,7 +136,7 @@ pasta de notas do projeto — não faz parte deste repositório público.
 | Tempo real | WebSocket + STOMP (chat e sinalização das chamadas) |
 | Validação | Bean Validation |
 | Docs de API | SpringDoc OpenAPI (Swagger UI, só em dev) |
-| Testes | JUnit 5, Testcontainers (Postgres real) |
+| Testes | JUnit 5, Mockito, Testcontainers (Postgres real), ArchUnit (regras de arquitetura) |
 | Dev local | Docker Compose (Postgres) |
 | Utilitário | Lombok |
 | CI | GitHub Actions (`mvnw verify` a cada push) |
@@ -149,6 +151,7 @@ pasta de notas do projeto — não faz parte deste repositório público.
 | Estilo | Tailwind CSS 4 + shadcn (Radix UI) |
 | Animação | Motion (`motion/react`) |
 | HTTP | Axios |
+| Dados em cache | TanStack Query |
 | Ícones | Lucide |
 | Notificações | Sonner |
 | Chamadas | WebRTC (malha ponto a ponto) |
@@ -276,32 +279,61 @@ Erros seguem um shape padrão (`timestamp, status, error, message, path, fieldEr
 
 ## Arquitetura
 
-**Backend** — monólito modular, **pacote-por-feature**. Cada módulo é um pacote sob
-`com.astra` e carrega suas próprias camadas (controller / service / repository /
-entity / dto). Regra de fronteira: módulos conversam por *services públicos*, nunca
-acessando o repository ou a entity do vizinho — mantendo o grafo de dependências
-**sem ciclos**.
+**Backend** — monólito modular com **arquitetura hexagonal**, migrado módulo a
+módulo seguindo as decisões registradas em [`docs/adr`](docs/adr/README.md)
+(base: *Get Your Hands Dirty on Clean Architecture*, de Tom Hombergs). Cada módulo
+é um pacote sob `com.astra` com a mesma estrutura:
+
+```
+<módulo>
+├── domain               → regras de negócio, sem Spring nem JPA
+├── application
+│   ├── port/in          → casos de uso e consultas: a única parte que outros módulos enxergam
+│   ├── port/out         → o que o módulo precisa de fora (banco, API, outro módulo)
+│   └── service          → implementa as portas de entrada
+└── adapter
+    ├── in               → web (REST), websocket, segurança, eventos
+    └── out              → persistência (JPA), APIs externas, memória, outros módulos
+```
+
+As fronteiras não dependem de disciplina: um teste de arquitetura (ArchUnit,
+`ArchitectureTest`) quebra o build se alguém as furar.
+
+- O domínio não conhece Spring nem JPA; services e adaptadores são
+  package-private.
+- De fora, um módulo só usa as portas de entrada (`port/in`) de outro. O núcleo
+  de um módulo fala com os vizinhos por portas de saída, implementadas por
+  adaptadores pequenos.
+- Nenhum ciclo entre módulos. Quando dois módulos precisariam perguntar coisas um
+  ao outro, a dependência é invertida: quem recebe a pergunta declara a porta, e
+  o outro a implementa. Exemplo: a exportação de dados (LGPD) é uma porta do
+  `privacy`, e cada módulo pluga a sua parte, então o `privacy` não conhece
+  nenhum deles.
+- Testes na proporção da camada: o domínio é testado sem Spring, os services com
+  portas simuladas e os fluxos de ponta a ponta com Postgres real (Testcontainers).
 
 ```
 com.astra
 ├── user       → autenticação (JWT + refresh token, OAuth2), perfil, roles/admin
-├── tracking   → Session, Category            (o núcleo)
-├── learning   → Course, CourseModule, Goal
+├── tracking   → session e category (o núcleo)
+├── learning   → Course, CourseModule, Goal e o vínculo curso ↔ repositório
 ├── roadmap    → Roadmap, RoadmapStep, CourseStepLink (o "pin")
 ├── social     → Friendship (pedidos de amizade)
-├── chat       → Message, WebSocket/STOMP
+├── chat       → grupos e mensagens, WebSocket/STOMP, cifra em repouso
 ├── call       → chamadas: estado em memória, sinalização WebRTC, credenciais TURN
 ├── github     → conexão OAuth2, sincronização e insights do GitHub
 ├── stats      → dashboard, heatmap, streak, ranking (só leitura sobre os domínios)
-├── privacy    → exportação dos dados do usuário (LGPD), juntando o que cada módulo expõe
-└── shared     → config, security, exceptions, base
+├── privacy    → exportação dos dados do usuário (LGPD), juntando o que cada módulo pluga
+└── shared     → config, exceções e utilitários comuns (não conhece nenhum módulo)
 ```
 
 **Frontend** — SPA em `frontend/`, uma página por rota sob `src/pages`, componentes
 de UI reutilizáveis (shadcn) em `src/components/ui`, e componentes de domínio
 (diagrama de roadmap, timer Pomodoro, heatmap, tela de chamada etc.) em
 `src/components`. A lógica das chamadas (conexões WebRTC, áudio, dispositivos)
-fica em `src/lib/call*.ts` e `src/context/CallContext.tsx`.
+fica em `src/lib/call*.ts` e `src/context/CallContext.tsx`. As leituras da API
+passam por TanStack Query, que mantém os dados em cache no navegador e os
+invalida quando algo muda, para a tela nunca mostrar número velho.
 
 **App desktop** — casca Electron em `desktop/`: não empacota o front, só abre
 o site (que segue atualizando pela Vercel). O processo principal cuida da
@@ -315,4 +347,6 @@ social e da atualização; a página fala com ele por uma ponte pequena
 sessões, dashboard, heatmap, cursos/módulos, metas, roadmaps (com diagrama
 interativo), amigos, chat em tempo real, chamadas de voz e vídeo com
 compartilhamento de tela, ranking, integração com GitHub, administração e app
-para Windows. Em polimento contínuo de UX e correções.
+para Windows. O backend foi reorganizado em arquitetura hexagonal, módulo a módulo,
+e as regras de fronteira são verificadas a cada build. Em polimento contínuo de UX
+e correções.
