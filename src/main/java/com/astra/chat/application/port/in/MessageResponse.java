@@ -1,0 +1,12 @@
+package com.astra.chat.application.port.in;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+public record MessageResponse(UUID id, UUID senderId, UUID recipientId, UUID groupId, String content,
+                              OffsetDateTime createdAt, boolean read, UUID attachmentId, ReplyPreview replyTo,
+                              OffsetDateTime pinnedAt, UUID pinnedBy) {
+
+    public record ReplyPreview(UUID id, UUID senderId, String contentPreview) {
+    }
+}
