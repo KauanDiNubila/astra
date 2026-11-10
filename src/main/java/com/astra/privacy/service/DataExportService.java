@@ -2,7 +2,7 @@ package com.astra.privacy.service;
 
 import com.astra.chat.application.port.in.ExportGroupsQuery;
 import com.astra.chat.application.port.in.ExportMessagesQuery;
-import com.astra.github.service.GitHubConnectionService;
+import com.astra.github.application.port.in.ExportGitHubQuery;
 import com.astra.learning.application.port.in.ExportCoursesQuery;
 import com.astra.learning.application.port.in.ExportGoalsQuery;
 import com.astra.roadmap.application.port.in.ExportCoursePinsQuery;
@@ -33,7 +33,7 @@ public class DataExportService {
     private final ExportFriendshipsQuery exportFriendshipsQuery;
     private final ExportMessagesQuery exportMessagesQuery;
     private final ExportGroupsQuery exportGroupsQuery;
-    private final GitHubConnectionService gitHubConnectionService;
+    private final ExportGitHubQuery exportGitHubQuery;
 
     public DataExportService(CurrentUserProvider currentUserProvider, ExportProfileQuery exportProfileQuery,
             ListCategoriesQuery listCategoriesQuery, ListSessionsQuery listSessionsQuery, ExportCoursesQuery exportCoursesQuery,
@@ -41,7 +41,7 @@ public class DataExportService {
             ExportCoursePinsQuery exportCoursePinsQuery,
             ExportFriendshipsQuery exportFriendshipsQuery, ExportMessagesQuery exportMessagesQuery,
             ExportGroupsQuery exportGroupsQuery,
-            GitHubConnectionService gitHubConnectionService) {
+            ExportGitHubQuery exportGitHubQuery) {
         this.currentUserProvider = currentUserProvider;
         this.exportProfileQuery = exportProfileQuery;
         this.listCategoriesQuery = listCategoriesQuery;
@@ -53,7 +53,7 @@ public class DataExportService {
         this.exportFriendshipsQuery = exportFriendshipsQuery;
         this.exportMessagesQuery = exportMessagesQuery;
         this.exportGroupsQuery = exportGroupsQuery;
-        this.gitHubConnectionService = gitHubConnectionService;
+        this.exportGitHubQuery = exportGitHubQuery;
     }
 
     @Transactional(readOnly = true)
@@ -71,6 +71,6 @@ public class DataExportService {
                 "friendships", exportFriendshipsQuery.export(userId),
                 "groups", exportGroupsQuery.exportGroups(userId),
                 "messages", exportMessagesQuery.exportMessages(userId),
-                "github", gitHubConnectionService.exportData(userId));
+                "github", exportGitHubQuery.exportGitHub(userId));
     }
 }

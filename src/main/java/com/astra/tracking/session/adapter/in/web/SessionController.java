@@ -1,7 +1,7 @@
 package com.astra.tracking.session.adapter.in.web;
 
-import com.astra.github.dto.SessionGitHubActivity;
-import com.astra.github.service.GitHubLiveActivityService;
+import com.astra.github.application.port.in.GetSessionActivityQuery;
+import com.astra.github.application.port.in.SessionActivityResponse;
 import com.astra.shared.CurrentUserProvider;
 import com.astra.tracking.session.application.port.in.DeleteSessionUseCase;
 import com.astra.tracking.session.application.port.in.GetSessionWindowQuery;
@@ -36,21 +36,21 @@ class SessionController {
     private final UnlinkRepositoryFromSessionUseCase unlinkRepositoryFromSessionUseCase;
     private final ListSessionsQuery listSessionsQuery;
     private final GetSessionWindowQuery getSessionWindowQuery;
-    private final GitHubLiveActivityService gitHubLiveActivityService;
+    private final GetSessionActivityQuery getSessionActivityQuery;
     private final CurrentUserProvider currentUserProvider;
 
     SessionController(RegisterSessionUseCase registerSessionUseCase, DeleteSessionUseCase deleteSessionUseCase,
                       LinkRepositoryToSessionUseCase linkRepositoryToSessionUseCase,
                       UnlinkRepositoryFromSessionUseCase unlinkRepositoryFromSessionUseCase,
                       ListSessionsQuery listSessionsQuery, GetSessionWindowQuery getSessionWindowQuery,
-                      GitHubLiveActivityService gitHubLiveActivityService, CurrentUserProvider currentUserProvider) {
+                      GetSessionActivityQuery getSessionActivityQuery, CurrentUserProvider currentUserProvider) {
         this.registerSessionUseCase = registerSessionUseCase;
         this.deleteSessionUseCase = deleteSessionUseCase;
         this.linkRepositoryToSessionUseCase = linkRepositoryToSessionUseCase;
         this.unlinkRepositoryFromSessionUseCase = unlinkRepositoryFromSessionUseCase;
         this.listSessionsQuery = listSessionsQuery;
         this.getSessionWindowQuery = getSessionWindowQuery;
-        this.gitHubLiveActivityService = gitHubLiveActivityService;
+        this.getSessionActivityQuery = getSessionActivityQuery;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -73,10 +73,10 @@ class SessionController {
     }
 
     @GetMapping("/{id}/github-activity")
-    SessionGitHubActivity githubActivity(@PathVariable UUID id) {
+    SessionActivityResponse githubActivity(@PathVariable UUID id) {
         UUID userId = currentUserProvider.currentUserId();
         SessionWindow window = getSessionWindowQuery.get(userId, id);
-        return gitHubLiveActivityService.activityForWindow(userId, window.startedAt(), window.endedAt(),
+        return getSessionActivityQuery.activityFor(userId, window.startedAt(), window.endedAt(),
                 window.githubRepositoryId());
     }
 
