@@ -280,4 +280,84 @@ class CallIntegrationTest {
         callService.join(b.id(), "sb-reconectado", callId, "cb");
         assertThat(lastEvent(b.id(), "state").participants()).hasSize(2);
     }
+
+    @Test
+    void grupoContinuaAteOUltimoSairERecusaNoGrupoNaoEncerra() throws Exception {
+        TestUser owner = newUser();
+        TestUser m1 = newUser();
+        TestUser m2 = newUser();
+        befriend(owner, m1);
+        befriend(owner, m2);
+        UUID groupId = createGroup(owner, List.of(m1, m2));
+
+        callService.start(owner.id(), "so", new StartCallRequest(null, groupId, "co"));
+        UUID callId = lastEvent(m1.id(), "incoming").callId();
+        assertThat(lastEvent(m1.id(), "incoming").groupName()).isEqualTo("Estudo");
+
+        callService.decline(m1.id(), callId);
+        assertThat(lastEvent(owner.id(), "declined").userId()).isEqualTo(m1.id());
+        assertThat(lastEvent(m1.id(), "dismissed").callId()).isEqualTo(callId);
+        assertThat(eventsFor(owner.id())).noneMatch(e -> e.type().equals("ended"));
+
+        callService.start(m2.id(), "s2", new StartCallRequest(null, groupId, "c2"));
+        assertThat(lastEvent(m2.id(), "state").participants()).hasSize(2);
+
+        callService.leave(owner.id(), callId, "outra-aba");
+        assertThat(eventsFor(m2.id())).noneMatch(e -> e.type().equals("left"));
+        callService.leave(owner.id(), callId, "co");
+        assertThat(lastEvent(m2.id(), "left").userId()).isEqualTo(owner.id());
+        assertThat(eventsFor(m2.id())).noneMatch(e -> e.type().equals("ended"));
+
+        callService.leave(m2.id(), callId, "c2");
+        assertThat(lastEvent(m1.id(), "ended").reason()).isEqualTo("left");
+        assertThat(lastEvent(owner.id(), "ended").callId()).isEqualTo(callId);
+    }
+
+    @Test
+    void pedidoInvalidoESinaisForaDaRegra() throws Exception {
+        TestUser a = newUser();
+        TestUser b = newUser();
+        befriend(a, b);
+
+        assertThatThrownBy(() -> callService.start(a.id(), "sa", new StartCallRequest(null, null, "ca")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Informe um amigo ou um grupo");
+        assertThatThrownBy(() -> callService.start(a.id(), "sa", dm(a.id(), "ca")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Não é possível ligar para si mesmo");
+
+        callService.start(a.id(), "sa", dm(b.id(), "ca"));
+        UUID callId = lastEvent(b.id(), "incoming").callId();
+        callService.join(b.id(), "sb", callId, "cb");
+
+        assertThatThrownBy(() -> callService.relay(a.id(), new SignalRequest(callId, "ninguem", "ice", "x")))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("Participante não encontrado");
+        for (int i = 0; i < 399; i++) {
+            callService.relay(a.id(), new SignalRequest(callId, "cb", "ice", "x"));
+        }
+        assertThatThrownBy(() -> callService.relay(a.id(), new SignalRequest(callId, "cb", "ice", "x")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Muitos sinais em pouco tempo");
+        callService.leave(a.id(), callId, "ca");
+    }
+
+    @Test
+    void chamadaDeGrupoAbertaApareceNaApiParaQuemAindaNaoEntrou() throws Exception {
+        TestUser owner = newUser();
+        TestUser member = newUser();
+        befriend(owner, member);
+        UUID groupId = createGroup(owner, List.of(member));
+
+        callService.start(owner.id(), "so", new StartCallRequest(null, groupId, "co"));
+
+        mockMvc.perform(get("/call/active").header("Authorization", "Bearer " + member.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.groupId == '" + groupId + "')].participantCount").value(1));
+        mockMvc.perform(get("/call/active").header("Authorization", "Bearer " + owner.token()))
+                .andExpect(jsonPath("$[?(@.groupId == '" + groupId + "')]").isEmpty());
+        mockMvc.perform(get("/call/active")).andExpect(status().isUnauthorized());
+
+        callService.leave(owner.id(), lastEvent(member.id(), "incoming").callId(), "co");
+    }
 }
