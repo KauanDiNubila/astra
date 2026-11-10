@@ -364,8 +364,9 @@ public class ChatService {
         }
         Message target = messageRepository.findById(replyToMessageId)
                 .orElseThrow(() -> new NotFoundException("Mensagem original não encontrada"));
-        boolean sameConversation = (target.getSenderId().equals(me) && target.getRecipientId().equals(otherId))
-                || (target.getSenderId().equals(otherId) && target.getRecipientId().equals(me));
+        boolean sameConversation = target.getGroupId() == null
+                && ((target.getSenderId().equals(me) && otherId.equals(target.getRecipientId()))
+                || (target.getSenderId().equals(otherId) && me.equals(target.getRecipientId())));
         if (!sameConversation) {
             throw new ConflictException("Mensagem não pertence a esta conversa");
         }
