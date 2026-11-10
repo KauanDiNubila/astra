@@ -27,7 +27,8 @@ class ArchitectureTest {
             "com.astra.user",
             "com.astra.chat",
             "com.astra.call",
-            "com.astra.github"
+            "com.astra.github",
+            "com.astra.privacy"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
@@ -37,6 +38,8 @@ class ArchitectureTest {
     private static final String[] KNOWN_EXCEPTIONS = {};
 
     private static final String SHARED = "com.astra.shared..";
+
+    private static final String PRIVACY_EXPORT_PORT = "com.astra.privacy.application.port.out..";
 
     private static String[] inMigrated(String... layers) {
         return MIGRATED_MODULES.stream()
@@ -93,9 +96,17 @@ class ArchitectureTest {
                     .toArray(String[]::new);
             classes()
                     .that().resideInAPackage(module + ".adapter..")
+                    .and().resideOutsideOfPackage(module + ".adapter.in.privacy..")
                     .should().onlyDependOnClassesThat().resideInAnyPackage(allowed)
                     .because("ADR 0007: adaptadores usam a porta de entrada do outro módulo; "
                             + "KNOWN_EXCEPTIONS lista o que ainda não é possível e só pode diminuir")
+                    .check(classes);
+            classes()
+                    .that().resideInAPackage(module + ".adapter.in.privacy..")
+                    .should().onlyDependOnClassesThat().resideInAnyPackage(
+                            Stream.concat(Arrays.stream(allowed), Stream.of(PRIVACY_EXPORT_PORT)).toArray(String[]::new))
+                    .because("ADR 0007: cada módulo pluga a sua parte da exportação na porta de saída do privacy")
+                    .allowEmptyShould(true)
                     .check(classes);
         }
     }

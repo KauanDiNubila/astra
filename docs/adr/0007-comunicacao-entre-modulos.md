@@ -13,7 +13,7 @@ Hoje um módulo usa service, entidade e repositório de outro. Exemplos: `Sessio
 - Quem precisa de outro módulo declara uma **porta de saída** própria e a implementa com um adaptador em `adapter/out/<modulo>` que chama a porta de entrada do outro lado. Exemplo: `CheckCategoryOwnerPort` (sessão) → `CategoryOwnerAdapter` → `GetCategoryOwnerQuery` (categoria).
 - Entre módulos só passam ids e modelos de saída. Nenhuma entidade, de domínio ou JPA, cruza a fronteira. Relações JPA entre módulos (`@ManyToOne`) viram colunas de id.
 - A segurança (filtro JWT, OAuth, STOMP) sai do `shared` e vai para `user/adapter/in/security`.
-- Exportação de dados: o `privacy` define a porta `UserDataExporter`, e cada módulo implementa a sua parte em `adapter/in/privacy`. O `privacy` passa a não conhecer nenhum módulo.
+- Exportação de dados: o `privacy` define a porta de saída `ExportUserDataPort` (em `application/port/out`), e cada módulo implementa a sua parte em `adapter/in/privacy`; a ordem das seções vem de `@Order`. O `privacy` passa a não conhecer nenhum módulo. É a única porta de saída que outro módulo pode usar, e o `ArchitectureTest` só libera isso para `adapter/in/privacy`.
 - Eventos entre módulos (como `UserRegisteredEvent`) continuam permitidos: quem publica usa uma porta de saída, e quem escuta é um adaptador de entrada em `adapter/in/event`.
 - Nenhum ciclo entre módulos é permitido (ADR 0011).
 

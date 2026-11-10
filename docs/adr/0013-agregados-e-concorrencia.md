@@ -18,6 +18,7 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 | `call` | `CallBoard` (todas as calls ativas) → `Call` → membros | sim, decidido na migração (#121): as transições ficam no `CallBoard` porque há regras entre chamadas (uma pessoa só pode estar em uma call; quem está ocupado não recebe outra) |
 | `github` | `GitHubConnection`; repositórios, contribuições por dia e resumos por período são dados sincronizados à parte | sim, decidido na migração (#121): tokens, renovação, espera entre sincronizações, erro da última sincronização e visibilidade ficam na `GitHubConnection`; o que vem do GitHub é só gravado e lido de novo, sem regra própria; o vínculo curso ↔ repositório mudou para o `learning` |
 | `social` | `Friendship` | sim, entidade sozinha |
+| `privacy` | nenhum: só junta o que cada módulo exporta | não se aplica |
 | `user` | `User`; `OAuthConnection` e `RefreshToken` separados; avatar fora do agregado | sim, decidido na migração (#121): moderação e hierarquia de papéis ficam no `User`; o login OAuth acha a conexão antes de saber o usuário, e os refresh tokens são muitos por pessoa e giram a cada renovação; o avatar (até 2 MB) só é lido e gravado pelo seu adaptador |
 
 - Um adaptador de persistência por agregado.
