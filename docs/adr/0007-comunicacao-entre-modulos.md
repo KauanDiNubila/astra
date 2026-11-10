@@ -15,7 +15,8 @@ Hoje um módulo usa service, entidade e repositório de outro. Exemplos: `Sessio
 - A segurança (filtro JWT, OAuth, STOMP) sai do `shared` e vai para `user/adapter/in/security`.
 - Exportação de dados: o `privacy` define a porta de saída `ExportUserDataPort` (em `application/port/out`), e cada módulo implementa a sua parte em `adapter/in/privacy`; a ordem das seções vem de `@Order`. O `privacy` passa a não conhecer nenhum módulo. É a única porta de saída que outro módulo pode usar, e o `ArchitectureTest` só libera isso para `adapter/in/privacy`.
 - Eventos entre módulos (como `UserRegisteredEvent`) continuam permitidos: quem publica usa uma porta de saída, e quem escuta é um adaptador de entrada em `adapter/in/event`.
-- Nenhum ciclo entre módulos é permitido (ADR 0011).
+- Quando dois módulos precisariam perguntar coisas um ao outro, a dependência é invertida: o módulo que pergunta declara a porta de saída, e o outro a implementa em `adapter/in/<módulo que pergunta>`, chamando a própria porta de entrada. É o mesmo padrão da exportação. Assim, `tracking.session` implementa `CheckCategoryInUsePort` (categoria) e `LoadLastStudiedPort` (learning), e a dependência fica só no sentido `session` → `category` e `session` → `learning`.
+- Nenhum ciclo entre módulos é permitido (ADR 0011). O `ArchitectureTest` confere isso com `modulesAreFreeOfCycles`.
 
 ## Consequências
 

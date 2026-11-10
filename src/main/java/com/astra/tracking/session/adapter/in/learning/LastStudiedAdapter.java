@@ -1,4 +1,4 @@
-package com.astra.learning.adapter.out.session;
+package com.astra.tracking.session.adapter.in.learning;
 
 import com.astra.learning.application.port.out.LoadLastStudiedPort;
 import com.astra.tracking.session.application.port.in.GetLastStudiedQuery;
