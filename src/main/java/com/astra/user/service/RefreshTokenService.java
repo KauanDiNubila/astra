@@ -53,7 +53,7 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
 
         if (existing.getRevokedAt() != null) {
-            if (existing.getRevokedAt().isAfter(OffsetDateTime.now().minus(REUSE_LEEWAY))) {
+            if (existing.isRotated() && existing.getRevokedAt().isAfter(OffsetDateTime.now().minus(REUSE_LEEWAY))) {
                 return existing.getUserId();
             }
             refreshTokenRepository.revokeAllForUser(existing.getUserId(), OffsetDateTime.now());
@@ -64,13 +64,17 @@ public class RefreshTokenService {
         }
 
         existing.setRevokedAt(OffsetDateTime.now());
+        existing.setRotated(true);
         return existing.getUserId();
     }
 
     @Transactional
     public void revoke(String rawToken) {
         refreshTokenRepository.findByTokenHash(hash(rawToken))
-                .ifPresent(rt -> rt.setRevokedAt(OffsetDateTime.now()));
+                .ifPresent(rt -> {
+                    rt.setRevokedAt(OffsetDateTime.now());
+                    rt.setRotated(false);
+                });
     }
 
     public void issueAndAttachCookie(UUID userId, HttpServletResponse response) {
