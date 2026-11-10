@@ -103,6 +103,12 @@ class ArchitectureTest {
     }
 
     @ArchTest
+    static final ArchRule sharedDependsOnNoModule = noClasses()
+            .that().resideInAPackage(SHARED)
+            .should().dependOnClassesThat(resideInAPackage("com.astra..").and(resideOutsideOfPackages(SHARED)))
+            .because("ADR 0003 e 0007: o shared só tem o que é comum de verdade e não conhece nenhum módulo");
+
+    @ArchTest
     static final ArchRule outsidersUseOnlyPortIn = noClasses()
             .that().resideOutsideOfPackages(inMigrated(".."))
             .should().dependOnClassesThat().resideInAnyPackage(

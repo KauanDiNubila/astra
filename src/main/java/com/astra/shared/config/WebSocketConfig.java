@@ -1,6 +1,5 @@
 package com.astra.shared.config;
 
-import com.astra.shared.security.StompAuthChannelInterceptor;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
@@ -8,6 +7,7 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
+import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -22,12 +22,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private static final int MAX_MESSAGE_BYTES = 128 * 1024;
     private static final long HEARTBEAT_MILLIS = 10_000;
 
-    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+    private final List<ChannelInterceptor> channelInterceptors;
     private final List<String> allowedOrigins;
 
-    public WebSocketConfig(StompAuthChannelInterceptor stompAuthChannelInterceptor,
+    public WebSocketConfig(List<ChannelInterceptor> channelInterceptors,
             @Value("${astra.cors.allowed-origins}") List<String> allowedOrigins) {
-        this.stompAuthChannelInterceptor = stompAuthChannelInterceptor;
+        this.channelInterceptors = channelInterceptors;
         this.allowedOrigins = allowedOrigins;
     }
 
@@ -69,6 +69,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(stompAuthChannelInterceptor);
+        registration.interceptors(channelInterceptors.toArray(ChannelInterceptor[]::new));
     }
 }

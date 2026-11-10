@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.shared.security.JwtService;
+import com.astra.shared.crypto.JwtService;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
 import java.util.List;
