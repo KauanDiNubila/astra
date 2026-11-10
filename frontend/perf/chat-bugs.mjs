@@ -35,29 +35,44 @@ const sendToAna = (content) => betoSocket.send("/app/chat.send", { recipientId: 
 
 {
   for (let i = 1; i <= 40; i++) sendToAna(`mensagem ${i}`)
-  await sleep(1500)
   await page.goto(`${APP}/chat/${beto.id}`)
   await page.locator(".overlay-scroll p", { hasText: /^mensagem 40$/ }).waitFor()
   const container = page.locator(".overlay-scroll").filter({ has: page.locator("p", { hasText: /^mensagem 40$/ }) })
   await container.hover()
   await page.mouse.wheel(0, -900)
-  await sleep(700)
-  const distance = await container.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)
-  check(distance > 200, "subir a conversa logo depois de abrir não volta sozinho para o fim", `(distância do fim: ${Math.round(distance)}px)`)
+  const distance = await container.evaluate(
+    (el) =>
+      new Promise((resolve) => {
+        const end = performance.now() + 700
+        let closest = Infinity
+        const sample = () => {
+          closest = Math.min(closest, el.scrollHeight - el.scrollTop - el.clientHeight)
+          if (performance.now() < end) requestAnimationFrame(sample)
+          else resolve(closest)
+        }
+        sample()
+      }),
+  )
+  check(distance > 200, "subir a conversa logo depois de abrir não volta sozinho para o fim", `(menor distância do fim: ${Math.round(distance)}px)`)
 }
 
 {
   await page.goto(`${APP}/chat`)
-  await page.getByText("mensagem 40").first().waitFor()
-  await sleep(500)
-  const before = Number((await page.locator("span.rounded-full.bg-primary").first().textContent().catch(() => "0")) ?? 0)
+  const item = page.getByRole("link", { name: /Beto/ })
+  await item.getByText("mensagem 40").waitFor()
+  const unread = async () => {
+    const label = await item.getByLabel(/não lida/).getAttribute("aria-label", { timeout: 500 }).catch(() => null)
+    return label ? Number(label.split(" ")[0]) : 0
+  }
+  const before = await unread()
   for (let i = 1; i <= 6; i++) sendToAna(`rajada ${i}`)
-  await sleep(2000)
-  const badge = Number((await page.locator("span.rounded-full.bg-primary").first().textContent()) ?? 0)
-  check(badge - before === 6, "6 mensagens em rajada contam 6 não lidas", `(contou ${badge - before})`)
+  await item.getByText("rajada 6").waitFor()
+  await sleep(300)
+  const counted = (await unread()) - before
+  check(counted === 6, "6 mensagens em rajada contam 6 não lidas", `(contou ${counted})`)
 }
 
 betoSocket.close()
 await browser.close()
 console.log(failures === 0 ? "\nTudo certo" : `\n${failures} falha(s)`)
-process.exit(failures === 0 ? 1 - 1 : 1)
+process.exit(failures === 0 ? 0 : 1)

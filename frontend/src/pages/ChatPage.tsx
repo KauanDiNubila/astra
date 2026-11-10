@@ -266,15 +266,6 @@ export function ChatPage() {
   // segundo crescimento.
   const activeGroupMemberCount = groupId ? (groupMembersById[groupId]?.length ?? 0) : 0
 
-  // "Grudado no fim" é uma intenção (o usuário rolou pra cima ou não), não
-  // uma distância fixa — a versão antiga desistia de acompanhar se um único
-  // evento de resize (várias imagens decodificando juntas, por exemplo)
-  // empurrasse o conteúdo mais de 300px de uma vez, e depois disso nada
-  // mais reancorava, deixando a conversa parada bem em cima de uma imagem.
-  // Aqui, enquanto pinnedRef for true, TODA mudança de altura reancora
-  // incondicionalmente; só um scroll de verdade que pousa longe do fim
-  // desarma, e voltar a rolar até o fim rearma.
-  //
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
@@ -573,7 +564,10 @@ export function ChatPage() {
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
-                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                          <span
+                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
+                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
+                          >
                             {c.unreadCount}
                           </span>
                         )}
@@ -633,7 +627,10 @@ export function ChatPage() {
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
-                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                          <span
+                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
+                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
+                          >
                             {c.unreadCount}
                           </span>
                         )}

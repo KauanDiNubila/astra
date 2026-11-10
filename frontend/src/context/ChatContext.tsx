@@ -344,6 +344,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return
 
+    seenMessageIdsRef.current.clear()
     const client = createChatClient()
     client.onConnect = () => {
       setConnected(true)
