@@ -1,4 +1,4 @@
-package com.astra.tracking.category.adapter.out.session;
+package com.astra.tracking.session.adapter.in.category;
 
 import com.astra.tracking.category.application.port.out.CheckCategoryInUsePort;
 import com.astra.tracking.session.application.port.in.HasSessionsInCategoryQuery;

@@ -16,7 +16,7 @@ Cada arquivo registra uma decisão: o contexto, o que foi decidido e o que isso 
 | [0010](0010-estrategia-de-testes.md) | Estratégia de testes | Aceito |
 | [0011](0011-protecao-das-fronteiras.md) | Proteção das fronteiras com visibilidade e ArchUnit | Aceito |
 | [0012](0012-tempo-real-e-integracoes-externas.md) | Tempo real, APIs externas e hora do sistema atrás de portas | Aceito |
-| [0013](0013-agregados-e-concorrencia.md) | Agregados e concorrência | Proposto |
+| [0013](0013-agregados-e-concorrencia.md) | Agregados e concorrência | Aceito |
 | [0014](0014-fluxo-de-trabalho-da-migracao.md) | Fluxo de trabalho no Git durante a migração | Aceito |
 | [0015](0015-sem-atalho-de-porta-de-entrada.md) | Todo módulo tem porta de entrada; cadastro só dispensa o mapeamento | Aceito |
 

@@ -4,12 +4,16 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPac
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackages;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.dependencies.SliceAssignment;
+import com.tngtech.archunit.library.dependencies.SliceIdentifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -39,7 +43,26 @@ class ArchitectureTest {
 
     private static final String SHARED = "com.astra.shared..";
 
-    private static final String PRIVACY_EXPORT_PORT = "com.astra.privacy.application.port.out..";
+    private static final SliceAssignment MODULES = new SliceAssignment() {
+        @Override
+        public SliceIdentifier getIdentifierOf(JavaClass javaClass) {
+            return MIGRATED_MODULES.stream()
+                    .filter(module -> javaClass.getPackageName().equals(module)
+                            || javaClass.getPackageName().startsWith(module + "."))
+                    .findFirst()
+                    .map(SliceIdentifier::of)
+                    .orElse(SliceIdentifier.ignore());
+        }
+
+        @Override
+        public String getDescription() {
+            return "módulos do backend";
+        }
+    };
+
+    private static String shortName(String module) {
+        return module.substring(module.lastIndexOf('.') + 1);
+    }
 
     private static String[] inMigrated(String... layers) {
         return MIGRATED_MODULES.stream()
@@ -96,20 +119,31 @@ class ArchitectureTest {
                     .toArray(String[]::new);
             classes()
                     .that().resideInAPackage(module + ".adapter..")
-                    .and().resideOutsideOfPackage(module + ".adapter.in.privacy..")
+                    .and().resideOutsideOfPackages(MIGRATED_MODULES.stream()
+                            .map(other -> module + ".adapter.in." + shortName(other) + "..")
+                            .toArray(String[]::new))
                     .should().onlyDependOnClassesThat().resideInAnyPackage(allowed)
                     .because("ADR 0007: adaptadores usam a porta de entrada do outro módulo; "
                             + "KNOWN_EXCEPTIONS lista o que ainda não é possível e só pode diminuir")
                     .check(classes);
-            classes()
-                    .that().resideInAPackage(module + ".adapter.in.privacy..")
-                    .should().onlyDependOnClassesThat().resideInAnyPackage(
-                            Stream.concat(Arrays.stream(allowed), Stream.of(PRIVACY_EXPORT_PORT)).toArray(String[]::new))
-                    .because("ADR 0007: cada módulo pluga a sua parte da exportação na porta de saída do privacy")
-                    .allowEmptyShould(true)
-                    .check(classes);
+            for (String other : MIGRATED_MODULES) {
+                classes()
+                        .that().resideInAPackage(module + ".adapter.in." + shortName(other) + "..")
+                        .should().onlyDependOnClassesThat().resideInAnyPackage(Stream.concat(Arrays.stream(allowed),
+                                Stream.of(other + ".application.port.out..")).toArray(String[]::new))
+                        .because("ADR 0007: um módulo pode implementar a porta de saída de outro em adapter/in/<outro>, "
+                                + "para a dependência ficar numa direção só")
+                        .allowEmptyShould(true)
+                        .check(classes);
+            }
         }
     }
+
+    @ArchTest
+    static final ArchRule modulesAreFreeOfCycles = slices()
+            .assignedFrom(MODULES)
+            .should().beFreeOfCycles()
+            .because("ADR 0011: nenhum ciclo entre módulos");
 
     @ArchTest
     static final ArchRule sharedDependsOnNoModule = noClasses()

@@ -1,13 +1,13 @@
 # ADR 0013: Agregados e concorrência
 
-- Status: Proposto
+- Status: Aceito
 - Data: 2026-11-06
 
 ## Contexto
 
 Um adaptador de persistência por agregado define quais objetos são carregados e gravados juntos. A sessão é uma entidade sozinha, mas outros módulos têm grupos de objetos que precisam ficar consistentes entre si. O `call` guarda o estado das chamadas em memória, e duas pessoas entrando ou saindo ao mesmo tempo podem gerar conflito.
 
-## Decisão (proposta, a confirmar ao migrar cada módulo)
+## Decisão
 
 | Módulo | Agregado | Muda só pela raiz? |
 |---|---|---|
