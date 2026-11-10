@@ -15,8 +15,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     @Modifying
     @Query("""
-            update RefreshToken r set r.revokedAt = :now
-            where r.userId = :userId and r.revokedAt is null
+            update RefreshToken r set r.revokedAt = coalesce(r.revokedAt, :now), r.rotated = false
+            where r.userId = :userId
             """)
     void revokeAllForUser(@Param("userId") UUID userId, @Param("now") OffsetDateTime now);
 }
