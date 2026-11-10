@@ -128,6 +128,23 @@ class PrivacyIntegrationTest {
     }
 
     @Test
+    void exportTrazTodasAsSecoesNaMesmaOrdem() throws Exception {
+        UUID userId = register(true);
+
+        String body = mockMvc.perform(get("/me/export").header("Authorization", bearer(userId)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("astra-meus-dados-")))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.exportedAt").exists())
+                .andExpect(jsonPath("$.github").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        java.util.Map<String, Object> export = JsonPath.read(body, "$");
+        assertThat(export.keySet()).containsExactly("exportedAt", "profile", "categories", "sessions", "courses",
+                "goals", "roadmaps", "coursePins", "friendships", "groups", "messages", "github");
+    }
+
+    @Test
     void exportRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/me/export")).andExpect(status().isUnauthorized());
     }
