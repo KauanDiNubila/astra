@@ -15,12 +15,12 @@ Um adaptador de persistência por agregado define quais objetos são carregados 
 | `learning` | `Course` → `CourseModule` → `Lesson`; `Goal` separado | sim, decidido na migração (#121): módulos e aulas só mudam por métodos do `Course`, e um adaptador grava o agregado inteiro em cascata |
 | `roadmap` | `Roadmap` → `RoadmapStep` → links; `StepProgress` (status por pessoa) e `CoursePin` separados | sim, decidido na migração (#121): passos e links só mudam pelo `Roadmap`; status e pin ficam fora porque também valem nos roadmaps prontos, compartilhados por todos |
 | `chat` | `ChatGroup` → `GroupMember`; `Message` separado (anexo à parte); foto do grupo fora do agregado | sim, decidido na migração (#121): entrar no grupo e quem pode adicionar ficam no `ChatGroup`; resposta e fixação ficam na `Message`; o limite de 3 fixadas por conversa é conferido no service, contando pela porta, por ser uma regra entre várias mensagens |
-| `call` | `Call` → `CallMember` | sim |
+| `call` | `CallBoard` (todas as calls ativas) → `Call` → membros | sim, decidido na migração (#121): as transições ficam no `CallBoard` porque há regras entre chamadas (uma pessoa só pode estar em uma call; quem está ocupado não recebe outra) |
 | `social` | `Friendship` | sim, entidade sozinha |
 | `user` | `User`; `OAuthConnection` e `RefreshToken` separados; avatar fora do agregado | sim, decidido na migração (#121): moderação e hierarquia de papéis ficam no `User`; o login OAuth acha a conexão antes de saber o usuário, e os refresh tokens são muitos por pessoa e giram a cada renovação; o avatar (até 2 MB) só é lido e gravado pelo seu adaptador |
 
 - Um adaptador de persistência por agregado.
-- Concorrência no `call`: as transições de estado (`start`, `join`, `leave`, `decline`) ficam no domínio `Call`, e o acesso ao estado em memória passa por uma porta (`StoreCallPort`) cuja implementação garante exclusão mútua por chamada.
+- Concorrência no `call`: as transições de estado (`start`, `join`, `leave`, `decline`, sinal, queda de conexão, fim do toque) ficam no domínio `CallBoard`, e o acesso ao estado em memória passa por uma porta (`CallBoardPort`) com **uma trava única** para todas as chamadas. Uma trava por chamada não serve: as regras entre chamadas abririam corrida (duas pessoas ligando uma para a outra ao mesmo tempo). Com no máximo 5 pessoas por call, a trava única não é gargalo.
 - Nos agregados guardados no banco, conflito de escrita simultânea será tratado quando aparecer um caso real, com `@Version` na entidade JPA.
 - Leituras que não precisam do agregado inteiro (listar roadmaps, localizar um passo) usam modelos de leitura próprios (`RoadmapOutline`, `LocatedStep`), para não carregar centenas de passos e links à toa.
 - Partes do agregado criadas dentro da raiz (como módulo e aula no `Course`) recebem o id no domínio, para a resposta sair com o id sem reler o banco.

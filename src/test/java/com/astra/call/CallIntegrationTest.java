@@ -9,10 +9,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.astra.TestcontainersConfiguration;
-import com.astra.call.dto.CallEvent;
-import com.astra.call.dto.SignalRequest;
-import com.astra.call.dto.StartCallRequest;
-import com.astra.call.service.CallService;
+import com.astra.call.application.port.in.DeclineCallUseCase;
+import com.astra.call.application.port.in.JoinCallUseCase;
+import com.astra.call.application.port.in.LeaveCallUseCase;
+import com.astra.call.application.port.in.ListActiveCallsQuery;
+import com.astra.call.application.port.in.RelaySignalCommand;
+import com.astra.call.application.port.in.RelaySignalUseCase;
+import com.astra.call.application.port.in.StartCallCommand;
+import com.astra.call.application.port.in.StartCallUseCase;
+import com.astra.call.application.port.out.NotifyCallPort;
+import com.astra.call.domain.CallEvent;
+import com.astra.call.domain.CallNotice;
 import com.astra.shared.exception.ConflictException;
 import com.astra.shared.exception.NotFoundException;
 import com.jayway.jsonpath.JsonPath;
@@ -32,7 +39,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,10 +53,25 @@ class CallIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private CallService callService;
+    private StartCallUseCase startCall;
+
+    @Autowired
+    private JoinCallUseCase joinCall;
+
+    @Autowired
+    private DeclineCallUseCase declineCall;
+
+    @Autowired
+    private LeaveCallUseCase leaveCall;
+
+    @Autowired
+    private RelaySignalUseCase relaySignal;
+
+    @Autowired
+    private ListActiveCallsQuery listActiveCalls;
 
     @MockitoSpyBean
-    private SimpMessagingTemplate messagingTemplate;
+    private NotifyCallPort notifyCallPort;
 
     @Value("${astra.call.turn-secret}")
     private String turnSecret;
@@ -103,14 +124,16 @@ class CallIntegrationTest {
         return UUID.fromString(JsonPath.read(body, "$.groupId"));
     }
 
+    @SuppressWarnings("unchecked")
     private List<CallEvent> eventsFor(UUID userId) {
         List<CallEvent> events = new ArrayList<>();
-        Mockito.mockingDetails(messagingTemplate).getInvocations().forEach(invocation -> {
-            Object[] args = invocation.getArguments();
-            if (invocation.getMethod().getName().equals("convertAndSendToUser") && args.length == 3
-                    && userId.toString().equals(args[0]) && "/queue/call".equals(args[1])
-                    && args[2] instanceof CallEvent event) {
-                events.add(event);
+        Mockito.mockingDetails(notifyCallPort).getInvocations().forEach(invocation -> {
+            if (invocation.getMethod().getName().equals("send")) {
+                for (CallNotice notice : (List<CallNotice>) invocation.getArguments()[0]) {
+                    if (notice.to().equals(userId)) {
+                        events.add(notice.event());
+                    }
+                }
             }
         });
         return events;
@@ -120,10 +143,6 @@ class CallIntegrationTest {
         List<CallEvent> events = eventsFor(userId).stream().filter(e -> e.type().equals(type)).toList();
         assertThat(events).as("evento %s para %s", type, userId).isNotEmpty();
         return events.get(events.size() - 1);
-    }
-
-    private StartCallRequest dm(UUID target, String clientId) {
-        return new StartCallRequest(target, null, clientId);
     }
 
     @Test
@@ -154,7 +173,7 @@ class CallIntegrationTest {
         TestUser a = newUser();
         TestUser stranger = newUser();
 
-        assertThatThrownBy(() -> callService.start(a.id(), "s1", dm(stranger.id(), "ca")))
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(a.id(), "s1", stranger.id(), null, "ca")))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -165,31 +184,31 @@ class CallIntegrationTest {
         TestUser stranger = newUser();
         befriend(a, b);
 
-        callService.start(a.id(), "sa", dm(b.id(), "ca"));
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca"));
         CallEvent incoming = lastEvent(b.id(), "incoming");
         assertThat(incoming.userId()).isEqualTo(a.id());
         UUID callId = incoming.callId();
 
-        callService.join(b.id(), "sb", callId, "cb");
+        joinCall.join(b.id(), "sb", callId, "cb");
         assertThat(lastEvent(a.id(), "joined").clientId()).isEqualTo("cb");
         assertThat(lastEvent(b.id(), "state").participants()).hasSize(2);
 
-        callService.relay(b.id(), new SignalRequest(callId, "ca", "offer", "{\"sdp\":\"x\"}"));
+        relaySignal.relay(new RelaySignalCommand(b.id(), callId, "ca", "offer", "{\"sdp\":\"x\"}"));
         CallEvent signal = lastEvent(a.id(), "signal");
         assertThat(signal.signalType()).isEqualTo("offer");
         assertThat(signal.clientId()).isEqualTo("cb");
 
-        assertThatThrownBy(() -> callService.relay(stranger.id(), new SignalRequest(callId, "ca", "offer", "x")))
+        assertThatThrownBy(() -> relaySignal.relay(new RelaySignalCommand(stranger.id(), callId, "ca", "offer", "x")))
                 .isInstanceOf(NotFoundException.class);
-        assertThatThrownBy(() -> callService.relay(b.id(), new SignalRequest(callId, "ca", "bogus", "x")))
+        assertThatThrownBy(() -> relaySignal.relay(new RelaySignalCommand(b.id(), callId, "ca", "bogus", "x")))
                 .isInstanceOf(ConflictException.class);
-        assertThatThrownBy(() -> callService.join(stranger.id(), "ss", callId, "cs"))
+        assertThatThrownBy(() -> joinCall.join(stranger.id(), "ss", callId, "cs"))
                 .isInstanceOf(NotFoundException.class);
 
-        callService.leave(b.id(), callId, "cb");
+        leaveCall.leave(b.id(), callId, "cb");
         assertThat(lastEvent(a.id(), "ended").callId()).isEqualTo(callId);
 
-        callService.start(a.id(), "sa", dm(b.id(), "ca2"));
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca2"));
         assertThat(lastEvent(b.id(), "incoming").callId()).isNotEqualTo(callId);
     }
 
@@ -199,15 +218,15 @@ class CallIntegrationTest {
         TestUser b = newUser();
         befriend(a, b);
 
-        callService.start(a.id(), "sa", dm(b.id(), "ca"));
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca"));
         UUID callId = lastEvent(b.id(), "incoming").callId();
-        callService.decline(b.id(), callId);
+        declineCall.decline(b.id(), callId);
 
         assertThat(lastEvent(a.id(), "declined").userId()).isEqualTo(b.id());
         assertThat(lastEvent(a.id(), "ended").reason()).isEqualTo("declined");
         assertThat(lastEvent(b.id(), "dismissed").callId()).isEqualTo(callId);
-        callService.join(b.id(), "sb", callId, "cb");
-        assertThat(callService.activeFor(b.id())).isEmpty();
+        joinCall.join(b.id(), "sb", callId, "cb");
+        assertThat(listActiveCalls.activeFor(b.id())).isEmpty();
         assertThat(lastEvent(b.id(), "ended").callId()).isEqualTo(callId);
     }
 
@@ -219,13 +238,13 @@ class CallIntegrationTest {
         befriend(a, b);
         befriend(c, b);
 
-        callService.start(a.id(), "sa", dm(b.id(), "ca"));
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca"));
         UUID callId = lastEvent(b.id(), "incoming").callId();
-        callService.join(b.id(), "sb", callId, "cb");
+        joinCall.join(b.id(), "sb", callId, "cb");
 
-        assertThatThrownBy(() -> callService.start(a.id(), "sa", dm(b.id(), "ca2")))
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca2")))
                 .isInstanceOf(ConflictException.class);
-        assertThatThrownBy(() -> callService.start(c.id(), "sc", dm(b.id(), "cc")))
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(c.id(), "sc", b.id(), null, "cc")))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -241,26 +260,26 @@ class CallIntegrationTest {
         TestUser outsider = newUser();
         UUID groupId = createGroup(owner, members);
 
-        callService.start(owner.id(), "so", new StartCallRequest(null, groupId, "co"));
+        startCall.start(new StartCallCommand(owner.id(), "so", null, groupId, "co"));
         UUID callId = lastEvent(members.get(0).id(), "incoming").callId();
         assertThat(lastEvent(members.get(0).id(), "incoming").groupId()).isEqualTo(groupId);
 
         for (int i = 0; i < 4; i++) {
-            callService.join(members.get(i).id(), "s" + i, callId, "c" + i);
+            joinCall.join(members.get(i).id(), "s" + i, callId, "c" + i);
         }
-        assertThatThrownBy(() -> callService.join(members.get(4).id(), "s4", callId, "c4"))
+        assertThatThrownBy(() -> joinCall.join(members.get(4).id(), "s4", callId, "c4"))
                 .isInstanceOf(ConflictException.class);
-        assertThatThrownBy(() -> callService.join(outsider.id(), "sx", callId, "cx"))
+        assertThatThrownBy(() -> joinCall.join(outsider.id(), "sx", callId, "cx"))
                 .isInstanceOf(NotFoundException.class);
-        assertThatThrownBy(() -> callService.start(outsider.id(), "sx", new StartCallRequest(null, groupId, "cx")))
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(outsider.id(), "sx", null, groupId, "cx")))
                 .isInstanceOf(NotFoundException.class);
 
-        assertThat(callService.activeFor(members.get(4).id())).hasSize(1);
-        assertThat(callService.activeFor(owner.id())).isEmpty();
+        assertThat(listActiveCalls.activeFor(members.get(4).id())).hasSize(1);
+        assertThat(listActiveCalls.activeFor(owner.id())).isEmpty();
 
-        callService.leave(members.get(0).id(), callId, "c0");
+        leaveCall.leave(members.get(0).id(), callId, "c0");
         assertThat(lastEvent(owner.id(), "left").clientId()).isEqualTo("c0");
-        callService.join(members.get(4).id(), "s4", callId, "c4");
+        joinCall.join(members.get(4).id(), "s4", callId, "c4");
         assertThat(lastEvent(members.get(4).id(), "state").participants()).hasSize(5);
     }
 
@@ -270,14 +289,94 @@ class CallIntegrationTest {
         TestUser b = newUser();
         befriend(a, b);
 
-        callService.start(a.id(), "sa", dm(b.id(), "ca"));
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca"));
         UUID callId = lastEvent(b.id(), "incoming").callId();
-        callService.join(b.id(), "sb", callId, "cb");
+        joinCall.join(b.id(), "sb", callId, "cb");
 
-        assertThatThrownBy(() -> callService.join(b.id(), "sb2", callId, "cb-outra-aba"))
+        assertThatThrownBy(() -> joinCall.join(b.id(), "sb2", callId, "cb-outra-aba"))
                 .isInstanceOf(ConflictException.class);
 
-        callService.join(b.id(), "sb-reconectado", callId, "cb");
+        joinCall.join(b.id(), "sb-reconectado", callId, "cb");
         assertThat(lastEvent(b.id(), "state").participants()).hasSize(2);
+    }
+
+    @Test
+    void grupoContinuaAteOUltimoSairERecusaNoGrupoNaoEncerra() throws Exception {
+        TestUser owner = newUser();
+        TestUser m1 = newUser();
+        TestUser m2 = newUser();
+        befriend(owner, m1);
+        befriend(owner, m2);
+        UUID groupId = createGroup(owner, List.of(m1, m2));
+
+        startCall.start(new StartCallCommand(owner.id(), "so", null, groupId, "co"));
+        UUID callId = lastEvent(m1.id(), "incoming").callId();
+        assertThat(lastEvent(m1.id(), "incoming").groupName()).isEqualTo("Estudo");
+
+        declineCall.decline(m1.id(), callId);
+        assertThat(lastEvent(owner.id(), "declined").userId()).isEqualTo(m1.id());
+        assertThat(lastEvent(m1.id(), "dismissed").callId()).isEqualTo(callId);
+        assertThat(eventsFor(owner.id())).noneMatch(e -> e.type().equals("ended"));
+
+        startCall.start(new StartCallCommand(m2.id(), "s2", null, groupId, "c2"));
+        assertThat(lastEvent(m2.id(), "state").participants()).hasSize(2);
+
+        leaveCall.leave(owner.id(), callId, "outra-aba");
+        assertThat(eventsFor(m2.id())).noneMatch(e -> e.type().equals("left"));
+        leaveCall.leave(owner.id(), callId, "co");
+        assertThat(lastEvent(m2.id(), "left").userId()).isEqualTo(owner.id());
+        assertThat(eventsFor(m2.id())).noneMatch(e -> e.type().equals("ended"));
+
+        leaveCall.leave(m2.id(), callId, "c2");
+        assertThat(lastEvent(m1.id(), "ended").reason()).isEqualTo("left");
+        assertThat(lastEvent(owner.id(), "ended").callId()).isEqualTo(callId);
+    }
+
+    @Test
+    void pedidoInvalidoESinaisForaDaRegra() throws Exception {
+        TestUser a = newUser();
+        TestUser b = newUser();
+        befriend(a, b);
+
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(a.id(), "sa", null, null, "ca")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Informe um amigo ou um grupo");
+        assertThatThrownBy(() -> startCall.start(new StartCallCommand(a.id(), "sa", a.id(), null, "ca")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Não é possível ligar para si mesmo");
+
+        startCall.start(new StartCallCommand(a.id(), "sa", b.id(), null, "ca"));
+        UUID callId = lastEvent(b.id(), "incoming").callId();
+        joinCall.join(b.id(), "sb", callId, "cb");
+
+        assertThatThrownBy(() -> relaySignal.relay(new RelaySignalCommand(a.id(), callId, "ninguem", "ice", "x")))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("Participante não encontrado");
+        for (int i = 0; i < 399; i++) {
+            relaySignal.relay(new RelaySignalCommand(a.id(), callId, "cb", "ice", "x"));
+        }
+        assertThatThrownBy(() -> relaySignal.relay(new RelaySignalCommand(a.id(), callId, "cb", "ice", "x")))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Muitos sinais em pouco tempo");
+        leaveCall.leave(a.id(), callId, "ca");
+    }
+
+    @Test
+    void chamadaDeGrupoAbertaApareceNaApiParaQuemAindaNaoEntrou() throws Exception {
+        TestUser owner = newUser();
+        TestUser member = newUser();
+        befriend(owner, member);
+        UUID groupId = createGroup(owner, List.of(member));
+
+        startCall.start(new StartCallCommand(owner.id(), "so", null, groupId, "co"));
+
+        mockMvc.perform(get("/call/active").header("Authorization", "Bearer " + member.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.groupId == '" + groupId + "')].participantCount").value(1));
+        mockMvc.perform(get("/call/active").header("Authorization", "Bearer " + owner.token()))
+                .andExpect(jsonPath("$[?(@.groupId == '" + groupId + "')]").isEmpty());
+        mockMvc.perform(get("/call/active")).andExpect(status().isUnauthorized());
+
+        leaveCall.leave(owner.id(), lastEvent(member.id(), "incoming").callId(), "co");
     }
 }

@@ -25,7 +25,8 @@ class ArchitectureTest {
             "com.astra.learning",
             "com.astra.roadmap",
             "com.astra.user",
-            "com.astra.chat"
+            "com.astra.chat",
+            "com.astra.call"
     );
 
     private static final List<String> NO_MAPPING_MODULES = List.of(
@@ -89,7 +90,7 @@ class ArchitectureTest {
     static void adaptersReachOtherModulesOnlyThroughPortIn(JavaClasses classes) {
         for (String module : MIGRATED_MODULES) {
             String[] allowed = Stream.of(
-                            Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "org.slf4j..", "lombok..",
+                            Stream.of("java..", "jakarta..", "org.springframework..", "org.hibernate..", "org.slf4j..", "com.fasterxml.jackson..", "lombok..",
                                     SHARED, module + "..", "..application.port.in.."),
                             Arrays.stream(KNOWN_EXCEPTIONS))
                     .flatMap(s -> s)
