@@ -51,7 +51,7 @@ public class GitHubLiveActivityService {
         this.apiClient = apiClient;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public SessionGitHubActivity activityForWindow(UUID userId, OffsetDateTime from, OffsetDateTime to,
             UUID preferredRepositoryId) {
         GitHubConnection connection = connectionRepository.findByUserId(userId).orElse(null);
