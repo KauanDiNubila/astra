@@ -166,6 +166,45 @@ try {
   check(false, "mensagem durante o carregamento do histórico", error.message.split(String.fromCharCode(10))[0])
 }
 
+try {
+  await page.goto(`${APP}/chat/${beto.id}`)
+  const original = page.locator("[id^=message-]", { has: page.locator("p", { hasText: /^mensagem 40$/ }) })
+  await original.waitFor()
+  await original.hover()
+  await original.getByTitle("Responder").click()
+  await page.getByText("Respondendo a Beto").waitFor({ timeout: 5000 })
+  check(true, "responder mostra a barra com o nome de quem escreveu")
+  const composer = page.locator("textarea")
+  await composer.fill("resposta ao Beto")
+  await composer.press("Enter")
+  const reply = page.locator("[id^=message-]", { has: page.locator("p", { hasText: /^resposta ao Beto$/ }) })
+  await reply.waitFor({ timeout: 5000 })
+  check((await reply.getByText("mensagem 40").count()) > 0, "a resposta mostra a mensagem citada")
+  const collapsed = await page
+    .waitForFunction(() => {
+      const label = [...document.querySelectorAll("p")].find((p) => p.textContent?.startsWith("Respondendo a"))
+      return !!label && label.closest(".grid")?.className.includes("grid-rows-[0fr]")
+    }, undefined, { timeout: 3000 })
+    .then(() => true, () => false)
+  check(collapsed, "depois de enviar a barra de resposta fecha")
+} catch (error) {
+  check(false, "responder mensagem", error.message.split(String.fromCharCode(10))[0])
+}
+
+try {
+  const pixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64")
+  await page.goto(`${APP}/chat/${beto.id}`)
+  await page.locator("textarea").waitFor()
+  await page.locator('input[type="file"]').setInputFiles({ name: "pixel.png", mimeType: "image/png", buffer: pixel })
+  await page.getByAltText("Pré-visualização").waitFor({ timeout: 5000 })
+  await page.getByRole("button", { name: "Enviar" }).click()
+  await page.getByAltText("Imagem enviada").first().waitFor({ timeout: 8000 })
+  check(true, "imagem anexada é enviada e aparece na conversa")
+  check((await page.getByAltText("Pré-visualização").count()) === 0, "a pré-visualização some depois de enviar")
+} catch (error) {
+  check(false, "enviar imagem", error.message.split(String.fromCharCode(10))[0])
+}
+
 betoSocket.close()
 await browser.close()
 console.log(failures === 0 ? "\nTudo certo" : `\n${failures} falha(s)`)
