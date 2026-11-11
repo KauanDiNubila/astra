@@ -144,6 +144,28 @@ try {
   check(false, "fixadas", error.message.split(String.fromCharCode(10))[0])
 }
 
+try {
+  const slow = await context.newPage()
+  const historyUrl = new RegExp(`/chat/${beto.id}/messages$`)
+  await slow.route(historyUrl, async (route) => {
+    const response = await route.fetch()
+    await sleep(4000)
+    await route.fulfill({ response })
+  })
+  const socketOpened = slow.waitForEvent("websocket")
+  await slow.goto(`${APP}/chat/${beto.id}`)
+  await socketOpened
+  await sleep(1200)
+  sendToAna("chegou durante o carregamento")
+  const arrived = slow.locator("p", { hasText: /^chegou durante o carregamento$/ })
+  await arrived.waitFor({ timeout: 3000 })
+  await sleep(4500)
+  check((await arrived.count()) > 0, "mensagem que chega enquanto o histórico carrega não some quando ele termina")
+  await slow.close()
+} catch (error) {
+  check(false, "mensagem durante o carregamento do histórico", error.message.split(String.fromCharCode(10))[0])
+}
+
 betoSocket.close()
 await browser.close()
 console.log(failures === 0 ? "\nTudo certo" : `\n${failures} falha(s)`)

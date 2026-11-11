@@ -83,4 +83,5 @@ Com o frontend em `http://localhost:5173` (ou `APP=...`), cria duas contas amiga
 - depois de abrir uma conversa, dá para rolar para cima sem a tela voltar sozinha para o fim;
 - seis mensagens recebidas em sequência contam seis não lidas na lista;
 - a própria mensagem aparece na conversa com o amigo e no grupo;
-- mensagens de grupo contam como não lidas e abrir o grupo marca como lido.
+- mensagens de grupo contam como não lidas e abrir o grupo marca como lido;
+- uma mensagem que chega enquanto o histórico ainda carrega não some quando ele termina.

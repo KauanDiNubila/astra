@@ -115,7 +115,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   function loadHistory(ref: ConversationRef) {
     return api.get<Message[]>(`${conversationPath(ref)}/messages`).then((res) => {
       res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
-      setMessagesByConversation((prev) => ({ ...prev, [conversationKey(ref)]: res.data }))
+      const key = conversationKey(ref)
+      setMessagesByConversation((prev) => {
+        const loaded = new Set(res.data.map((m) => m.id))
+        const arrivedMeanwhile = (prev[key] ?? []).filter((m) => !loaded.has(m.id))
+        if (arrivedMeanwhile.length === 0) return { ...prev, [key]: res.data }
+        const merged = [...res.data, ...arrivedMeanwhile].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        return { ...prev, [key]: merged }
+      })
     })
   }
 
