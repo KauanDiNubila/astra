@@ -55,7 +55,45 @@ try {
   const betoHears = await untilTrue(() => receivingAudio(betoPage))
   check(anaHears && betoHears, "os dois lados passam a receber áudio um do outro", `(Ana: ${anaHears}, Beto: ${betoHears})`)
 
-  await anaPage.getByRole("button", { name: /Desligar|Encerrar|Sair/ }).first().click()
+  check((await betoPage.getByText("Ana", { exact: true }).count()) > 0, "cada lado vê o nome do outro no tile")
+  check((await anaPage.getByText("Você", { exact: true }).count()) > 0, "o próprio tile se chama Você")
+  check((await anaPage.getByText("2 na call").count()) > 0, "o cabeçalho mostra quantos estão na call")
+
+  const mute = anaPage.getByRole("button", { name: "Silenciar microfone" })
+  await mute.click()
+  const unmute = anaPage.getByRole("button", { name: "Ativar microfone" })
+  await unmute.waitFor({ timeout: 5000 })
+  check((await unmute.getAttribute("aria-pressed")) === "true", "silenciar troca o rótulo e marca o botão como pressionado")
+  await unmute.click()
+  await anaPage.getByRole("button", { name: "Silenciar microfone" }).waitFor({ timeout: 5000 })
+  check(true, "ativar o microfone volta ao estado normal")
+
+  await anaPage.getByRole("button", { name: "Ligar câmera" }).click()
+  await anaPage.getByRole("button", { name: "Desligar câmera" }).waitFor({ timeout: 8000 })
+  const remoteVideo = await untilTrue(() =>
+    betoPage.evaluate(() =>
+      [...document.querySelectorAll("video")].some(
+        (v) => v.srcObject instanceof MediaStream && v.srcObject.getVideoTracks().some((t) => t.readyState === "live"),
+      ),
+    ),
+  )
+  check(remoteVideo, "ligar a câmera mostra o vídeo no outro lado")
+  await anaPage.getByRole("button", { name: "Desligar câmera" }).click()
+  await anaPage.getByRole("button", { name: "Ligar câmera" }).waitFor({ timeout: 5000 })
+
+  await anaPage.getByRole("button", { name: "Minimizar chamada" }).click()
+  await anaPage.getByTitle("Abrir chamada").waitFor({ timeout: 5000 })
+  await anaPage.getByRole("dialog", { name: /Chamada com/ }).waitFor({ state: "detached", timeout: 5000 })
+  check(true, "minimizar mostra a chamada em miniatura")
+  await anaPage.getByRole("button", { name: "Silenciar microfone" }).click()
+  await anaPage.getByRole("button", { name: "Ativar microfone" }).waitFor({ timeout: 5000 })
+  await anaPage.getByRole("button", { name: "Ativar microfone" }).click()
+  check(true, "dá para silenciar e reativar pela miniatura")
+  await anaPage.getByRole("button", { name: "Expandir chamada" }).click()
+  await anaPage.getByRole("button", { name: "Minimizar chamada" }).waitFor({ timeout: 5000 })
+  check(true, "expandir volta para a chamada inteira")
+
+  await anaPage.getByRole("button", { name: "Sair da chamada" }).first().click()
   const ended = await untilTrue(async () => !(await receivingAudio(betoPage)), 10000)
   check(ended, "desligar encerra a chamada dos dois lados")
 } catch (error) {
