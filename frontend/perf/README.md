@@ -108,4 +108,18 @@ Teste de unidade da negociação entre os participantes (`PeerMesh`), com uma co
 npm run test:call
 ```
 
-Com o backend e o frontend de desenvolvimento rodando, cria duas contas amigas, uma liga, a outra atende, e confere que as duas passam a receber áudio uma da outra e que desligar encerra dos dois lados. Usa câmera e microfone falsos do Chromium, então não precisa de dispositivo real.
+Com o backend e o frontend de desenvolvimento rodando, cria duas contas amigas, uma liga, a outra atende e confere, nos dois lados:
+
+- o áudio de um chegando no outro e os nomes nos tiles;
+- silenciar e reativar o microfone, pelos botões da chamada e pela miniatura;
+- ligar a câmera e o vídeo aparecer no outro lado;
+- compartilhar a tela: o tile "Sua tela", a oferta para assistir, a tela ao vivo e parar de assistir;
+- minimizar, expandir e desligar.
+
+Usa câmera, microfone e captura de tela falsos do Chromium, então não precisa de dispositivo real. Não cobre: o som do compartilhamento de tela, a escolha de dispositivos e o app desktop.
+
+```bash
+npm run test:callview
+```
+
+Teste de unidade do que a tela da chamada mostra (`buildCallView`: tiles de pessoa e de tela, quem fala, sem microfone, conexão) e dos rótulos do microfone. Roda com o Node, sem navegador e sem backend.
