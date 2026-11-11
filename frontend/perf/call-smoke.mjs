@@ -12,7 +12,11 @@ const ana = await createUser("Ana", "callsmoke")
 const beto = await createUser("Beto", "callsmoke")
 await befriend(ana, beto)
 
-const browser = await launch(["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"])
+const browser = await launch([
+  "--use-fake-ui-for-media-stream",
+  "--use-fake-device-for-media-stream",
+  "--auto-select-desktop-capture-source=Entire screen",
+])
 const newPage = async (user) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } })
   await context.grantPermissions(["microphone", "camera"], { origin: APP })
@@ -80,6 +84,34 @@ try {
   check(remoteVideo, "ligar a câmera mostra o vídeo no outro lado")
   await anaPage.getByRole("button", { name: "Desligar câmera" }).click()
   await anaPage.getByRole("button", { name: "Ligar câmera" }).waitFor({ timeout: 5000 })
+
+  try {
+    await anaPage.getByRole("button", { name: "Compartilhar tela" }).click()
+    await anaPage.getByRole("dialog", { name: "Escolher o que compartilhar" }).getByRole("button", { name: "Continuar" }).click()
+    const ownScreen = anaPage.getByText("Sua tela", { exact: true })
+    await ownScreen.waitFor({ timeout: 8000 })
+    check(true, "compartilhar a tela mostra o tile Sua tela")
+    const offer = betoPage.getByRole("button", { name: "Assistir a tela de Ana" })
+    await offer.waitFor({ timeout: 8000 })
+    check(true, "o outro lado recebe a oferta para assistir a transmissão")
+    await offer.click()
+    await betoPage.getByText("Tela de Ana", { exact: true }).waitFor({ timeout: 10000 })
+    const watching = await untilTrue(() =>
+      betoPage.evaluate(() =>
+        [...document.querySelectorAll("video")].some(
+          (v) => v.srcObject instanceof MediaStream && v.srcObject.getVideoTracks().length > 0 && v.className.includes("bg-black"),
+        ),
+      ),
+    )
+    check(watching, "assistir mostra a tela ao vivo")
+    await betoPage.getByRole("button", { name: "Parar de assistir a tela de Ana" }).click()
+    await betoPage.getByRole("button", { name: "Assistir a tela de Ana" }).waitFor({ timeout: 8000 })
+    check(true, "parar de assistir volta para a oferta")
+    await anaPage.getByRole("button", { name: "Parar de compartilhar a tela" }).click()
+    await anaPage.getByRole("button", { name: "Compartilhar tela" }).waitFor({ timeout: 5000 })
+  } catch (error) {
+    check(false, "compartilhamento de tela", error.message.split(String.fromCharCode(10))[0])
+  }
 
   await anaPage.getByRole("button", { name: "Minimizar chamada" }).click()
   await anaPage.getByTitle("Abrir chamada").waitFor({ timeout: 5000 })
