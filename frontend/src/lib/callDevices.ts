@@ -58,6 +58,11 @@ export function supportsSpeakerSelection() {
   return typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype
 }
 
+export function applySpeaker(element: HTMLMediaElement, deviceId: string) {
+  const target = element as HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }
+  return target.setSinkId ? target.setSinkId(deviceId).catch(() => {}) : Promise.resolve()
+}
+
 export function deviceLabel(device: MediaDeviceInfo, index: number, fallback: string) {
   return device.label || `${fallback} ${index + 1}`
 }

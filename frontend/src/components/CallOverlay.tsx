@@ -1,491 +1,27 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import {
-  EyeOff,
-  HeadphoneOff,
-  Headphones,
-  Maximize2,
-  Mic,
-  MicOff,
-  Minimize2,
-  MonitorOff,
-  MonitorUp,
-  PhoneOff,
-  Settings,
-  Video,
-  VideoOff,
-} from "lucide-react"
+import { Maximize2, Mic, MicOff, Minimize2, PhoneOff } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
-import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
-import type { CallContextValue } from "@/context/CallContext"
 import { useCoversApp } from "@/hooks/useCoversApp"
 import { useDelayedUnmount, useFrozen } from "@/hooks/useDelayedUnmount"
+import { useScreenShareToast } from "@/hooks/useScreenShareToast"
+import { buildCallView, MIC_LABELS, micStateOf } from "@/lib/callView"
+import type { CallView, Tile } from "@/lib/callView"
 import { cn } from "@/lib/utils"
-import { deviceLabel, supportsSpeakerSelection } from "@/lib/callDevices"
+import { CallAudio } from "@/components/call/CallAudio"
+import { CallControls } from "@/components/call/CallControls"
+import { CallTile } from "@/components/call/CallTile"
+import { CallTimer } from "@/components/call/CallTimer"
 import { ScreenSourcePicker } from "@/components/ScreenSourcePicker"
-import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Switch } from "@/components/ui/switch"
-
-type Tile = {
-  key: string
-  kind: "person" | "screen"
-  clientId: string | null
-  screenState: "offer" | "loading" | "live" | null
-  userId: string
-  name: string
-  stream: MediaStream | null
-  isSelf: boolean
-  speaking: boolean
-  noMic: boolean
-  connection: RTCPeerConnectionState | null
-}
-
-function formatElapsed(seconds: number) {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  const h = Math.floor(m / 60)
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  return h > 0 ? `${h}:${pad(m % 60)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
-}
-
-function CallTimer({ startedAt, className }: { startedAt: number | null; className?: string }) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(interval)
-  }, [])
-  if (!startedAt) return null
-  return <span className={cn("tabular-nums", className)}>{formatElapsed(Math.max(0, Math.floor((now - startedAt) / 1000)))}</span>
-}
-
-function hasLiveVideo(stream: MediaStream | null) {
-  return !!stream && stream.getVideoTracks().some((t) => t.readyState === "live" && !t.muted)
-}
-
-function MediaAudio({ stream, deafened, speakerId }: { stream: MediaStream; deafened: boolean; speakerId: string }) {
-  const ref = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream
-  }, [stream])
-  useEffect(() => {
-    const element = ref.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null
-    if (element?.setSinkId) element.setSinkId(speakerId).catch(() => {})
-  }, [speakerId])
-  useEffect(() => {
-    if (ref.current) ref.current.muted = deafened
-  }, [deafened])
-  return <audio ref={ref} autoPlay />
-}
-
-function TileVideo({ stream, mirror, dark }: { stream: MediaStream; mirror?: boolean; dark?: boolean }) {
-  const ref = useRef<HTMLVideoElement>(null)
-  useEffect(() => {
-    if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream
-  }, [stream])
-  return (
-    <video
-      ref={ref}
-      autoPlay
-      playsInline
-      muted
-      className={cn(
-        "absolute inset-0 size-full object-contain",
-        dark ? "bg-black" : "bg-muted",
-        mirror && "-scale-x-100",
-      )}
-    />
-  )
-}
-
-function CallTile({
-  tile,
-  onClick,
-  onStopWatching,
-  compact,
-}: {
-  tile: Tile
-  onClick: () => void
-  onStopWatching?: () => void
-  compact?: boolean
-}) {
-  const offer = tile.screenState === "offer" || tile.screenState === "loading"
-  const showVideo = tile.kind === "screen" ? !!tile.stream : tile.stream !== null && hasLiveVideo(tile.stream)
-  const connecting = tile.connection !== null && tile.connection !== "connected"
-
-  const reducedMotion = useReducedMotion()
-
-  return (
-    <motion.div
-      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className={cn("relative min-h-0", compact ? "aspect-video h-full shrink-0" : "size-full")}
-    >
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={tile.screenState === "loading"}
-        title={offer ? `Assistir a tela de ${tile.name}` : undefined}
-        aria-label={offer ? `Assistir a tela de ${tile.name}` : undefined}
-        className={cn(
-          "group/tile relative flex size-full items-center justify-center overflow-hidden rounded-xl bg-muted outline-none ring-2 ring-transparent transition-shadow duration-150 focus-visible:ring-ring",
-          tile.speaking && tile.kind === "person" && "ring-emerald-500",
-        )}
-      >
-        {offer ? (
-          <span className="flex flex-col items-center gap-2 px-3 text-center">
-            <MonitorUp className={cn("text-muted-foreground", compact ? "size-5" : "size-8")} />
-            <span
-              className={cn(
-                "rounded-full bg-primary font-medium text-primary-foreground transition-opacity group-hover/tile:opacity-90",
-                compact ? "px-2.5 py-0.5 text-[11px]" : "px-4 py-1.5 text-sm",
-              )}
-            >
-              {tile.screenState === "loading" ? "Carregando…" : compact ? "Assistir" : "Assistir transmissão"}
-            </span>
-          </span>
-        ) : showVideo && tile.stream ? (
-          <TileVideo stream={tile.stream} mirror={tile.isSelf && tile.kind === "person"} dark={tile.kind === "screen"} />
-        ) : (
-          <UserAvatar userId={tile.userId} name={tile.name} size={compact ? "default" : "xl"} />
-        )}
-        <span className="absolute bottom-2 left-2 flex max-w-[85%] items-center gap-1.5 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">
-          <span className="truncate">
-            {tile.kind === "screen" ? (tile.isSelf ? "Sua tela" : `Tela de ${tile.name}`) : tile.name}
-          </span>
-          {tile.noMic && tile.kind === "person" && (
-            <MicOff className="size-3.5 shrink-0 text-red-400" aria-label="Sem microfone" role="img">
-              <title>Sem microfone</title>
-            </MicOff>
-          )}
-        </span>
-        {connecting && (
-          <span className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
-            Conectando…
-          </span>
-        )}
-      </button>
-      {tile.screenState === "live" && onStopWatching && (
-        <button
-          type="button"
-          onClick={onStopWatching}
-          title="Parar de assistir"
-          aria-label={`Parar de assistir a tela de ${tile.name}`}
-          className="absolute right-2 top-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-[11px] text-white outline-none transition-colors hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <EyeOff className="size-3.5" />
-          {!compact && "Parar de assistir"}
-        </button>
-      )}
-    </motion.div>
-  )
-}
-
-function DeviceSelect({
-  label,
-  value,
-  devices,
-  fallback,
-  onChange,
-}: {
-  label: string
-  value: string
-  devices: MediaDeviceInfo[]
-  fallback: string
-  onChange: (deviceId: string) => void
-}) {
-  const known = devices.some((d) => d.deviceId === value)
-  return (
-    <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-      {label}
-      <select
-        value={known ? value : ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-md border bg-background px-2 text-sm font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring max-sm:h-11"
-      >
-        <option value="">Padrão do sistema</option>
-        {devices.map((d, i) => (
-          <option key={d.deviceId} value={d.deviceId}>
-            {deviceLabel(d, i, fallback)}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function ProcessingToggle({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  id: string
-  label: string
-  description: string
-  checked: boolean
-  onChange: (checked: boolean) => void
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="min-w-0 flex-1">
-        <label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </label>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} className="mt-0.5" />
-    </div>
-  )
-}
-
-function DeviceSettings({ buttonClass }: { buttonClass: string }) {
-  const { devices, devicePrefs, refreshDevices, selectMic, selectCamera, selectSpeaker, setMicProcessing } = useCall()
-  const speakerSupported = supportsSpeakerSelection()
-
-  return (
-    <Popover onOpenChange={(open) => open && void refreshDevices()}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          className={buttonClass}
-          title="Configurações de dispositivos"
-          aria-label="Configurações de dispositivos"
-        >
-          <Settings className="size-5" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent side="top" align="center" className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-3">
-        <p className="font-medium">Dispositivos</p>
-        <DeviceSelect
-          label="Microfone"
-          value={devicePrefs.micId}
-          devices={devices.mics}
-          fallback="Microfone"
-          onChange={(id) => void selectMic(id)}
-        />
-        {speakerSupported && (
-          <DeviceSelect
-            label="Saída de áudio"
-            value={devicePrefs.speakerId}
-            devices={devices.speakers}
-            fallback="Alto-falante"
-            onChange={selectSpeaker}
-          />
-        )}
-        <DeviceSelect
-          label="Câmera"
-          value={devicePrefs.cameraId}
-          devices={devices.cameras}
-          fallback="Câmera"
-          onChange={(id) => void selectCamera(id)}
-        />
-        {devices.cameras.length > 0 && devices.cameras.every((d) => !d.label) && (
-          <p className="text-xs text-muted-foreground">Ligue a câmera uma vez para ver os nomes dos dispositivos.</p>
-        )}
-        <div className="flex flex-col gap-3 border-t pt-3">
-          <ProcessingToggle
-            id="call-echo-cancellation"
-            label="Cancelamento de eco"
-            description="Evita que os outros ouçam a própria voz pela sua caixa de som. Com fone de ouvido, pode desligar."
-            checked={devicePrefs.echoCancellation}
-            onChange={(checked) => void setMicProcessing({ echoCancellation: checked })}
-          />
-          <ProcessingToggle
-            id="call-noise-suppression"
-            label="Supressão de ruído"
-            description="Reduz ruídos de fundo, como ventilador e teclado."
-            checked={devicePrefs.noiseSuppression}
-            onChange={(checked) => void setMicProcessing({ noiseSuppression: checked })}
-          />
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function CallControls() {
-  const {
-    muted: mutedState,
-    micMissing,
-    deafened,
-    cameraOn,
-    screenSharing,
-    screenShareSupported,
-    toggleMute,
-    toggleDeafen,
-    toggleCamera,
-    toggleScreenShare,
-    leave,
-  } = useCall()
-
-  const muted = mutedState || micMissing
-  const micLabel = micMissing ? "Sem microfone. Clique para tentar de novo" : muted ? "Ativar microfone" : "Silenciar microfone"
-  const base = "size-12 rounded-full max-sm:size-12"
-
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-2 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <Button
-        type="button"
-        size="icon"
-        variant={muted ? "destructive" : "secondary"}
-        className={base}
-        onClick={toggleMute}
-        title={micLabel}
-        aria-label={micLabel}
-        aria-pressed={muted}
-      >
-        {muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant={deafened ? "destructive" : "secondary"}
-        className={base}
-        onClick={toggleDeafen}
-        title={deafened ? "Ativar áudio" : "Desativar áudio da call"}
-        aria-label={deafened ? "Ativar áudio" : "Desativar áudio da call"}
-        aria-pressed={deafened}
-      >
-        {deafened ? <HeadphoneOff className="size-5" /> : <Headphones className="size-5" />}
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant={cameraOn ? "default" : "secondary"}
-        className={base}
-        onClick={() => void toggleCamera()}
-        title={cameraOn ? "Desligar câmera" : "Ligar câmera"}
-        aria-label={cameraOn ? "Desligar câmera" : "Ligar câmera"}
-        aria-pressed={cameraOn}
-      >
-        {cameraOn ? <Video className="size-5" /> : <VideoOff className="size-5" />}
-      </Button>
-      {screenShareSupported && (
-        <Button
-          type="button"
-          size="icon"
-          variant={screenSharing ? "default" : "secondary"}
-          className={base}
-          onClick={() => void toggleScreenShare()}
-          title={screenSharing ? "Parar de compartilhar a tela" : "Compartilhar tela"}
-          aria-label={screenSharing ? "Parar de compartilhar a tela" : "Compartilhar tela"}
-          aria-pressed={screenSharing}
-        >
-          {screenSharing ? <MonitorOff className="size-5" /> : <MonitorUp className="size-5" />}
-        </Button>
-      )}
-      <DeviceSettings buttonClass={base} />
-      <Button
-        type="button"
-        size="icon"
-        variant="destructive"
-        className={cn(base, "ml-2")}
-        onClick={leave}
-        title="Sair da chamada"
-        aria-label="Sair da chamada"
-      >
-        <PhoneOff className="size-5" />
-      </Button>
-    </div>
-  )
-}
 
 function gridClass(count: number) {
   if (count <= 1) return "grid-cols-1"
   if (count === 2) return "grid-cols-1 sm:grid-cols-2"
   if (count <= 4) return "grid-cols-2"
   return "grid-cols-2 lg:grid-cols-3"
-}
-
-type CallView = {
-  title: string
-  ringing: boolean
-  startedAt: number | null
-  count: number
-  troubled: boolean
-  tiles: Tile[]
-}
-
-function buildView(call: CallContextValue, userId: string): CallView {
-  const tiles: Tile[] = [
-    {
-      key: "self",
-      kind: "person",
-      clientId: null,
-      screenState: null,
-      userId,
-      name: "Você",
-      stream: call.cameraOn ? call.localStream : null,
-      isSelf: true,
-      speaking: !!call.speaking.self,
-      noMic: call.micMissing,
-      connection: null,
-    },
-  ]
-  if (call.screenSharing && call.localScreen) {
-    tiles.push({
-      key: "self-screen",
-      kind: "screen",
-      clientId: null,
-      screenState: null,
-      userId,
-      name: "Você",
-      stream: call.localScreen,
-      isSelf: true,
-      speaking: false,
-      noMic: false,
-      connection: null,
-    })
-  }
-  for (const peer of call.participants) {
-    const media = call.remoteMedia(peer.clientId)
-    tiles.push({
-      key: peer.clientId,
-      kind: "person",
-      clientId: peer.clientId,
-      screenState: null,
-      userId: peer.userId,
-      name: peer.name || "Participante",
-      stream: media.camera,
-      isSelf: false,
-      speaking: !!call.speaking[peer.clientId],
-      noMic: call.peerNoMic(peer.clientId),
-      connection: call.connectionOf(peer.clientId),
-    })
-    const watching = call.watchingScreen(peer.clientId)
-    const live = watching && !!media.screen
-    if (live || call.peerSharing(peer.clientId)) {
-      tiles.push({
-        key: `${peer.clientId}-screen`,
-        kind: "screen",
-        clientId: peer.clientId,
-        screenState: live ? "live" : watching ? "loading" : "offer",
-        userId: peer.userId,
-        name: peer.name || "participante",
-        stream: live ? media.screen : null,
-        isSelf: false,
-        speaking: false,
-        noMic: false,
-        connection: null,
-      })
-    }
-  }
-  return {
-    title: call.call?.title ?? "",
-    ringing: call.ringing,
-    startedAt: call.startedAt,
-    count: call.participants.length + 1,
-    troubled: call.participants.some((p) => call.connectionOf(p.clientId) === "failed"),
-    tiles,
-  }
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -527,7 +63,7 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
   const [pinnedKey, setPinnedKey] = useState<string | null>(null)
   const { tiles } = view
 
-  const autoStageKey = tiles.find((t) => t.screenState === "live")?.key ?? null
+  const autoStageKey = tiles.find((t) => t.kind === "screen" && t.status === "live")?.key ?? null
   const stageKey = pinnedKey && tiles.some((t) => t.key === pinnedKey) ? pinnedKey : autoStageKey
   const stage = tiles.find((t) => t.key === stageKey) ?? null
   const strip = tiles.filter((t) => t.key !== stageKey)
@@ -537,11 +73,13 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
   }
 
   function handleTileClick(tile: Tile) {
-    if (tile.screenState === "offer" && tile.clientId) {
-      setWatchingScreen(tile.clientId, true)
-      return
+    if (tile.kind === "screen") {
+      if (tile.status === "offer" && tile.clientId) {
+        setWatchingScreen(tile.clientId, true)
+        return
+      }
+      if (tile.status === "loading") return
     }
-    if (tile.screenState === "loading") return
     togglePin(tile.key)
   }
 
@@ -624,8 +162,8 @@ function FullCall({ view, visible }: { view: CallView; visible: boolean }) {
 }
 
 function MiniCall({ view, visible }: { view: CallView; visible: boolean }) {
-  const { muted: mutedState, micMissing, toggleMute, setMinimized, leave } = useCall()
-  const muted = mutedState || micMissing
+  const { muted, micMissing, toggleMute, setMinimized, leave } = useCall()
+  const mic = micStateOf(muted, micMissing)
   return (
     <Presence
       visible={visible}
@@ -650,10 +188,10 @@ function MiniCall({ view, visible }: { view: CallView; visible: boolean }) {
         size="icon"
         className="size-8 rounded-full"
         onClick={toggleMute}
-        title={muted ? "Ativar microfone" : "Silenciar microfone"}
-        aria-label={muted ? "Ativar microfone" : "Silenciar microfone"}
+        title={MIC_LABELS[mic]}
+        aria-label={MIC_LABELS[mic]}
       >
-        {muted ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+        {mic !== "on" ? <MicOff className="size-4" /> : <Mic className="size-4" />}
       </Button>
       <Button
         type="button"
@@ -685,7 +223,7 @@ export function CallOverlay() {
   const { user } = useAuth()
   const call = useCall()
   const active = call.phase === "active"
-  const view = useFrozen(buildView(call, user?.id ?? ""), !active)
+  const view = useFrozen(buildCallView(call, user?.id ?? ""), !active)
 
   const fullVisible = active && !call.minimized
   const miniVisible = active && call.minimized
@@ -700,59 +238,11 @@ export function CallOverlay() {
     }
   }, [miniVisible])
 
-  const sharingKey = active
-    ? call.participants
-        .filter((p) => call.peerSharing(p.clientId))
-        .map((p) => p.clientId)
-        .join(",")
-    : ""
-  const sharingRef = useRef<string[]>([])
-  useEffect(() => {
-    const now = sharingKey ? sharingKey.split(",") : []
-    const started = now.filter((id) => !sharingRef.current.includes(id))
-    sharingRef.current = now
-    if (!call.minimized) return
-    for (const clientId of started) {
-      const name = call.participants.find((p) => p.clientId === clientId)?.name || "Alguém"
-      toast(`${name} está compartilhando a tela`, {
-        action: {
-          label: "Assistir",
-          onClick: () => {
-            call.setWatchingScreen(clientId, true)
-            call.setMinimized(false)
-          },
-        },
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sharingKey])
+  useScreenShareToast(active)
 
   return (
     <>
-      {active &&
-        call.participants.map((peer) => {
-          const media = call.remoteMedia(peer.clientId)
-          return (
-            <span key={peer.clientId}>
-              {media.camera && (
-                <MediaAudio
-                  key={media.camera.id}
-                  stream={media.camera}
-                  deafened={call.deafened}
-                  speakerId={call.devicePrefs.speakerId}
-                />
-              )}
-              {media.screen && (
-                <MediaAudio
-                  key={media.screen.id}
-                  stream={media.screen}
-                  deafened={call.deafened}
-                  speakerId={call.devicePrefs.speakerId}
-                />
-              )}
-            </span>
-          )
-        })}
+      {active && <CallAudio />}
       {showFull && <FullCall view={view} visible={fullVisible} />}
       {showMini && <MiniCall view={view} visible={miniVisible} />}
       {active && <ScreenSourcePicker />}
