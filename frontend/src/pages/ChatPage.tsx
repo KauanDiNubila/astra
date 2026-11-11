@@ -191,7 +191,7 @@ export function ChatPage() {
   const conversationListRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
   const pinnedRef = useRef(true)
-  const programmaticScrollRef = useRef(false)
+  const echoScrollTopRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
@@ -266,23 +266,6 @@ export function ChatPage() {
   // segundo crescimento.
   const activeGroupMemberCount = groupId ? (groupMembersById[groupId]?.length ?? 0) : 0
 
-  // "Grudado no fim" é uma intenção (o usuário rolou pra cima ou não), não
-  // uma distância fixa — a versão antiga desistia de acompanhar se um único
-  // evento de resize (várias imagens decodificando juntas, por exemplo)
-  // empurrasse o conteúdo mais de 300px de uma vez, e depois disso nada
-  // mais reancorava, deixando a conversa parada bem em cima de uma imagem.
-  // Aqui, enquanto pinnedRef for true, TODA mudança de altura reancora
-  // incondicionalmente; só um scroll de verdade que pousa longe do fim
-  // desarma, e voltar a rolar até o fim rearma.
-  //
-  // programmaticScrollRef existe porque a própria correção (stickToBottom
-  // setando scrollTop) dispara um evento "scroll" nativo — sem filtrar
-  // isso, o handler abaixo lia esse eco como se fosse o usuário rolando
-  // pra longe (a nova mensagem ainda "assentando" no layout faz o
-  // scrollHeight mudar de novo bem depois do assign, sobrando uma
-  // distância de dezenas de pixels no instante do evento) e desgrudava
-  // sozinho bem depois de cada mensagem nova — o bug ficava só visível
-  // com uma mensagem chegando enquanto a conversa já estava aberta.
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
@@ -291,11 +274,10 @@ export function ChatPage() {
     settleScroll(2000)
 
     function handleScroll() {
-      if (programmaticScrollRef.current) {
-        programmaticScrollRef.current = false
-        return
-      }
       if (!container) return
+      const echo = echoScrollTopRef.current
+      echoScrollTopRef.current = null
+      if (echo !== null && Math.abs(container.scrollTop - echo) < 2) return
       const distance = container.scrollHeight - container.scrollTop - container.clientHeight
       pinnedRef.current = distance < 40
     }
@@ -315,8 +297,10 @@ export function ChatPage() {
   function stickToBottom() {
     const container = scrollContainerRef.current
     if (!container || !pinnedRef.current) return
-    programmaticScrollRef.current = true
-    container.scrollTop = container.scrollHeight
+    const target = container.scrollHeight - container.clientHeight
+    if (Math.abs(container.scrollTop - target) < 1) return
+    echoScrollTopRef.current = target
+    container.scrollTop = target
   }
 
   const settleFrameRef = useRef<number | null>(null)
@@ -391,11 +375,16 @@ export function ChatPage() {
       return
     }
     if (!draft.trim()) return
+    let sent: boolean
     if (isGroup && groupId) {
-      sendGroupMessage(groupId, draft.trim(), replyingTo?.id)
+      sent = sendGroupMessage(groupId, draft.trim(), replyingTo?.id)
     } else if (friendId) {
-      sendMessage(friendId, draft.trim(), replyingTo?.id)
+      sent = sendMessage(friendId, draft.trim(), replyingTo?.id)
     } else {
+      return
+    }
+    if (!sent) {
+      toast.error("Sem conexão com o chat. Sua mensagem continua no campo, tente de novo em instantes.")
       return
     }
     setDraft("")
@@ -575,7 +564,10 @@ export function ChatPage() {
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
-                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                          <span
+                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
+                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
+                          >
                             {c.unreadCount}
                           </span>
                         )}
@@ -635,7 +627,10 @@ export function ChatPage() {
                           {c.lastMessage ?? "Nenhuma mensagem ainda"}
                         </span>
                         {c.unreadCount > 0 && (
-                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
+                          <span
+                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
+                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
+                          >
                             {c.unreadCount}
                           </span>
                         )}

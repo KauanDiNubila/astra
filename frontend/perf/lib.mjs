@@ -1,3 +1,4 @@
+import { Client } from "@stomp/stompjs"
 import { chromium } from "playwright-core"
 
 export const API = process.env.API ?? "http://localhost:8080"
@@ -60,4 +61,22 @@ export async function loginInBrowser(page, app, email) {
     await sleep(10000)
   }
   throw new Error("login bloqueado pelo limite de tentativas")
+}
+
+export async function stompSession(token) {
+  const client = new Client({
+    brokerURL: API.replace(/^http/, "ws") + "/ws",
+    connectHeaders: { Authorization: `Bearer ${token}` },
+    reconnectDelay: 0,
+  })
+  await new Promise((resolve, reject) => {
+    client.onConnect = resolve
+    client.onStompError = (frame) => reject(new Error(frame.headers.message))
+    client.onWebSocketError = reject
+    client.activate()
+  })
+  return {
+    send: (destination, body) => client.publish({ destination, body: JSON.stringify(body) }),
+    close: () => client.deactivate(),
+  }
 }

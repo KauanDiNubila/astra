@@ -52,7 +52,7 @@ type ChatContextValue = {
   loadConversations: () => Promise<void>
   messagesFor: (friendId: string) => Message[]
   loadHistory: (friendId: string) => Promise<void>
-  sendMessage: (friendId: string, content: string, replyToMessageId?: string) => void
+  sendMessage: (friendId: string, content: string, replyToMessageId?: string) => boolean
   sendImageMessage: (friendId: string, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
   markRead: (friendId: string) => Promise<void>
   totalUnread: number
@@ -73,7 +73,7 @@ type ChatContextValue = {
   addGroupMember: (groupId: string, userId: string) => Promise<void>
   groupMessagesFor: (groupId: string) => Message[]
   loadGroupHistory: (groupId: string) => Promise<void>
-  sendGroupMessage: (groupId: string, content: string, replyToMessageId?: string) => void
+  sendGroupMessage: (groupId: string, content: string, replyToMessageId?: string) => boolean
   sendGroupImageMessage: (
     groupId: string,
     file: File,
@@ -109,6 +109,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [pinsByConversation, setPinsByConversation] = useState<Record<string, Message[]>>({})
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
+  const seenMessageIdsRef = useRef(new Set<string>())
   const callListenersRef = useRef(new Set<(event: CallEvent) => void>())
   const activeFriendIdRef = useRef<string | null>(null)
   const conversationsRef = useRef<ConversationSummary[]>([])
@@ -153,6 +154,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   function loadHistory(friendId: string) {
     return api.get<Message[]>(`/chat/${friendId}/messages`).then((res) => {
+      res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
       setMessagesByFriend((prev) => ({ ...prev, [friendId]: res.data }))
     })
   }
@@ -173,6 +175,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   function loadGroupHistory(groupId: string) {
     return api.get<Message[]>(`/chat/groups/${groupId}/messages`).then((res) => {
+      res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
       setMessagesByGroup((prev) => ({ ...prev, [groupId]: res.data }))
     })
   }
@@ -257,36 +260,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const groupId = message.groupId!
     const me = user?.id
 
-    // Reconexão do WebSocket pode reentregar o mesmo frame — sem essa
-    // guarda, uma mensagem já exibida tocaria o som/toast de novo.
-    let alreadySeen = false
-    setMessagesByGroup((prev) => {
-      const existing = prev[groupId] ?? []
-      if (existing.some((m) => m.id === message.id)) {
-        alreadySeen = true
-        return prev
-      }
-      return { ...prev, [groupId]: [...existing, message] }
-    })
-    if (alreadySeen) return
+    if (seenMessageIdsRef.current.has(message.id)) return
+    seenMessageIdsRef.current.add(message.id)
+    setMessagesByGroup((prev) => ({ ...prev, [groupId]: [...(prev[groupId] ?? []), message] }))
 
-    // Prévia da lista lateral: precisa atualizar sempre — mensagem própria
-    // ou a conversa já estar aberta não pode pular isso, senão a prévia
-    // fica presa na última mensagem antes da conversa "ficar em foco".
     const isOpen = activeGroupIdRef.current === groupId
     const bumpUnread = message.senderId !== me && !isOpen
-    const found = groupConversationsRef.current.find((c) => c.groupId === groupId)
-    const groupName = found?.groupName ?? "Grupo"
     const preview = message.content ?? "📷 Foto"
-    const updated: GroupConversationSummary = {
-      groupId,
-      groupName,
-      memberNames: found?.memberNames ?? [],
-      lastMessage: preview,
-      lastMessageAt: message.createdAt,
-      unreadCount: bumpUnread ? (found?.unreadCount ?? 0) + 1 : (found?.unreadCount ?? 0),
-    }
-    setGroupConversations((prev) => (found ? prev.map((c) => (c.groupId === groupId ? updated : c)) : [...prev, updated]))
+    const groupName = groupConversationsRef.current.find((c) => c.groupId === groupId)?.groupName ?? "Grupo"
+    setGroupConversations((prev) => {
+      const found = prev.find((c) => c.groupId === groupId)
+      const updated: GroupConversationSummary = {
+        groupId,
+        groupName: found?.groupName ?? "Grupo",
+        memberNames: found?.memberNames ?? [],
+        lastMessage: preview,
+        lastMessageAt: message.createdAt,
+        unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
+      }
+      return found ? prev.map((c) => (c.groupId === groupId ? updated : c)) : [...prev, updated]
+    })
 
     if (message.senderId === me) return
 
@@ -309,46 +302,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const me = user?.id
     const otherId = message.senderId === me ? message.recipientId! : message.senderId
 
-    let alreadySeen = false
-    setMessagesByFriend((prev) => {
-      const existing = prev[otherId] ?? []
-      if (existing.some((m) => m.id === message.id)) {
-        alreadySeen = true
-        return prev
-      }
-      return { ...prev, [otherId]: [...existing, message] }
-    })
-    if (alreadySeen) return
+    if (seenMessageIdsRef.current.has(message.id)) return
+    seenMessageIdsRef.current.add(message.id)
+    setMessagesByFriend((prev) => ({ ...prev, [otherId]: [...(prev[otherId] ?? []), message] }))
 
-    // Prévia da lista lateral: precisa atualizar sempre — mensagem própria
-    // ou a conversa já estar aberta não pode pular isso, senão a prévia
-    // fica presa na última mensagem antes da conversa "ficar em foco".
     const isOpen = activeFriendIdRef.current === otherId
     const bumpUnread = message.senderId !== me && !isOpen
-    const found = conversationsRef.current.find((c) => c.friendUserId === otherId)
     const friend = friendsRef.current.find((f) => f.friendUserId === otherId)
-    const friendName = found?.friendName ?? friend?.friendName ?? "Contato"
-    const friendTag = found?.friendTag ?? ""
-    const friendBio = found?.friendBio ?? friend?.friendBio ?? null
-    const friendAdmin = found?.friendAdmin ?? friend?.friendAdmin ?? false
-    const friendGithubLogin = found?.friendGithubLogin ?? null
-    const friendGithubAvatarUrl = found?.friendGithubAvatarUrl ?? null
+    const friendName =
+      conversationsRef.current.find((c) => c.friendUserId === otherId)?.friendName ?? friend?.friendName ?? "Contato"
     const preview = message.content ?? "📷 Foto"
-    const updated: ConversationSummary = {
-      friendUserId: otherId,
-      friendName,
-      friendTag,
-      friendBio,
-      friendAdmin,
-      friendGithubLogin,
-      friendGithubAvatarUrl,
-      lastMessage: preview,
-      lastMessageAt: message.createdAt,
-      unreadCount: bumpUnread ? (found?.unreadCount ?? 0) + 1 : (found?.unreadCount ?? 0),
-    }
-    setConversations((prev) =>
-      found ? prev.map((c) => (c.friendUserId === otherId ? updated : c)) : [...prev, updated],
-    )
+    setConversations((prev) => {
+      const found = prev.find((c) => c.friendUserId === otherId)
+      const updated: ConversationSummary = {
+        friendUserId: otherId,
+        friendName: found?.friendName ?? friend?.friendName ?? "Contato",
+        friendTag: found?.friendTag ?? "",
+        friendBio: found?.friendBio ?? friend?.friendBio ?? null,
+        friendAdmin: found?.friendAdmin ?? friend?.friendAdmin ?? false,
+        friendGithubLogin: found?.friendGithubLogin ?? null,
+        friendGithubAvatarUrl: found?.friendGithubAvatarUrl ?? null,
+        lastMessage: preview,
+        lastMessageAt: message.createdAt,
+        unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
+      }
+      return found ? prev.map((c) => (c.friendUserId === otherId ? updated : c)) : [...prev, updated]
+    })
 
     if (message.senderId === me) return
 
@@ -365,6 +344,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return
 
+    seenMessageIdsRef.current.clear()
     const client = createChatClient()
     client.onConnect = () => {
       setConnected(true)
@@ -412,12 +392,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }
 
   function sendMessage(friendId: string, content: string, replyToMessageId?: string) {
-    const client = clientRef.current
-    if (!client || !client.connected) return
-    client.publish({
-      destination: "/app/chat.send",
-      body: JSON.stringify({ recipientId: friendId, content, replyToMessageId: replyToMessageId ?? null }),
-    })
+    return publishStomp("/app/chat.send", { recipientId: friendId, content, replyToMessageId: replyToMessageId ?? null })
   }
 
   async function sendImageMessage(friendId: string, file: File, caption?: string, replyToMessageId?: string) {
@@ -438,12 +413,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }
 
   function sendGroupMessage(groupId: string, content: string, replyToMessageId?: string) {
-    const client = clientRef.current
-    if (!client || !client.connected) return
-    client.publish({
-      destination: "/app/chat.sendGroup",
-      body: JSON.stringify({ groupId, content, replyToMessageId: replyToMessageId ?? null }),
-    })
+    return publishStomp("/app/chat.sendGroup", { groupId, content, replyToMessageId: replyToMessageId ?? null })
   }
 
   async function sendGroupImageMessage(groupId: string, file: File, caption?: string, replyToMessageId?: string) {

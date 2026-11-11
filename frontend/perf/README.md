@@ -70,3 +70,15 @@ Leitura:
 - Os ~85 ms que sobram no Dashboard são o tempo de desenhar o heatmap de um ano e os gráficos, não espera de rede.
 - A primeira visita a cada página não muda; o ganho aparece ao voltar a uma página.
 - A simulação não inclui o tempo de consulta ao banco de produção, que o "antes" esperava e o "depois" não espera mais; os percentuais são uma estimativa conservadora.
+
+## Conferir o chat
+
+```bash
+npm run test:chat
+```
+
+Com o frontend em `http://localhost:5173` (ou `APP=...`), cria duas contas amigas e verifica que:
+
+- sem conexão com o chat, a mensagem digitada continua no campo e aparece um aviso;
+- depois de abrir uma conversa, dá para rolar para cima sem a tela voltar sozinha para o fim;
+- seis mensagens recebidas em sequência contam seis não lidas na lista.
