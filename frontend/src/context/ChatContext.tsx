@@ -17,6 +17,8 @@ import type {
   Message,
 } from "@/lib/types"
 
+const NO_MESSAGES: Message[] = []
+
 const attachmentUrlCache = new Map<string, string>()
 
 export function useAttachmentUrl(messageId: string | null) {
@@ -347,8 +349,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         totalGroupUnread,
         openConversation,
         closeConversation,
-        messagesFor: (ref) => messagesByConversation[conversationKey(ref)] ?? [],
-        pinsFor: (ref) => pinsByConversation[conversationKey(ref)] ?? [],
+        messagesFor: (ref) => messagesByConversation[conversationKey(ref)] ?? NO_MESSAGES,
+        pinsFor: (ref) => pinsByConversation[conversationKey(ref)] ?? NO_MESSAGES,
         sendMessage,
         sendImageMessage,
         setMessagePinned,

@@ -1,144 +1,34 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ArrowUp, ChevronLeft, ImagePlus, MessageCircle, Phone, Pin, PinOff, Plus, Reply, Search, Volume2, VolumeX, X } from "lucide-react"
-import { motion, useAnimate, useMotionValue, useReducedMotion, useTransform } from "motion/react"
+import { MessageCircle } from "lucide-react"
+import { useAnimate, useReducedMotion } from "motion/react"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
-import { useChat, useAttachmentUrl } from "@/context/ChatContext"
+import { useChat } from "@/context/ChatContext"
+import { useStickToBottom } from "@/hooks/useStickToBottom"
+import { conversationKey } from "@/lib/conversation"
 import type { ConversationRef } from "@/lib/conversation"
-import { formatRelativeTime } from "@/lib/format"
+import { buildMessageRows } from "@/lib/messageRows"
 import type { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { AdminBadge } from "@/components/AdminBadge"
-import { GroupCallBanner } from "@/components/GroupCallBanner"
-import { OverlayScrollbar } from "@/components/OverlayScrollbar"
+import { Composer } from "@/components/chat/Composer"
+import { ConversationHeader } from "@/components/chat/ConversationHeader"
+import { ConversationSidebar } from "@/components/chat/ConversationSidebar"
+import { MessageRow } from "@/components/chat/MessageRow"
+import { PinnedBar } from "@/components/chat/PinnedBar"
+import { ReplyBar } from "@/components/chat/ReplyBar"
 import { CreateGroupModal } from "@/components/CreateGroupModal"
 import { FriendProfileModal } from "@/components/FriendProfileModal"
-import { GroupAvatar } from "@/components/GroupAvatar"
+import { GroupCallBanner } from "@/components/GroupCallBanner"
 import { GroupInfoModal } from "@/components/GroupInfoModal"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { OverlayScrollbar } from "@/components/OverlayScrollbar"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 
-const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
-const URL_PREFIX = /^(https?:\/\/|www\.)/i
-const TRAILING_PUNCTUATION = /[.,!?;:'")\]}]+$/
-
-function normalizeSearch(text: string) {
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-}
-
-function messageDayLabel(iso: string) {
-  const date = new Date(iso)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  if (date.toDateString() === today.toDateString()) return "Hoje"
-  if (date.toDateString() === yesterday.toDateString()) return "Ontem"
-  const label = date.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    ...(date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
-  })
-  return label.charAt(0).toUpperCase() + label.slice(1).replace(".", "")
-}
-
-function messageTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-}
-
-function linkifyText(text: string) {
-  return text.split(URL_PATTERN).map((part, i) => {
-    if (!URL_PREFIX.test(part)) return part
-    const trailingMatch = part.match(TRAILING_PUNCTUATION)
-    const trailing = trailingMatch ? trailingMatch[0] : ""
-    const url = trailing ? part.slice(0, -trailing.length) : part
-    const href = url.startsWith("www.") ? `https://${url}` : url
-    return (
-      <Fragment key={i}>
-        <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
-          {url}
-        </a>
-        {trailing}
-      </Fragment>
-    )
-  })
-}
-
-function AttachmentImage({
-  messageId,
-  onOpen,
-  onLoaded,
-}: {
-  messageId: string
-  onOpen: () => void
-  onLoaded: () => void
-}) {
-  const url = useAttachmentUrl(messageId)
-  if (!url) {
-    return <div className="h-40 w-52 animate-pulse rounded-md bg-foreground/10" />
-  }
-  return (
-    <button type="button" onClick={onOpen} className="block cursor-zoom-in">
-      {/* onLoad avisa a conversa pra reancorar: é o único momento em que dá
-          pra ter certeza de que a imagem já tem altura final, sem depender
-          do ResizeObserver nem de acertar uma janela de tempo. */}
-      <img
-        src={url}
-        alt="Imagem enviada"
-        onLoad={onLoaded}
-        className="max-h-64 max-w-full rounded-md object-cover"
-      />
-    </button>
-  )
-}
-
-const IS_TOUCH_DEVICE = typeof window !== "undefined" && "ontouchstart" in window
-const SWIPE_REPLY_TRIGGER_PX = 40
-const SWIPE_REPLY_MAX_PX = 56
-
-// Swipe-to-reply (estilo WhatsApp) só faz sentido em touch — no mouse já
-// existe o duplo-clique e o ícone de hover, arrastar com mouse atrapalharia
-// seleção de texto.
-function SwipeableMessage({ onReply, children }: { onReply: () => void; children: ReactNode }) {
-  const x = useMotionValue(0)
-  const iconOpacity = useTransform(x, [0, SWIPE_REPLY_TRIGGER_PX], [0, 1])
-
-  if (!IS_TOUCH_DEVICE) return <>{children}</>
-
-  return (
-    <div className="relative">
-      <motion.div
-        style={{ opacity: iconOpacity }}
-        className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-1 text-muted-foreground"
-      >
-        <Reply className="size-4" />
-      </motion.div>
-      <motion.div
-        drag="x"
-        style={{ x }}
-        dragConstraints={{ left: 0, right: SWIPE_REPLY_MAX_PX }}
-        dragElastic={0.15}
-        dragSnapToOrigin
-        onDragEnd={(_, info) => {
-          if (info.offset.x > SWIPE_REPLY_TRIGGER_PX) onReply()
-        }}
-      >
-        {children}
-      </motion.div>
-    </div>
-  )
-}
-
-type PendingImage = {
-  file: File
-  previewUrl: string
-}
+const NO_MESSAGES: Message[] = []
 
 export function ChatPage() {
   const { friendId, groupId } = useParams<{ friendId?: string; groupId?: string }>()
@@ -151,8 +41,6 @@ export function ChatPage() {
     closeConversation,
     messagesFor,
     pinsFor,
-    sendMessage,
-    sendImageMessage,
     groupConversations,
     groupConversationsLoaded,
     membersOf,
@@ -167,15 +55,7 @@ export function ChatPage() {
   )
   const { phase: callPhase, startDirectCall, startGroupCall } = useCall()
   const ready = conversationsLoaded && groupConversationsLoaded
-  const [draft, setDraft] = useState("")
-  const [search, setSearch] = useState("")
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
-  const [displayedReplyingTo, setDisplayedReplyingTo] = useState<Message | null>(null)
-  useEffect(() => {
-    if (replyingTo) setDisplayedReplyingTo(replyingTo)
-  }, [replyingTo])
-  const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
-  const [sendingImage, setSendingImage] = useState(false)
   const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false)
@@ -184,37 +64,16 @@ export function ChatPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const conversationListRef = useRef<HTMLDivElement>(null)
   const messagesContentRef = useRef<HTMLDivElement>(null)
-  const pinnedRef = useRef(true)
-  const echoScrollTopRef = useRef<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [conversationScope, animateConversation] = useAnimate()
   const reducedMotion = useReducedMotion()
   const hadConversationRef = useRef(false)
 
-  // formatRelativeTime só recalcula quando o componente re-renderiza — sem
-  // isso, uma mensagem mandada "agora" continua mostrando "agora" pra
-  // sempre se a conversa ficar aberta sem novas mensagens chegando. Esse
-  // tick força um re-render periódico só pra atualizar os textos de tempo.
-  const [, forceTimeTick] = useState(0)
   useEffect(() => {
-    const interval = setInterval(() => forceTimeTick((t) => t + 1), 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    setDraft("")
     setReplyingTo(null)
-    setPendingImage(null)
     setPinIndex(0)
-    if (conversation) openConversation(conversation)
     if (conversation) {
-      // Só anima a entrada ao sair de "nenhuma conversa selecionada" pra uma
-      // conversa — trocar entre conversas já abertas não deve reanimar o
-      // painel inteiro de novo (fica um "flash" repetindo por cima da
-      // transição anterior se ela ainda não tiver acabado). Também evita o
-      // duplo-disparo do StrictMode no primeiro mount, já que o ref não é
-      // resetado entre o mount/cleanup/remount sintético dele.
+      openConversation(conversation)
       if (!hadConversationRef.current) {
         animateConversation(
           conversationScope.current,
@@ -230,105 +89,22 @@ export function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation])
 
-  const messages = conversation ? messagesFor(conversation) : []
-  const pins = conversation ? pinsFor(conversation) : []
+  const messages = conversation ? messagesFor(conversation) : NO_MESSAGES
+  const rows = useMemo(() => buildMessageRows(messages), [messages])
+  const pins = conversation ? pinsFor(conversation) : NO_MESSAGES
   const currentPin = pins.length > 0 ? pins[Math.min(pinIndex, pins.length - 1)] : null
   const activeConversationLastMessageAt = isGroup
     ? groupConversations.find((c) => c.groupId === groupId)?.lastMessageAt
     : conversations.find((c) => c.friendUserId === friendId)?.lastMessageAt
   const conversationIsEmpty = messages.length === 0 && ready && !activeConversationLastMessageAt
-
-  // Em grupo, cada bolha de outra pessoa ganha o nome de quem mandou acima do
-  // conteúdo — e esse nome só existe depois que loadGroupMembers responde, ou
-  // seja, TODAS as bolhas crescem um pouco depois que o histórico já
-  // renderizou. É por isso que o grupo continuava abrindo fora do fim mesmo
-  // depois de consertar o caso da conversa 1:1: nada reancorava nesse
-  // segundo crescimento.
   const activeGroupMemberCount = groupId ? membersOf(groupId).length : 0
 
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-    pinnedRef.current = true
-    stickToBottom()
-    settleScroll(2000)
-
-    function handleScroll() {
-      if (!container) return
-      const echo = echoScrollTopRef.current
-      echoScrollTopRef.current = null
-      if (echo !== null && Math.abs(container.scrollTop - echo) < 2) return
-      const distance = container.scrollHeight - container.scrollTop - container.clientHeight
-      pinnedRef.current = distance < 40
-    }
-    container.addEventListener("scroll", handleScroll, { passive: true })
-    return () => container.removeEventListener("scroll", handleScroll)
-    // ready entra nas deps por causa da tela de carregamento (ver comentário
-    // do ResizeObserver logo abaixo) — reanexa assim que o container de
-    // verdade existe, não só quando troca de conversa.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [friendId, groupId, ready])
-
-  useEffect(() => {
-    settleScroll(2000)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, ready, activeGroupMemberCount, pins.length > 0])
-
-  function stickToBottom() {
-    const container = scrollContainerRef.current
-    if (!container || !pinnedRef.current) return
-    const target = container.scrollHeight - container.clientHeight
-    if (Math.abs(container.scrollTop - target) < 1) return
-    echoScrollTopRef.current = target
-    container.scrollTop = target
-  }
-
-  const settleFrameRef = useRef<number | null>(null)
-
-  // Reforça por ~2s via requestAnimationFrame em vez de confiar só no
-  // ResizeObserver abaixo: em teste, o ResizeObserver simplesmente não
-  // disparou nem uma vez pra um crescimento manual e óbvio do conteúdo
-  // (confirmado isolando o teste fora do React) — pode ser algo específico
-  // deste navegador automatizado, mas como não dá pra garantir 100% em
-  // todo navegador/aba em segundo plano, esse polling curto garante a
-  // ancoragem de qualquer jeito, sem depender de nenhum sinal de resize.
-  function settleScroll(durationMs: number) {
-    if (settleFrameRef.current !== null) cancelAnimationFrame(settleFrameRef.current)
-    const deadline = performance.now() + durationMs
-    function frame() {
-      stickToBottom()
-      settleFrameRef.current = performance.now() < deadline ? requestAnimationFrame(frame) : null
-    }
-    settleFrameRef.current = requestAnimationFrame(frame)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (settleFrameRef.current !== null) cancelAnimationFrame(settleFrameRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    const content = messagesContentRef.current
-    if (!content) return
-    // ResizeObserver como reação imediata em navegadores onde funciona (não
-    // depende de rAF, que não roda com a aba em segundo plano) — o polling
-    // de settleScroll acima é quem garante a ancoragem de fato.
-    // Precisa reanexar a cada troca de conversa E a cada mudança de "ready"
-    // (deps friendId/groupId/ready, não []): messagesContentRef só existe
-    // depois que a tela de carregamento (conversationsLoaded/
-    // groupConversationsLoaded) libera o conteúdo de verdade. Se o
-    // histórico da conversa chegasse ANTES disso — uma corrida bem real,
-    // já que são duas requisições independentes — o efeito rodava com
-    // content nulo, desistia, e como friendId/groupId não mudam quando a
-    // tela de carregamento sai do ar, nada tentava de novo depois: a
-    // conversa carregava parada no topo pro resto da sessão, sem nenhum
-    // erro visível.
-    const observer = new ResizeObserver(() => stickToBottom())
-    observer.observe(content)
-    return () => observer.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [friendId, groupId, ready])
+  const { settle } = useStickToBottom(
+    scrollContainerRef,
+    messagesContentRef,
+    `${conversation ? conversationKey(conversation) : ""}|${ready}`,
+    `${messages.length}|${ready}|${activeGroupMemberCount}|${pins.length > 0}`,
+  )
 
   function startReply(message: Message) {
     setReplyingTo(message)
@@ -349,82 +125,11 @@ export function ChatPage() {
     if (pins.length > 1) setPinIndex((i) => (Math.min(i, pins.length - 1) + 1) % pins.length)
   }
 
-  function submitDraft() {
-    if (pendingImage) {
-      if (!sendingImage) submitImage()
-      return
-    }
-    if (!draft.trim()) return
-    if (!conversation) return
-    if (!sendMessage(conversation, draft.trim(), replyingTo?.id)) {
-      toast.error("Sem conexão com o chat. Sua mensagem continua no campo, tente de novo em instantes.")
-      return
-    }
-    setDraft("")
-    setReplyingTo(null)
-  }
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    submitDraft()
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault()
-      submitDraft()
-    }
-  }
-
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (file) {
-      setPendingImage({ file, previewUrl: URL.createObjectURL(file) })
-    }
-    event.target.value = ""
-  }
-
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const item = Array.from(event.clipboardData.items).find((i) => i.type.startsWith("image/"))
-    if (!item) return
-    const file = item.getAsFile()
-    if (!file) return
-    event.preventDefault()
-    setPendingImage({ file, previewUrl: URL.createObjectURL(file) })
-  }
-
-  function cancelImage() {
-    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl)
-    setPendingImage(null)
-  }
-
-  async function submitImage() {
-    if (!pendingImage) return
-    setSendingImage(true)
-    try {
-      const caption = draft.trim() || undefined
-      if (conversation) await sendImageMessage(conversation, pendingImage.file, caption, replyingTo?.id)
-      URL.revokeObjectURL(pendingImage.previewUrl)
-      setPendingImage(null)
-      setDraft("")
-      setReplyingTo(null)
-    } finally {
-      setSendingImage(false)
-    }
-  }
-
   if (!ready) {
     return <PageSkeleton rows={5} />
   }
 
   const activeFriend = conversations.find((c) => c.friendUserId === friendId)
-  const normalizedSearch = normalizeSearch(search.trim())
-  const visibleConversations = normalizedSearch
-    ? conversations.filter((c) => normalizeSearch(c.friendName).includes(normalizedSearch))
-    : conversations
-  const visibleGroups = normalizedSearch
-    ? groupConversations.filter((c) => normalizeSearch(c.groupName).includes(normalizedSearch))
-    : groupConversations
   const activeGroup = groupConversations.find((c) => c.groupId === groupId)
   const composerPlaceholder = isGroup
     ? activeGroup
@@ -439,21 +144,29 @@ export function ChatPage() {
     return activeGroupMembers.find((m) => m.userId === userId)?.name ?? ""
   }
 
-  function authorLabel(senderId: string) {
-    if (senderId === user?.id) return "Você"
+  function nameOf(senderId: string) {
     return isGroup ? memberName(senderId) : (activeFriend?.friendName ?? "")
   }
 
-  function replyAuthorLabel(m: Message) {
-    if (m.replyTo?.senderId === user?.id) return "Você"
-    return isGroup ? memberName(m.replyTo?.senderId ?? "") : (activeFriend?.friendName ?? "")
+  function authorLabel(senderId: string) {
+    return senderId === user?.id ? "Você" : nameOf(senderId)
+  }
+
+  function avatarFor(message: Message) {
+    if (isGroup) return <UserAvatar userId={message.senderId} name={memberName(message.senderId)} size="sm" />
+    return activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />
+  }
+
+  function startCall() {
+    if (isGroup && activeGroup) void startGroupCall(activeGroup.groupId, activeGroup.groupName)
+    else if (activeFriend) void startDirectCall(activeFriend.friendUserId, activeFriend.friendName)
   }
 
   return (
     <div
       className={cn(
         "sm:h-[calc(100dvh-9rem-var(--titlebar-h))] md:h-[calc(100dvh-5.5rem-var(--titlebar-h))]",
-        friendId || groupId
+        conversation
           ? "max-sm:h-[calc(100dvh-3.6rem)]"
           : "max-sm:h-[calc(100dvh-7.2rem-env(safe-area-inset-bottom))]",
       )}
@@ -462,549 +175,115 @@ export function ChatPage() {
       <OverlayScrollbar target={conversationListRef} />
       <OverlayScrollbar target={scrollContainerRef} />
       <div className="flex h-full flex-row overflow-hidden bg-background sm:rounded-2xl sm:border">
-      <div
-        ref={conversationListRef}
-        className={cn(
-          "overlay-scroll flex w-full shrink-0 flex-col overflow-y-auto border-r sm:w-72",
-          (friendId || groupId) && "hidden sm:flex",
-        )}
-      >
-        <div className="px-3 pt-3">
-          <label className="flex h-9 items-center gap-2 rounded-xl border bg-card px-3 text-sm text-muted-foreground focus-within:border-foreground/30">
-            <Search className="size-3.5 shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar conversa"
-              aria-label="Buscar conversa"
-              className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
-            />
-          </label>
-        </div>
-        <div className="flex items-center justify-between px-4 pt-3 pb-1">
-          <span className="text-xs font-medium text-muted-foreground">Mensagens</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            title={chatSoundEnabled ? "Silenciar som de mensagem" : "Ativar som de mensagem"}
-            className="size-6 max-sm:size-10"
-            onClick={() => setChatSoundEnabled(!chatSoundEnabled)}
-          >
-            {chatSoundEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
-          </Button>
-        </div>
-        {normalizedSearch && visibleConversations.length === 0 && visibleGroups.length === 0 && (
-          <p className="px-4 py-2 text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>
-        )}
-        {conversations.length === 0 ? (
-          <p className="px-4 pb-3 text-sm text-muted-foreground">Adicione amigos pra começar a conversar.</p>
-        ) : (
-          <ul className="flex flex-col gap-0.5 p-2">
-            {visibleConversations.map((c) => (
-              <li key={c.friendUserId} className="relative">
-                {c.friendUserId === friendId && (
-                  <motion.div
-                    layoutId="chat-conversation-pill-friend"
-                    className="absolute inset-0 rounded-xl bg-muted/70"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <Link
-                  to={`/chat/${c.friendUserId}`}
-                  className="relative z-10 flex flex-col gap-1 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/40"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <UserAvatar userId={c.friendUserId} name={c.friendName} size="default" />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-1">
-                          <span className={cn("min-w-0 truncate", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{c.friendName}</span>
-                          {c.friendAdmin && <AdminBadge />}
-                        </span>
-                        {c.lastMessageAt && (
-                          <span className="shrink-0 text-[11px] text-muted-foreground/70">
-                            {formatRelativeTime(c.lastMessageAt)}
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={cn("min-w-0 truncate text-xs", c.unreadCount > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
-                          {c.lastMessage ?? "Nenhuma mensagem ainda"}
-                        </span>
-                        {c.unreadCount > 0 && (
-                          <span
-                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
-                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
-                          >
-                            {c.unreadCount}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ConversationSidebar
+          listRef={conversationListRef}
+          conversations={conversations}
+          groupConversations={groupConversations}
+          active={conversation}
+          chatSoundEnabled={chatSoundEnabled}
+          onToggleSound={() => setChatSoundEnabled(!chatSoundEnabled)}
+          onCreateGroup={() => setCreateGroupModalOpen(true)}
+        />
 
-        <div className="mt-2 flex items-center justify-between px-4 pt-2 pb-1">
-          <span className="text-xs font-medium text-muted-foreground">Grupos</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            title="Criar grupo"
-            className="size-6 max-sm:size-10"
-            onClick={() => setCreateGroupModalOpen(true)}
-          >
-            <Plus className="size-3.5" />
-          </Button>
-        </div>
-        {groupConversations.length === 0 && (
-          <p className="px-4 pb-3 text-sm text-muted-foreground">Nenhum grupo ainda. Use o + para criar um.</p>
-        )}
-        {groupConversations.length > 0 && (
-          <ul className="flex flex-col gap-0.5 p-2">
-            {visibleGroups.map((c) => (
-              <li key={c.groupId} className="relative">
-                {c.groupId === groupId && (
-                  <motion.div
-                    layoutId="chat-conversation-pill-group"
-                    className="absolute inset-0 rounded-xl bg-muted/70"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <Link
-                  to={`/chat/g/${c.groupId}`}
-                  className="relative z-10 flex flex-col gap-1 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/40"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <GroupAvatar groupId={c.groupId} className="rounded-lg after:rounded-lg [&>*]:rounded-lg" />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={cn("min-w-0 truncate", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>{c.groupName}</span>
-                        {c.lastMessageAt && (
-                          <span className="shrink-0 text-[11px] text-muted-foreground/70">
-                            {formatRelativeTime(c.lastMessageAt)}
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={cn("min-w-0 truncate text-xs", c.unreadCount > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
-                          {c.lastMessage ?? "Nenhuma mensagem ainda"}
-                        </span>
-                        {c.unreadCount > 0 && (
-                          <span
-                            aria-label={c.unreadCount === 1 ? "1 não lida" : `${c.unreadCount} não lidas`}
-                            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground"
-                          >
-                            {c.unreadCount}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className={cn("flex flex-1 flex-col overflow-hidden", !(friendId || groupId) && "hidden sm:flex")}>
-        {!friendId && !groupId ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full border text-muted-foreground">
-              <MessageCircle className="size-5" />
-            </span>
-            <p className="font-medium">Suas conversas</p>
-            <p className="max-w-xs text-sm text-muted-foreground">
-              {conversations.length > 0
-                ? "Escolha uma conversa ao lado para continuar de onde parou."
-                : "Adicione um amigo para começar a conversar e combinar sessões de estudo."}
-            </p>
-            {conversations.length === 0 && (
-              <Button asChild variant="outline" size="sm" className="rounded-full">
-                <Link to="/friends">Adicionar amigo</Link>
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div ref={conversationScope} className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex items-center border-b">
-              <Link to="/chat" aria-label="Voltar" className="p-3 text-muted-foreground hover:text-foreground sm:hidden">
-                <ChevronLeft className="size-5" />
-              </Link>
-              {isGroup ? (
-                <button
-                  type="button"
-                  onClick={() => setProfileModalOpen(true)}
-                  disabled={!activeGroup}
-                  className="flex flex-1 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent sm:pl-4"
-                >
-                  <GroupAvatar groupId={groupId ?? ""} />
-                  <span className="flex flex-col">
-                    <span className="font-medium">{activeGroup?.groupName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {activeGroupMembers.length > 0
-                        ? `${activeGroupMembers.length} membros`
-                        : activeGroup?.memberNames.join(", ")}
-                    </span>
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setProfileModalOpen(true)}
-                  disabled={!activeFriend}
-                  className="flex flex-1 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent sm:pl-4"
-                >
-                  {activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />}
-                  <span className="flex flex-col">
-                    <span className="flex items-center gap-1 font-medium">
-                      {activeFriend?.friendName}
-                      {activeFriend?.friendAdmin && <AdminBadge />}
-                    </span>
-                    {activeFriend?.friendBio && (
-                      <span className="text-xs text-muted-foreground">{activeFriend.friendBio}</span>
-                    )}
-                  </span>
-                </button>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Ligar"
-                aria-label="Ligar"
-                disabled={callPhase !== "idle" || !connected || (isGroup ? !activeGroup : !activeFriend)}
-                className="mr-2 max-sm:size-10"
-                onClick={() => {
-                  if (isGroup && activeGroup) void startGroupCall(activeGroup.groupId, activeGroup.groupName)
-                  else if (activeFriend) void startDirectCall(activeFriend.friendUserId, activeFriend.friendName)
-                }}
-              >
-                <Phone className="size-4" />
-              </Button>
-            </div>
-            {isGroup && groupId && activeGroup && (
-              <GroupCallBanner groupId={groupId} groupName={activeGroup.groupName} />
-            )}
-            {isGroup ? (
-              <GroupInfoModal
-                group={activeGroup ?? null}
-                open={profileModalOpen}
-                onClose={() => setProfileModalOpen(false)}
-              />
-            ) : (
-              <FriendProfileModal
-                friend={activeFriend ?? null}
-                open={profileModalOpen}
-                onClose={() => setProfileModalOpen(false)}
-              />
-            )}
-            {currentPin && (
-              <div className="flex items-center gap-1 border-b bg-muted/30 pr-2">
-                <button
-                  type="button"
-                  onClick={showPinnedMessage}
-                  title={pins.length > 1 ? "Ir para a mensagem e mostrar a próxima fixada" : "Ir para a mensagem"}
-                  className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/50"
-                >
-                  {pins.length > 1 ? (
-                    <span className="flex w-0.5 shrink-0 flex-col gap-0.5 self-stretch py-0.5" aria-hidden>
-                      {pins.map((p) => (
-                        <span
-                          key={p.id}
-                          className={cn(
-                            "min-h-1 flex-1 rounded-full transition-colors",
-                            p.id === currentPin.id ? "bg-primary" : "bg-muted-foreground/30",
-                          )}
-                        />
-                      ))}
-                    </span>
-                  ) : null}
-                  <Pin className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-medium text-muted-foreground">
-                      Mensagem fixada
-                      {pins.length > 1 && ` · ${pins.findIndex((p) => p.id === currentPin.id) + 1} de ${pins.length}`}
-                    </span>
-                    <span className="block truncate text-sm">
-                      <span className="font-medium">{authorLabel(currentPin.senderId)}:</span>{" "}
-                      {currentPin.content ?? "📷 Foto"}
-                    </span>
-                  </span>
-                </button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title="Desafixar"
-                  aria-label="Desafixar mensagem"
-                  className="shrink-0 max-sm:size-10"
-                  onClick={() => void setMessagePinned(currentPin, false)}
-                >
-                  <PinOff className="size-4" />
+        <div className={cn("flex flex-1 flex-col overflow-hidden", !conversation && "hidden sm:flex")}>
+          {!conversation ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full border text-muted-foreground">
+                <MessageCircle className="size-5" />
+              </span>
+              <p className="font-medium">Suas conversas</p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                {conversations.length > 0
+                  ? "Escolha uma conversa ao lado para continuar de onde parou."
+                  : "Adicione um amigo para começar a conversar e combinar sessões de estudo."}
+              </p>
+              {conversations.length === 0 && (
+                <Button asChild variant="outline" size="sm" className="rounded-full">
+                  <Link to="/friends">Adicionar amigo</Link>
                 </Button>
-              </div>
-            )}
-            <div ref={scrollContainerRef} className="overlay-scroll flex-1 overflow-y-auto px-4 py-3">
-              <div ref={messagesContentRef} className="flex flex-col">
-                {conversationIsEmpty && (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
-                )}
-                {messages.map((m, i) => {
-                  const mine = m.senderId === user?.id
-                  const prev = messages[i - 1]
-                  const next = messages[i + 1]
-                  const GROUP_WINDOW_MS = 5 * 60 * 1000
-                  const groupedWithPrev =
-                    !!prev &&
-                    prev.senderId === m.senderId &&
-                    new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < GROUP_WINDOW_MS
-                  const groupedWithNext =
-                    !!next &&
-                    next.senderId === m.senderId &&
-                    new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() < GROUP_WINDOW_MS
-                  const actionClass =
-                    "shrink-0 rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
-                  const replyButton = (
-                    <button type="button" title="Responder" onClick={() => startReply(m)} className={actionClass}>
-                      <Reply className="size-3.5" />
-                    </button>
-                  )
-                  const pinButton = (
-                    <button
-                      type="button"
-                      title={m.pinnedAt ? "Desafixar" : "Fixar"}
-                      aria-label={m.pinnedAt ? "Desafixar mensagem" : "Fixar mensagem"}
-                      onClick={() => void setMessagePinned(m, !m.pinnedAt)}
-                      className={actionClass}
-                    >
-                      {m.pinnedAt ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-                    </button>
-                  )
-                  const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()
-                  const showAvatar = !mine && !groupedWithNext
-                  return (
-                    <Fragment key={m.id}>
-                    {newDay && (
-                      <div className="my-4 flex items-center gap-3 first:mt-0" role="separator">
-                        <span className="h-px flex-1 bg-border/60" />
-                        <span className="text-[11px] font-medium text-muted-foreground">{messageDayLabel(m.createdAt)}</span>
-                        <span className="h-px flex-1 bg-border/60" />
-                      </div>
-                    )}
-                    <motion.div
-                      id={`message-${m.id}`}
-                      initial={{ opacity: 0, scale: 0.94, y: 4 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                      onDoubleClick={(e) => {
-                        // duplo-clique na bolha continua selecionando o texto
-                        // normalmente — só fora dela (do lado/na mesma linha)
-                        // dispara a resposta.
-                        if ((e.target as HTMLElement).closest("[data-message-bubble]")) return
-                        window.getSelection()?.removeAllRanges()
-                        startReply(m)
-                      }}
-                      className={cn(
-                        "group flex items-end gap-1",
-                        mine ? "justify-end" : "justify-start",
-                        groupedWithPrev && !newDay ? "mt-0.5" : newDay ? "mt-0" : "mt-3",
-                      )}
-                    >
-                      {mine && pinButton}
-                      {mine && replyButton}
-                      {!mine && (
-                        <span className="mr-1 w-6 shrink-0">
-                          {showAvatar &&
-                            (isGroup ? (
-                              <UserAvatar userId={m.senderId} name={memberName(m.senderId)} size="sm" />
-                            ) : (
-                              activeFriend && <UserAvatar userId={activeFriend.friendUserId} name={activeFriend.friendName} size="sm" />
-                            ))}
-                        </span>
-                      )}
-                      <SwipeableMessage onReply={() => startReply(m)}>
-                      <div
-                        data-message-bubble
-                        title={new Date(m.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        className={cn(
-                          "relative max-w-[70%] overflow-hidden rounded-[18px] px-3.5 py-2 text-sm",
-                          mine ? "bg-primary text-primary-foreground" : "border bg-card",
-                          groupedWithPrev && !newDay && (mine ? "rounded-tr-md" : "rounded-tl-md"),
-                          groupedWithNext && (mine ? "rounded-br-md" : "rounded-bl-md"),
-                        )}
-                      >
-                        {highlight?.id === m.id && (
-                          <motion.div
-                            key={highlight.nonce}
-                            initial={{ opacity: 0.35 }}
-                            animate={{ opacity: 0 }}
-                            transition={{ duration: 1.1, ease: "easeOut" }}
-                            onAnimationComplete={() =>
-                              setHighlight((h) => (h?.nonce === highlight.nonce ? null : h))
-                            }
-                            className="pointer-events-none absolute inset-0 bg-foreground"
-                          />
-                        )}
-                        <div className="relative z-10">
-                          {isGroup && !mine && !groupedWithPrev && (
-                            <p className="mb-0.5 text-xs font-medium text-muted-foreground">
-                              {memberName(m.senderId)}
-                            </p>
-                          )}
-                          {m.replyTo && (
-                            <button
-                              type="button"
-                              onClick={() => jumpToMessage(m.replyTo!.id)}
-                              className={`mb-1.5 block w-full rounded border-l-2 px-2 py-1 text-left text-xs transition-colors ${
-                                mine
-                                  ? "border-primary-foreground/40 bg-primary-foreground/10 hover:bg-primary-foreground/20"
-                                  : "border-foreground/20 bg-foreground/5 hover:bg-foreground/10"
-                              }`}
-                            >
-                              <p className="font-medium">{replyAuthorLabel(m)}</p>
-                              <p className="truncate opacity-80">{m.replyTo.contentPreview}</p>
-                            </button>
-                          )}
-                          {m.attachmentId && (
-                            <div className={m.content ? "mb-1.5" : ""}>
-                              <AttachmentImage
-                                messageId={m.id}
-                                onOpen={() => setLightboxMessageId(m.id)}
-                                onLoaded={() => settleScroll(400)}
-                              />
-                            </div>
-                          )}
-                          {m.content && (
-                            <p className="whitespace-pre-wrap break-words">{linkifyText(m.content)}</p>
-                          )}
-                          {(!groupedWithNext || m.pinnedAt) && (
-                            <p
-                              className={`mt-1 flex items-center gap-1 text-[10px] tabular-nums ${
-                                mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                              }`}
-                            >
-                              {m.pinnedAt && <Pin className="size-2.5" aria-label="Fixada" role="img" />}
-                              {!groupedWithNext && messageTime(m.createdAt)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      </SwipeableMessage>
-                      {!mine && replyButton}
-                      {!mine && pinButton}
-                    </motion.div>
-                    </Fragment>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                "grid ease-out",
-                replyingTo ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                reducedMotion ? "duration-0" : "duration-200",
               )}
-              style={{ transitionProperty: "grid-template-rows" }}
-            >
-              <div className="overflow-hidden">
-                <div className="flex items-center justify-between gap-2 border-t bg-muted/40 px-4 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Respondendo a{" "}
-                      {displayedReplyingTo?.senderId === user?.id
-                        ? "você mesmo"
-                        : isGroup
-                          ? memberName(displayedReplyingTo?.senderId ?? "")
-                          : activeFriend?.friendName}
-                    </p>
-                    <p className="truncate text-sm">{displayedReplyingTo?.content ?? "📷 Foto"}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={replyingTo ? 0 : -1}
-                    onClick={() => setReplyingTo(null)}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-              </div>
             </div>
-
-            {pendingImage && (
-              <div className="border-t bg-muted/40 px-4 py-2">
-                <div className="relative inline-block">
-                  <img
-                    src={pendingImage.previewUrl}
-                    alt="Pré-visualização"
-                    className="size-16 rounded-md object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={cancelImage}
-                    disabled={sendingImage}
-                    title="Remover anexo"
-                    className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-background text-muted-foreground shadow ring-1 ring-border hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    <X className="size-3" />
-                  </button>
+          ) : (
+            <div ref={conversationScope} className="flex flex-1 flex-col overflow-hidden">
+              <ConversationHeader
+                conversation={conversation}
+                friend={activeFriend}
+                group={activeGroup}
+                memberCount={activeGroupMembers.length}
+                callDisabled={callPhase !== "idle" || !connected || (isGroup ? !activeGroup : !activeFriend)}
+                onOpenProfile={() => setProfileModalOpen(true)}
+                onCall={startCall}
+              />
+              {isGroup && groupId && activeGroup && <GroupCallBanner groupId={groupId} groupName={activeGroup.groupName} />}
+              {isGroup ? (
+                <GroupInfoModal
+                  group={activeGroup ?? null}
+                  open={profileModalOpen}
+                  onClose={() => setProfileModalOpen(false)}
+                />
+              ) : (
+                <FriendProfileModal
+                  friend={activeFriend ?? null}
+                  open={profileModalOpen}
+                  onClose={() => setProfileModalOpen(false)}
+                />
+              )}
+              {currentPin && (
+                <PinnedBar
+                  pins={pins}
+                  current={currentPin}
+                  authorLabel={authorLabel(currentPin.senderId)}
+                  onShow={showPinnedMessage}
+                  onUnpin={() => void setMessagePinned(currentPin, false)}
+                />
+              )}
+              <div ref={scrollContainerRef} className="overlay-scroll flex-1 overflow-y-auto px-4 py-3">
+                <div ref={messagesContentRef} className="flex flex-col">
+                  {conversationIsEmpty && (
+                    <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda. Diga olá!</p>
+                  )}
+                  {rows.map((row) => {
+                    const m = row.message
+                    const highlightNonce = highlight?.id === m.id ? highlight.nonce : null
+                    return (
+                      <MessageRow
+                        key={m.id}
+                        row={row}
+                        mine={m.senderId === user?.id}
+                        avatar={avatarFor(m)}
+                        senderLabel={isGroup ? memberName(m.senderId) : null}
+                        replyAuthor={m.replyTo ? authorLabel(m.replyTo.senderId) : ""}
+                        highlightNonce={highlightNonce}
+                        onReply={() => startReply(m)}
+                        onTogglePin={() => void setMessagePinned(m, !m.pinnedAt)}
+                        onJumpTo={jumpToMessage}
+                        onOpenImage={() => setLightboxMessageId(m.id)}
+                        onImageLoaded={() => settle(400)}
+                        onHighlightDone={() =>
+                          setHighlight((h) => (h?.id === m.id && h.nonce === highlightNonce ? null : h))
+                        }
+                      />
+                    )
+                  })}
                 </div>
               </div>
-            )}
 
-            <form onSubmit={onSubmit} className="px-3 pt-1 pb-3 sm:px-4 sm:pb-4">
-              <div className="flex items-end gap-1 rounded-2xl border bg-card p-1.5 pl-2 transition-colors focus-within:border-foreground/30">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
+              <ReplyBar
+                replyingTo={replyingTo}
+                targetLabel={(message) => (message.senderId === user?.id ? "você mesmo" : nameOf(message.senderId))}
+                onCancel={() => setReplyingTo(null)}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Anexar imagem"
-                className="size-8 shrink-0 rounded-xl text-muted-foreground"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <ImagePlus className="size-4" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <Textarea
-                  ref={textareaRef}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  onPaste={handlePaste}
-                  placeholder={composerPlaceholder}
-                  className="max-h-40 min-h-8 w-full resize-none border-0 bg-transparent px-1 py-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
-                />
-              </div>
-              <Button
-                type="submit"
-                size="icon"
-                aria-label="Enviar"
-                className="size-8 shrink-0 rounded-xl"
-                disabled={pendingImage ? sendingImage : !draft.trim()}
-              >
-                <ArrowUp className="size-4" />
-              </Button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
+              <Composer
+                key={conversationKey(conversation)}
+                conversation={conversation}
+                placeholder={composerPlaceholder}
+                replyToMessageId={replyingTo?.id}
+                textareaRef={textareaRef}
+                onSent={() => setReplyingTo(null)}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <CreateGroupModal open={createGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} />
