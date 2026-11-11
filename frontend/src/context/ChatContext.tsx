@@ -63,7 +63,7 @@ type ChatContextValue = {
   sendImageMessage: (ref: ConversationRef, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
   setMessagePinned: (message: Message, pinned: boolean) => Promise<void>
 
-  groupMembersById: Record<string, GroupMember[]>
+  membersOf: (groupId: string) => GroupMember[]
   loadGroupMembers: (groupId: string) => Promise<void>
   createGroup: (name: string, memberIds: string[]) => Promise<string>
   addGroupMember: (groupId: string, userId: string) => Promise<void>
@@ -87,7 +87,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [groupConversationsLoaded, setGroupConversationsLoaded] = useState(false)
   const [messagesByConversation, setMessagesByConversation] = useState<Record<string, Message[]>>({})
   const [pinsByConversation, setPinsByConversation] = useState<Record<string, Message[]>>({})
-  const [groupMembersById, setGroupMembersById] = useState<Record<string, GroupMember[]>>({})
+  const [membersByConversation, setMembersByConversation] = useState<Record<string, GroupMember[]>>({})
   const [chatSoundEnabled, setChatSoundEnabledState] = useState(loadChatSoundEnabled)
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
@@ -127,7 +127,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   function loadGroupMembers(groupId: string) {
     return api.get<GroupMember[]>(`/chat/groups/${groupId}/members`).then((res) => {
-      setGroupMembersById((prev) => ({ ...prev, [groupId]: res.data }))
+      setMembersByConversation((prev) => ({ ...prev, [conversationKey({ kind: "group", id: groupId })]: res.data }))
     })
   }
 
@@ -345,7 +345,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sendMessage,
         sendImageMessage,
         setMessagePinned,
-        groupMembersById,
+        membersOf: (groupId) => membersByConversation[conversationKey({ kind: "group", id: groupId })] ?? [],
         loadGroupMembers,
         createGroup,
         addGroupMember,

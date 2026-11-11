@@ -155,7 +155,7 @@ export function ChatPage() {
     sendImageMessage,
     groupConversations,
     groupConversationsLoaded,
-    groupMembersById,
+    membersOf,
     chatSoundEnabled,
     setChatSoundEnabled,
     connected,
@@ -244,7 +244,7 @@ export function ChatPage() {
   // renderizou. É por isso que o grupo continuava abrindo fora do fim mesmo
   // depois de consertar o caso da conversa 1:1: nada reancorava nesse
   // segundo crescimento.
-  const activeGroupMemberCount = groupId ? (groupMembersById[groupId]?.length ?? 0) : 0
+  const activeGroupMemberCount = groupId ? membersOf(groupId).length : 0
 
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -433,7 +433,7 @@ export function ChatPage() {
     : activeFriend
       ? `Escreva para ${activeFriend.friendName.trim().split(/\s+/)[0]}…`
       : "Escreva uma mensagem…"
-  const activeGroupMembers = groupId ? (groupMembersById[groupId] ?? []) : []
+  const activeGroupMembers = groupId ? membersOf(groupId) : []
 
   function memberName(userId: string) {
     return activeGroupMembers.find((m) => m.userId === userId)?.name ?? ""

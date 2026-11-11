@@ -117,6 +117,8 @@ try {
   await sleep(500)
   const afterOpen = await item.getByLabel(/não lida/).count()
   check(afterOpen === 0, "abrir o grupo marca como lido")
+  await page.locator(".overlay-scroll").getByText("Beto", { exact: true }).first().waitFor({ timeout: 5000 })
+  check(true, "o nome de quem escreveu aparece nas mensagens do grupo")
 
   const composer = page.locator("textarea")
   await composer.fill("oi grupo")

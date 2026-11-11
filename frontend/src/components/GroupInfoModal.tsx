@@ -21,7 +21,7 @@ type Props = {
 export function GroupInfoModal({ group, open, onClose }: Props) {
   const reducedMotion = useReducedMotion()
   const { friends } = useFriends()
-  const { groupMembersById, loadGroupMembers, addGroupMember } = useChat()
+  const { membersOf, loadGroupMembers, addGroupMember } = useChat()
   const [rendered, setRendered] = useState(open)
   const [addingId, setAddingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -63,7 +63,7 @@ export function GroupInfoModal({ group, open, onClose }: Props) {
 
   if (!group || !rendered) return null
 
-  const members = groupMembersById[group.groupId] ?? []
+  const members = membersOf(group.groupId)
   const memberIds = new Set(members.map((m) => m.userId))
   const addableFriends = friends.filter((f) => f.status === "ACCEPTED" && !memberIds.has(f.friendUserId))
 
