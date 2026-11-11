@@ -13,6 +13,7 @@
     "test:chat": "node perf/chat-bugs.mjs",
     "test:rows": "node perf/message-rows.mjs",
     "test:peers": "node perf/call-peers.mjs",
+    "test:callview": "node perf/call-view.mjs",
     "test:call": "node perf/call-smoke.mjs"
   },
   "dependencies": {
