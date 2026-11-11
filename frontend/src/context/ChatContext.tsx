@@ -4,13 +4,14 @@ import { toast } from "sonner"
 import { api, getErrorMessage } from "@/lib/api"
 import { createChatClient } from "@/lib/chatSocket"
 import { loadChatSoundEnabled, saveChatSoundEnabled } from "@/lib/chatSoundPreference"
+import { conversationKey, conversationOf, conversationPath, sameConversation } from "@/lib/conversation"
+import type { ConversationRef } from "@/lib/conversation"
 import { playMessagePing } from "@/lib/sound"
 import { useAuth } from "@/context/AuthContext"
 import { useFriends } from "@/context/FriendsContext"
 import type {
   CallEvent,
   ConversationSummary,
-  Friendship,
   GroupConversationSummary,
   GroupMember,
   Message,
@@ -45,43 +46,27 @@ export function useAttachmentUrl(messageId: string | null) {
 
 type ChatContextValue = {
   connected: boolean
-  activeFriendId: string | null
-  setActiveFriendId: (id: string | null) => void
   conversations: ConversationSummary[]
   conversationsLoaded: boolean
   loadConversations: () => Promise<void>
-  messagesFor: (friendId: string) => Message[]
-  loadHistory: (friendId: string) => Promise<void>
-  sendMessage: (friendId: string, content: string, replyToMessageId?: string) => boolean
-  sendImageMessage: (friendId: string, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
-  markRead: (friendId: string) => Promise<void>
-  totalUnread: number
-  pinsFor: (friendId: string) => Message[]
-  loadPins: (friendId: string) => Promise<void>
-  groupPinsFor: (groupId: string) => Message[]
-  loadGroupPins: (groupId: string) => Promise<void>
-  setMessagePinned: (message: Message, pinned: boolean) => Promise<void>
-
-  activeGroupId: string | null
-  setActiveGroupId: (id: string | null) => void
   groupConversations: GroupConversationSummary[]
   groupConversationsLoaded: boolean
   loadGroupConversations: () => Promise<void>
-  groupMembersById: Record<string, GroupMember[]>
+  totalUnread: number
+  totalGroupUnread: number
+
+  openConversation: (ref: ConversationRef) => void
+  closeConversation: () => void
+  messagesFor: (ref: ConversationRef) => Message[]
+  pinsFor: (ref: ConversationRef) => Message[]
+  sendMessage: (ref: ConversationRef, content: string, replyToMessageId?: string) => boolean
+  sendImageMessage: (ref: ConversationRef, file: File, caption?: string, replyToMessageId?: string) => Promise<void>
+  setMessagePinned: (message: Message, pinned: boolean) => Promise<void>
+
+  membersOf: (groupId: string) => GroupMember[]
   loadGroupMembers: (groupId: string) => Promise<void>
   createGroup: (name: string, memberIds: string[]) => Promise<string>
   addGroupMember: (groupId: string, userId: string) => Promise<void>
-  groupMessagesFor: (groupId: string) => Message[]
-  loadGroupHistory: (groupId: string) => Promise<void>
-  sendGroupMessage: (groupId: string, content: string, replyToMessageId?: string) => boolean
-  sendGroupImageMessage: (
-    groupId: string,
-    file: File,
-    caption?: string,
-    replyToMessageId?: string,
-  ) => Promise<void>
-  markGroupRead: (groupId: string) => Promise<void>
-  totalGroupUnread: number
 
   chatSoundEnabled: boolean
   setChatSoundEnabled: (enabled: boolean) => void
@@ -96,31 +81,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { friends } = useFriends()
   const [connected, setConnected] = useState(false)
-  const [activeFriendId, setActiveFriendId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [conversationsLoaded, setConversationsLoaded] = useState(false)
-  const [messagesByFriend, setMessagesByFriend] = useState<Record<string, Message[]>>({})
-
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
   const [groupConversations, setGroupConversations] = useState<GroupConversationSummary[]>([])
   const [groupConversationsLoaded, setGroupConversationsLoaded] = useState(false)
-  const [messagesByGroup, setMessagesByGroup] = useState<Record<string, Message[]>>({})
-  const [groupMembersById, setGroupMembersById] = useState<Record<string, GroupMember[]>>({})
+  const [messagesByConversation, setMessagesByConversation] = useState<Record<string, Message[]>>({})
   const [pinsByConversation, setPinsByConversation] = useState<Record<string, Message[]>>({})
+  const [membersByConversation, setMembersByConversation] = useState<Record<string, GroupMember[]>>({})
+  const [chatSoundEnabled, setChatSoundEnabledState] = useState(loadChatSoundEnabled)
 
   const clientRef = useRef<ReturnType<typeof createChatClient> | null>(null)
   const seenMessageIdsRef = useRef(new Set<string>())
   const callListenersRef = useRef(new Set<(event: CallEvent) => void>())
-  const activeFriendIdRef = useRef<string | null>(null)
-  const conversationsRef = useRef<ConversationSummary[]>([])
-  const friendsRef = useRef<Friendship[]>([])
-  const activeGroupIdRef = useRef<string | null>(null)
-  const groupConversationsRef = useRef<GroupConversationSummary[]>([])
-
-  const [chatSoundEnabled, setChatSoundEnabledState] = useState(loadChatSoundEnabled)
-  // Espelhado em ref porque quem lê é o handler do WebSocket, que vive num
-  // closure de longa duração (mesmo motivo dos outros refs aqui).
+  const activeConversationRef = useRef<ConversationRef | null>(null)
   const chatSoundEnabledRef = useRef(chatSoundEnabled)
+  const handleIncomingRef = useRef<(message: Message) => void>(() => {})
+  const applyMessageUpdateRef = useRef<(message: Message) => void>(() => {})
 
   function setChatSoundEnabled(enabled: boolean) {
     chatSoundEnabledRef.current = enabled
@@ -128,82 +104,63 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     saveChatSoundEnabled(enabled)
   }
 
-  useEffect(() => {
-    activeFriendIdRef.current = activeFriendId
-  }, [activeFriendId])
-
-  useEffect(() => {
-    conversationsRef.current = conversations
-  }, [conversations])
-
-  useEffect(() => {
-    friendsRef.current = friends
-  }, [friends])
-
-  useEffect(() => {
-    activeGroupIdRef.current = activeGroupId
-  }, [activeGroupId])
-
-  useEffect(() => {
-    groupConversationsRef.current = groupConversations
-  }, [groupConversations])
-
   function loadConversations() {
     return api.get<ConversationSummary[]>("/chat/conversations").then((res) => setConversations(res.data))
-  }
-
-  function loadHistory(friendId: string) {
-    return api.get<Message[]>(`/chat/${friendId}/messages`).then((res) => {
-      res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
-      setMessagesByFriend((prev) => ({ ...prev, [friendId]: res.data }))
-    })
-  }
-
-  async function markRead(friendId: string) {
-    // Uma mensagem nova dispara markRead a cada chegada enquanto a conversa
-    // está aberta — sem essa guarda, 5 mensagens em sequência viram 5 POSTs
-    // pro mesmo "já lido".
-    const current = conversationsRef.current.find((c) => c.friendUserId === friendId)
-    if (current && current.unreadCount === 0) return
-    await api.post(`/chat/${friendId}/read`)
-    setConversations((prev) => prev.map((c) => (c.friendUserId === friendId ? { ...c, unreadCount: 0 } : c)))
   }
 
   function loadGroupConversations() {
     return api.get<GroupConversationSummary[]>("/chat/groups").then((res) => setGroupConversations(res.data))
   }
 
-  function loadGroupHistory(groupId: string) {
-    return api.get<Message[]>(`/chat/groups/${groupId}/messages`).then((res) => {
+  function loadHistory(ref: ConversationRef) {
+    return api.get<Message[]>(`${conversationPath(ref)}/messages`).then((res) => {
       res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
-      setMessagesByGroup((prev) => ({ ...prev, [groupId]: res.data }))
+      setMessagesByConversation((prev) => ({ ...prev, [conversationKey(ref)]: res.data }))
     })
   }
 
-  function loadPins(friendId: string) {
-    return api.get<Message[]>(`/chat/${friendId}/pins`).then((res) => {
-      setPinsByConversation((prev) => ({ ...prev, [`f:${friendId}`]: res.data }))
+  function loadPins(ref: ConversationRef) {
+    return api.get<Message[]>(`${conversationPath(ref)}/pins`).then((res) => {
+      setPinsByConversation((prev) => ({ ...prev, [conversationKey(ref)]: res.data }))
     })
   }
 
-  function loadGroupPins(groupId: string) {
-    return api.get<Message[]>(`/chat/groups/${groupId}/pins`).then((res) => {
-      setPinsByConversation((prev) => ({ ...prev, [`g:${groupId}`]: res.data }))
+  function loadGroupMembers(groupId: string) {
+    return api.get<GroupMember[]>(`/chat/groups/${groupId}/members`).then((res) => {
+      setMembersByConversation((prev) => ({ ...prev, [conversationKey({ kind: "group", id: groupId })]: res.data }))
     })
+  }
+
+  async function markRead(ref: ConversationRef) {
+    const unread =
+      ref.kind === "group"
+        ? groupConversations.find((c) => c.groupId === ref.id)?.unreadCount
+        : conversations.find((c) => c.friendUserId === ref.id)?.unreadCount
+    if (unread === 0) return
+    await api.post(`${conversationPath(ref)}/read`)
+    if (ref.kind === "group") {
+      setGroupConversations((prev) => prev.map((c) => (c.groupId === ref.id ? { ...c, unreadCount: 0 } : c)))
+    } else {
+      setConversations((prev) => prev.map((c) => (c.friendUserId === ref.id ? { ...c, unreadCount: 0 } : c)))
+    }
+  }
+
+  function openConversation(ref: ConversationRef) {
+    activeConversationRef.current = ref
+    const loads = [loadHistory(ref), loadPins(ref), markRead(ref)]
+    if (ref.kind === "group") loads.push(loadGroupMembers(ref.id))
+    Promise.all(loads).catch((error) => toast.error(getErrorMessage(error, "Não foi possível abrir a conversa.")))
+  }
+
+  function closeConversation() {
+    activeConversationRef.current = null
   }
 
   function applyMessageUpdate(message: Message) {
-    const replace = (list: Message[] | undefined) => list?.map((m) => (m.id === message.id ? message : m))
-    let key: string
-    if (message.groupId) {
-      const groupId = message.groupId
-      key = `g:${groupId}`
-      setMessagesByGroup((prev) => (prev[groupId] ? { ...prev, [groupId]: replace(prev[groupId])! } : prev))
-    } else {
-      const otherId = message.senderId === user?.id ? message.recipientId! : message.senderId
-      key = `f:${otherId}`
-      setMessagesByFriend((prev) => (prev[otherId] ? { ...prev, [otherId]: replace(prev[otherId])! } : prev))
-    }
+    const key = conversationKey(conversationOf(message, user?.id))
+    setMessagesByConversation((prev) =>
+      prev[key] ? { ...prev, [key]: prev[key].map((m) => (m.id === message.id ? message : m)) } : prev,
+    )
     setPinsByConversation((prev) => {
       const rest = (prev[key] ?? []).filter((m) => m.id !== message.id)
       const next = message.pinnedAt ? [...rest, message] : rest
@@ -223,12 +180,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function loadGroupMembers(groupId: string) {
-    return api.get<GroupMember[]>(`/chat/groups/${groupId}/members`).then((res) => {
-      setGroupMembersById((prev) => ({ ...prev, [groupId]: res.data }))
-    })
-  }
-
   async function createGroup(name: string, memberIds: string[]) {
     const res = await api.post<GroupConversationSummary>("/chat/groups", { name, memberIds })
     await loadGroupConversations()
@@ -240,106 +191,76 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await loadGroupMembers(groupId)
   }
 
-  async function markGroupRead(groupId: string) {
-    const current = groupConversationsRef.current.find((c) => c.groupId === groupId)
-    if (current && current.unreadCount === 0) return
-    await api.post(`/chat/groups/${groupId}/read`)
-    setGroupConversations((prev) => prev.map((c) => (c.groupId === groupId ? { ...c, unreadCount: 0 } : c)))
-  }
-
-  // Toca quando chega mensagem de outra pessoa e ela não está à vista: ou a
-  // conversa aberta é outra, ou a aba está em segundo plano. Sem isso, o
-  // ping tocaria em cima de uma conversa que a pessoa já está lendo.
   function pingIfUnseen(isActiveConversation: boolean) {
     if (!chatSoundEnabledRef.current) return
     if (isActiveConversation && !document.hidden) return
     playMessagePing()
   }
 
-  function handleIncomingGroup(message: Message) {
-    const groupId = message.groupId!
-    const me = user?.id
-
-    if (seenMessageIdsRef.current.has(message.id)) return
-    seenMessageIdsRef.current.add(message.id)
-    setMessagesByGroup((prev) => ({ ...prev, [groupId]: [...(prev[groupId] ?? []), message] }))
-
-    const isOpen = activeGroupIdRef.current === groupId
-    const bumpUnread = message.senderId !== me && !isOpen
-    const preview = message.content ?? "📷 Foto"
-    const groupName = groupConversationsRef.current.find((c) => c.groupId === groupId)?.groupName ?? "Grupo"
-    setGroupConversations((prev) => {
-      const found = prev.find((c) => c.groupId === groupId)
-      const updated: GroupConversationSummary = {
-        groupId,
-        groupName: found?.groupName ?? "Grupo",
-        memberNames: found?.memberNames ?? [],
-        lastMessage: preview,
-        lastMessageAt: message.createdAt,
-        unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
-      }
-      return found ? prev.map((c) => (c.groupId === groupId ? updated : c)) : [...prev, updated]
-    })
-
-    if (message.senderId === me) return
-
-    pingIfUnseen(isOpen)
-
-    if (isOpen) {
-      markGroupRead(groupId)
-      return
-    }
-
-    toast(`${groupName}: ${preview}`)
-  }
-
   function handleIncoming(message: Message) {
-    if (message.groupId) {
-      handleIncomingGroup(message)
-      return
-    }
-
-    const me = user?.id
-    const otherId = message.senderId === me ? message.recipientId! : message.senderId
-
     if (seenMessageIdsRef.current.has(message.id)) return
     seenMessageIdsRef.current.add(message.id)
-    setMessagesByFriend((prev) => ({ ...prev, [otherId]: [...(prev[otherId] ?? []), message] }))
 
-    const isOpen = activeFriendIdRef.current === otherId
+    const me = user?.id
+    const ref = conversationOf(message, me)
+    const key = conversationKey(ref)
+    setMessagesByConversation((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), message] }))
+
+    const isOpen = sameConversation(activeConversationRef.current, ref)
     const bumpUnread = message.senderId !== me && !isOpen
-    const friend = friendsRef.current.find((f) => f.friendUserId === otherId)
-    const friendName =
-      conversationsRef.current.find((c) => c.friendUserId === otherId)?.friendName ?? friend?.friendName ?? "Contato"
     const preview = message.content ?? "📷 Foto"
-    setConversations((prev) => {
-      const found = prev.find((c) => c.friendUserId === otherId)
-      const updated: ConversationSummary = {
-        friendUserId: otherId,
-        friendName: found?.friendName ?? friend?.friendName ?? "Contato",
-        friendTag: found?.friendTag ?? "",
-        friendBio: found?.friendBio ?? friend?.friendBio ?? null,
-        friendAdmin: found?.friendAdmin ?? friend?.friendAdmin ?? false,
-        friendGithubLogin: found?.friendGithubLogin ?? null,
-        friendGithubAvatarUrl: found?.friendGithubAvatarUrl ?? null,
-        lastMessage: preview,
-        lastMessageAt: message.createdAt,
-        unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
-      }
-      return found ? prev.map((c) => (c.friendUserId === otherId ? updated : c)) : [...prev, updated]
-    })
+    const lastMessage = { lastMessage: preview, lastMessageAt: message.createdAt }
+
+    let name: string
+    if (ref.kind === "group") {
+      name = groupConversations.find((c) => c.groupId === ref.id)?.groupName ?? "Grupo"
+      setGroupConversations((prev) => {
+        const found = prev.find((c) => c.groupId === ref.id)
+        const updated: GroupConversationSummary = {
+          groupId: ref.id,
+          groupName: found?.groupName ?? name,
+          memberNames: found?.memberNames ?? [],
+          unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
+          ...lastMessage,
+        }
+        return found ? prev.map((c) => (c.groupId === ref.id ? updated : c)) : [...prev, updated]
+      })
+    } else {
+      const friend = friends.find((f) => f.friendUserId === ref.id)
+      name = conversations.find((c) => c.friendUserId === ref.id)?.friendName ?? friend?.friendName ?? "Contato"
+      setConversations((prev) => {
+        const found = prev.find((c) => c.friendUserId === ref.id)
+        const updated: ConversationSummary = {
+          friendUserId: ref.id,
+          friendName: found?.friendName ?? name,
+          friendTag: found?.friendTag ?? "",
+          friendBio: found?.friendBio ?? friend?.friendBio ?? null,
+          friendAdmin: found?.friendAdmin ?? friend?.friendAdmin ?? false,
+          friendGithubLogin: found?.friendGithubLogin ?? null,
+          friendGithubAvatarUrl: found?.friendGithubAvatarUrl ?? null,
+          unreadCount: (found?.unreadCount ?? 0) + (bumpUnread ? 1 : 0),
+          ...lastMessage,
+        }
+        return found ? prev.map((c) => (c.friendUserId === ref.id ? updated : c)) : [...prev, updated]
+      })
+    }
 
     if (message.senderId === me) return
 
     pingIfUnseen(isOpen)
 
     if (isOpen) {
-      markRead(otherId)
+      void markRead(ref)
       return
     }
 
-    toast(`${friendName}: ${preview}`)
+    toast(`${name}: ${preview}`)
   }
+
+  useEffect(() => {
+    handleIncomingRef.current = handleIncoming
+    applyMessageUpdateRef.current = applyMessageUpdate
+  })
 
   useEffect(() => {
     if (!user) return
@@ -349,10 +270,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     client.onConnect = () => {
       setConnected(true)
       client.subscribe("/user/queue/messages", (frame) => {
-        handleIncoming(JSON.parse(frame.body) as Message)
+        handleIncomingRef.current(JSON.parse(frame.body) as Message)
       })
       client.subscribe("/user/queue/message-updates", (frame) => {
-        applyMessageUpdate(JSON.parse(frame.body) as Message)
+        applyMessageUpdateRef.current(JSON.parse(frame.body) as Message)
       })
       client.subscribe("/user/queue/call", (frame) => {
         const event = JSON.parse(frame.body) as CallEvent
@@ -387,81 +308,47 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function messagesFor(friendId: string) {
-    return messagesByFriend[friendId] ?? []
+  function sendMessage(ref: ConversationRef, content: string, replyToMessageId?: string) {
+    const reply = replyToMessageId ?? null
+    return ref.kind === "group"
+      ? publishStomp("/app/chat.sendGroup", { groupId: ref.id, content, replyToMessageId: reply })
+      : publishStomp("/app/chat.send", { recipientId: ref.id, content, replyToMessageId: reply })
   }
 
-  function sendMessage(friendId: string, content: string, replyToMessageId?: string) {
-    return publishStomp("/app/chat.send", { recipientId: friendId, content, replyToMessageId: replyToMessageId ?? null })
-  }
-
-  async function sendImageMessage(friendId: string, file: File, caption?: string, replyToMessageId?: string) {
+  async function sendImageMessage(ref: ConversationRef, file: File, caption?: string, replyToMessageId?: string) {
     const form = new FormData()
     form.append("file", file)
     if (caption) form.append("caption", caption)
     if (replyToMessageId) form.append("replyToMessageId", replyToMessageId)
-    // Sem atualizar o estado local aqui de propósito — a entrega chega pelo
-    // mesmo handleIncoming via STOMP, igual mensagem de texto, evitando duas
-    // lógicas de shape de mensagem divergentes.
-    await api.post(`/chat/${friendId}/messages/image`, form)
+    await api.post(`${conversationPath(ref)}/messages/image`, form)
   }
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
-
-  function groupMessagesFor(groupId: string) {
-    return messagesByGroup[groupId] ?? []
-  }
-
-  function sendGroupMessage(groupId: string, content: string, replyToMessageId?: string) {
-    return publishStomp("/app/chat.sendGroup", { groupId, content, replyToMessageId: replyToMessageId ?? null })
-  }
-
-  async function sendGroupImageMessage(groupId: string, file: File, caption?: string, replyToMessageId?: string) {
-    const form = new FormData()
-    form.append("file", file)
-    if (caption) form.append("caption", caption)
-    if (replyToMessageId) form.append("replyToMessageId", replyToMessageId)
-    await api.post(`/chat/groups/${groupId}/messages/image`, form)
-  }
-
   const totalGroupUnread = groupConversations.reduce((sum, c) => sum + c.unreadCount, 0)
 
   return (
     <ChatContext.Provider
       value={{
         connected,
-        activeFriendId,
-        setActiveFriendId,
         conversations,
         conversationsLoaded,
         loadConversations,
-        messagesFor,
-        loadHistory,
-        sendMessage,
-        sendImageMessage,
-        markRead,
-        totalUnread,
-        pinsFor: (friendId) => pinsByConversation[`f:${friendId}`] ?? [],
-        loadPins,
-        groupPinsFor: (groupId) => pinsByConversation[`g:${groupId}`] ?? [],
-        loadGroupPins,
-        setMessagePinned,
-
-        activeGroupId,
-        setActiveGroupId,
         groupConversations,
         groupConversationsLoaded,
         loadGroupConversations,
-        groupMembersById,
+        totalUnread,
+        totalGroupUnread,
+        openConversation,
+        closeConversation,
+        messagesFor: (ref) => messagesByConversation[conversationKey(ref)] ?? [],
+        pinsFor: (ref) => pinsByConversation[conversationKey(ref)] ?? [],
+        sendMessage,
+        sendImageMessage,
+        setMessagePinned,
+        membersOf: (groupId) => membersByConversation[conversationKey({ kind: "group", id: groupId })] ?? [],
         loadGroupMembers,
         createGroup,
         addGroupMember,
-        groupMessagesFor,
-        loadGroupHistory,
-        sendGroupMessage,
-        sendGroupImageMessage,
-        markGroupRead,
-        totalGroupUnread,
         chatSoundEnabled,
         setChatSoundEnabled,
         publishStomp,

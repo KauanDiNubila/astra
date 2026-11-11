@@ -1,4 +1,4 @@
-import { befriend, createUser, launch, loginInBrowser, sleep, stompSession } from "./lib.mjs"
+import { api, befriend, createUser, launch, loginInBrowser, sleep, stompSession } from "./lib.mjs"
 
 const APP = process.env.APP ?? "http://localhost:5173"
 let failures = 0
@@ -87,6 +87,61 @@ try {
   check(counted === 6, "6 mensagens em rajada contam 6 não lidas", `(contou ${counted})`)
 } catch (error) {
   check(false, "cenário abortou", error.message.split(String.fromCharCode(10))[0])
+}
+
+try {
+  await page.goto(`${APP}/chat/${beto.id}`)
+  const composer = page.locator("textarea")
+  await composer.fill("oi amigo")
+  await composer.press("Enter")
+  await page.locator(".overlay-scroll p", { hasText: /^oi amigo$/ }).waitFor({ timeout: 5000 })
+  check(true, "a própria mensagem aparece na conversa com o amigo")
+} catch (error) {
+  check(false, "a própria mensagem aparece na conversa com o amigo", error.message.split(String.fromCharCode(10))[0])
+}
+
+try {
+  const created = await api("/chat/groups", ana.token, "POST", { name: "Estudo em grupo", memberIds: [beto.id] })
+  const groupId = created.json.groupId
+  await page.goto(`${APP}/chat`)
+  const item = page.getByRole("link", { name: /Estudo em grupo/ })
+  await item.waitFor()
+  for (let i = 1; i <= 3; i++) betoSocket.send("/app/chat.sendGroup", { groupId, content: `grupo ${i}`, replyToMessageId: null })
+  await item.getByText("grupo 3").waitFor()
+  await sleep(300)
+  const label = await item.getByLabel(/não lida/).getAttribute("aria-label", { timeout: 500 }).catch(() => null)
+  check(label === "3 não lidas", "mensagens de grupo contam como não lidas na lista", `(rótulo: ${label})`)
+
+  await item.click()
+  await page.locator(".overlay-scroll p", { hasText: /^grupo 3$/ }).waitFor({ timeout: 5000 })
+  await sleep(500)
+  const afterOpen = await item.getByLabel(/não lida/).count()
+  check(afterOpen === 0, "abrir o grupo marca como lido")
+  await page.locator(".overlay-scroll").getByText("Beto", { exact: true }).first().waitFor({ timeout: 5000 })
+  check(true, "o nome de quem escreveu aparece nas mensagens do grupo")
+
+  const composer = page.locator("textarea")
+  await composer.fill("oi grupo")
+  await composer.press("Enter")
+  await page.locator(".overlay-scroll p", { hasText: /^oi grupo$/ }).waitFor({ timeout: 5000 })
+  check(true, "a própria mensagem aparece no grupo")
+} catch (error) {
+  check(false, "cenário do grupo", error.message.split(String.fromCharCode(10))[0])
+}
+
+try {
+  const history = await api(`/chat/${beto.id}/messages`, ana.token)
+  const target = history.json.find((m) => m.content === "mensagem 10")
+  await page.goto(`${APP}/chat/${beto.id}`)
+  await page.locator(".overlay-scroll p", { hasText: /^oi amigo$/ }).waitFor({ timeout: 5000 })
+  await api(`/chat/messages/${target.id}/pin`, beto.token, "PUT")
+  await page.getByText("Mensagem fixada").waitFor({ timeout: 5000 })
+  check((await page.getByText("mensagem 10").count()) > 0, "mensagem fixada pelo amigo aparece na barra de fixadas")
+  await api(`/chat/messages/${target.id}/pin`, beto.token, "DELETE")
+  await page.getByText("Mensagem fixada").waitFor({ state: "detached", timeout: 5000 })
+  check(true, "desafixar remove a barra")
+} catch (error) {
+  check(false, "fixadas", error.message.split(String.fromCharCode(10))[0])
 }
 
 betoSocket.close()

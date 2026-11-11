@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent, ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ArrowUp, ChevronLeft, ImagePlus, MessageCircle, Phone, Pin, PinOff, Plus, Reply, Search, Volume2, VolumeX, X } from "lucide-react"
@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { useCall } from "@/context/CallContext"
 import { useChat, useAttachmentUrl } from "@/context/ChatContext"
+import type { ConversationRef } from "@/lib/conversation"
 import { formatRelativeTime } from "@/lib/format"
 import type { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -146,31 +147,24 @@ export function ChatPage() {
   const {
     conversations,
     conversationsLoaded,
+    openConversation,
+    closeConversation,
     messagesFor,
-    loadHistory,
+    pinsFor,
     sendMessage,
     sendImageMessage,
-    markRead,
-    setActiveFriendId,
     groupConversations,
     groupConversationsLoaded,
-    groupMessagesFor,
-    loadGroupHistory,
-    loadGroupMembers,
-    sendGroupMessage,
-    sendGroupImageMessage,
-    markGroupRead,
-    setActiveGroupId,
-    groupMembersById,
+    membersOf,
     chatSoundEnabled,
     setChatSoundEnabled,
     connected,
-    pinsFor,
-    loadPins,
-    groupPinsFor,
-    loadGroupPins,
     setMessagePinned,
   } = useChat()
+  const conversation = useMemo<ConversationRef | null>(
+    () => (groupId ? { kind: "group", id: groupId } : friendId ? { kind: "friend", id: friendId } : null),
+    [friendId, groupId],
+  )
   const { phase: callPhase, startDirectCall, startGroupCall } = useCall()
   const ready = conversationsLoaded && groupConversationsLoaded
   const [draft, setDraft] = useState("")
@@ -209,23 +203,12 @@ export function ChatPage() {
   }, [])
 
   useEffect(() => {
-    setActiveFriendId(isGroup ? null : (friendId ?? null))
-    setActiveGroupId(isGroup ? (groupId ?? null) : null)
     setDraft("")
     setReplyingTo(null)
     setPendingImage(null)
     setPinIndex(0)
-    if (isGroup && groupId) {
-      loadGroupHistory(groupId)
-      loadGroupMembers(groupId)
-      loadGroupPins(groupId)
-      markGroupRead(groupId)
-    } else if (friendId) {
-      loadHistory(friendId)
-      loadPins(friendId)
-      markRead(friendId)
-    }
-    if (friendId || groupId) {
+    if (conversation) openConversation(conversation)
+    if (conversation) {
       // Só anima a entrada ao sair de "nenhuma conversa selecionada" pra uma
       // conversa — trocar entre conversas já abertas não deve reanimar o
       // painel inteiro de novo (fica um "flash" repetindo por cima da
@@ -243,15 +226,12 @@ export function ChatPage() {
     } else {
       hadConversationRef.current = false
     }
-    return () => {
-      setActiveFriendId(null)
-      setActiveGroupId(null)
-    }
+    return closeConversation
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [friendId, groupId])
+  }, [conversation])
 
-  const messages = isGroup ? (groupId ? groupMessagesFor(groupId) : []) : friendId ? messagesFor(friendId) : []
-  const pins = isGroup ? (groupId ? groupPinsFor(groupId) : []) : friendId ? pinsFor(friendId) : []
+  const messages = conversation ? messagesFor(conversation) : []
+  const pins = conversation ? pinsFor(conversation) : []
   const currentPin = pins.length > 0 ? pins[Math.min(pinIndex, pins.length - 1)] : null
   const activeConversationLastMessageAt = isGroup
     ? groupConversations.find((c) => c.groupId === groupId)?.lastMessageAt
@@ -264,7 +244,7 @@ export function ChatPage() {
   // renderizou. É por isso que o grupo continuava abrindo fora do fim mesmo
   // depois de consertar o caso da conversa 1:1: nada reancorava nesse
   // segundo crescimento.
-  const activeGroupMemberCount = groupId ? (groupMembersById[groupId]?.length ?? 0) : 0
+  const activeGroupMemberCount = groupId ? membersOf(groupId).length : 0
 
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -375,15 +355,8 @@ export function ChatPage() {
       return
     }
     if (!draft.trim()) return
-    let sent: boolean
-    if (isGroup && groupId) {
-      sent = sendGroupMessage(groupId, draft.trim(), replyingTo?.id)
-    } else if (friendId) {
-      sent = sendMessage(friendId, draft.trim(), replyingTo?.id)
-    } else {
-      return
-    }
-    if (!sent) {
+    if (!conversation) return
+    if (!sendMessage(conversation, draft.trim(), replyingTo?.id)) {
       toast.error("Sem conexão com o chat. Sua mensagem continua no campo, tente de novo em instantes.")
       return
     }
@@ -430,11 +403,7 @@ export function ChatPage() {
     setSendingImage(true)
     try {
       const caption = draft.trim() || undefined
-      if (isGroup && groupId) {
-        await sendGroupImageMessage(groupId, pendingImage.file, caption, replyingTo?.id)
-      } else if (friendId) {
-        await sendImageMessage(friendId, pendingImage.file, caption, replyingTo?.id)
-      }
+      if (conversation) await sendImageMessage(conversation, pendingImage.file, caption, replyingTo?.id)
       URL.revokeObjectURL(pendingImage.previewUrl)
       setPendingImage(null)
       setDraft("")
@@ -464,7 +433,7 @@ export function ChatPage() {
     : activeFriend
       ? `Escreva para ${activeFriend.friendName.trim().split(/\s+/)[0]}…`
       : "Escreva uma mensagem…"
-  const activeGroupMembers = groupId ? (groupMembersById[groupId] ?? []) : []
+  const activeGroupMembers = groupId ? membersOf(groupId) : []
 
   function memberName(userId: string) {
     return activeGroupMembers.find((m) => m.userId === userId)?.name ?? ""
