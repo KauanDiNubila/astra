@@ -95,3 +95,17 @@ npm run test:rows
 ```
 
 Teste de unidade da `buildMessageRows` (dia novo e agrupamento por pessoa em até 5 minutos). Roda com o Node, sem navegador e sem backend.
+
+## Conferir a chamada
+
+```bash
+npm run test:peers
+```
+
+Teste de unidade da negociação entre os participantes (`PeerMesh`), com uma conexão WebRTC falsa. Roda com o Node, sem navegador e sem backend.
+
+```bash
+npm run test:call
+```
+
+Com o backend e o frontend de desenvolvimento rodando, cria duas contas amigas, uma liga, a outra atende, e confere que as duas passam a receber áudio uma da outra e que desligar encerra dos dois lados. Usa câmera e microfone falsos do Chromium, então não precisa de dispositivo real.
