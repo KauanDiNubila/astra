@@ -17,6 +17,8 @@ import type {
   Message,
 } from "@/lib/types"
 
+const NO_MESSAGES: Message[] = []
+
 const attachmentUrlCache = new Map<string, string>()
 
 export function useAttachmentUrl(messageId: string | null) {
@@ -115,7 +117,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   function loadHistory(ref: ConversationRef) {
     return api.get<Message[]>(`${conversationPath(ref)}/messages`).then((res) => {
       res.data.forEach((m) => seenMessageIdsRef.current.add(m.id))
-      setMessagesByConversation((prev) => ({ ...prev, [conversationKey(ref)]: res.data }))
+      const key = conversationKey(ref)
+      setMessagesByConversation((prev) => {
+        const loaded = new Set(res.data.map((m) => m.id))
+        const arrivedMeanwhile = (prev[key] ?? []).filter((m) => !loaded.has(m.id))
+        if (arrivedMeanwhile.length === 0) return { ...prev, [key]: res.data }
+        const merged = [...res.data, ...arrivedMeanwhile].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        return { ...prev, [key]: merged }
+      })
     })
   }
 
@@ -340,8 +349,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         totalGroupUnread,
         openConversation,
         closeConversation,
-        messagesFor: (ref) => messagesByConversation[conversationKey(ref)] ?? [],
-        pinsFor: (ref) => pinsByConversation[conversationKey(ref)] ?? [],
+        messagesFor: (ref) => messagesByConversation[conversationKey(ref)] ?? NO_MESSAGES,
+        pinsFor: (ref) => pinsByConversation[conversationKey(ref)] ?? NO_MESSAGES,
         sendMessage,
         sendImageMessage,
         setMessagePinned,

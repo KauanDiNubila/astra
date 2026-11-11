@@ -48,3 +48,23 @@ export function formatDaysAgo(iso: string): string {
   if (days < 60) return `há ${Math.floor(days / 7)} semanas`
   return `em ${new Date(iso).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}`
 }
+
+export function messageDayLabel(iso: string): string {
+  const date = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (date.toDateString() === today.toDateString()) return "Hoje"
+  if (date.toDateString() === yesterday.toDateString()) return "Ontem"
+  const label = date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+  })
+  return label.charAt(0).toUpperCase() + label.slice(1).replace(".", "")
+}
+
+export function messageTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+}
