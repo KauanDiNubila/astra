@@ -117,8 +117,11 @@ class PeerLink {
     if (this.ignoreOffer) return
 
     this.settingRemoteAnswer = description.type === "answer"
-    await this.pc.setRemoteDescription(description)
-    this.settingRemoteAnswer = false
+    try {
+      await this.pc.setRemoteDescription(description)
+    } finally {
+      this.settingRemoteAnswer = false
+    }
 
     const pending = this.pendingCandidates
     this.pendingCandidates = []
