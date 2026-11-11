@@ -84,4 +84,14 @@ Com o frontend em `http://localhost:5173` (ou `APP=...`), cria duas contas amiga
 - seis mensagens recebidas em sequência contam seis não lidas na lista;
 - a própria mensagem aparece na conversa com o amigo e no grupo;
 - mensagens de grupo contam como não lidas e abrir o grupo marca como lido;
-- uma mensagem que chega enquanto o histórico ainda carrega não some quando ele termina.
+- uma mensagem que chega enquanto o histórico ainda carrega não some quando ele termina;
+- responder uma mensagem mostra a barra com o nome de quem escreveu, a resposta traz a mensagem citada e a barra fecha;
+- uma imagem anexada é enviada e aparece na conversa.
+
+## Conferir o agrupamento das mensagens
+
+```bash
+npm run test:rows
+```
+
+Teste de unidade da `buildMessageRows` (dia novo e agrupamento por pessoa em até 5 minutos). Roda com o Node, sem navegador e sem backend.

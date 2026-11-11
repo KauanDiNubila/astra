@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "perf:compare": "node perf/compare.mjs",
     "test:cache": "node perf/cache-rules.mjs",
-    "test:chat": "node perf/chat-bugs.mjs"
+    "test:chat": "node perf/chat-bugs.mjs",
+    "test:rows": "node perf/message-rows.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
