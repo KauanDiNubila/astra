@@ -1,6 +1,7 @@
 package com.astra.user.adapter.in.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -89,6 +90,15 @@ class DesktopLoginIntegrationTest {
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
         assertThat(session).isNotNull();
         assertThat(session.getAttribute(OAuthAuthenticationSuccessHandler.DESKTOP_CHALLENGE)).isEqualTo(pkce.challenge());
+    }
+
+    @Test
+    void paginaDeRetornoRecusaCodigoComCaracteresQuePoderiamQuebrarOHtml() {
+        for (String code : new String[] {"", "abc\"</script><script>x", "a b", "a?b=c", "a'b"}) {
+            assertThatThrownBy(() -> OAuthAuthenticationSuccessHandler.renderDesktopReturnPage(code))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        assertThat(OAuthAuthenticationSuccessHandler.renderDesktopReturnPage("Ab3_-x9")).contains("code=Ab3_-x9");
     }
 
     @Test

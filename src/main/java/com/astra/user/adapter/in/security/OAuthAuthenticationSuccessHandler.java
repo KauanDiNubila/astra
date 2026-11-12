@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -21,6 +22,7 @@ class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessHandler 
 
     static final String DESKTOP_CHALLENGE = "astraDesktopChallenge";
     private static final String DESKTOP_RETURN_PAGE = loadDesktopReturnPage();
+    private static final Pattern DESKTOP_CODE_FORMAT = Pattern.compile("[A-Za-z0-9_-]+");
 
     private final IssueRefreshTokenUseCase issueRefreshTokenUseCase;
     private final CreateDesktopLoginCodeUseCase createDesktopLoginCodeUseCase;
@@ -64,7 +66,14 @@ class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessHandler 
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("text/html;charset=UTF-8");
         response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write(DESKTOP_RETURN_PAGE.replace("{{code}}", code));
+        response.getWriter().write(renderDesktopReturnPage(code));
+    }
+
+    static String renderDesktopReturnPage(String code) {
+        if (!DESKTOP_CODE_FORMAT.matcher(code).matches()) {
+            throw new IllegalArgumentException("Unexpected desktop login code format");
+        }
+        return DESKTOP_RETURN_PAGE.replace("{{code}}", code);
     }
 
     private static String loadDesktopReturnPage() {
