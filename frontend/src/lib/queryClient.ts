@@ -1,6 +1,7 @@
 import { QueryClient, queryOptions } from "@tanstack/react-query"
 import type { QueryFunctionContext } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { retryDelay, shouldRetry } from "@/lib/queryRetry"
 import type { Dashboard } from "@/lib/types"
 
 export const queryClient = new QueryClient({
@@ -10,7 +11,8 @@ export const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      retry: 1,
+      retry: shouldRetry,
+      retryDelay,
     },
   },
 })
