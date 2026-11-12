@@ -1,8 +1,8 @@
-import { QueryClient, queryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, QueryClient, queryOptions } from "@tanstack/react-query"
 import type { QueryFunctionContext } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { retryDelay, shouldRetry } from "@/lib/queryRetry"
-import type { Dashboard } from "@/lib/types"
+import type { Dashboard, Session } from "@/lib/types"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +40,16 @@ export function fetchJson<T>(url: string, params?: Record<string, unknown>) {
 export const dashboardQuery = queryOptions({
   queryKey: queryKeys.dashboard,
   queryFn: fetchJson<Dashboard>("/dashboard"),
+})
+
+const SESSIONS_PAGE_SIZE = 30
+
+export const sessionsQuery = infiniteQueryOptions({
+  queryKey: queryKeys.sessions,
+  queryFn: ({ pageParam, signal }) =>
+    api.get<Session[]>("/sessions", { signal, params: { page: pageParam, size: SESSIONS_PAGE_SIZE } }).then((res) => res.data),
+  initialPageParam: 0,
+  getNextPageParam: (lastPage, allPages) => (lastPage.length === SESSIONS_PAGE_SIZE ? allPages.length : undefined),
 })
 
 function invalidate(...keys: readonly (readonly unknown[])[]) {

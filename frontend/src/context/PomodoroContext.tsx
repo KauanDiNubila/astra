@@ -10,6 +10,7 @@ import {
   invalidateStudyStats,
   queryClient,
   queryKeys,
+  sessionsQuery,
 } from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
@@ -18,6 +19,8 @@ import type { PomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, CourseDetail, CourseSummary } from "@/lib/types"
 
 export type Mode = "focus" | "break"
+
+const SESSIONS_PREFETCH_STALE_MS = 30_000
 
 const NO_CATEGORIES: Category[] = []
 const NO_COURSES: CourseSummary[] = []
@@ -314,7 +317,10 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   function handlePrimaryClick() {
     const startingUp = !running
     toggleRunning()
-    if (startingUp) setFocusMode(true)
+    if (startingUp) {
+      setFocusMode(true)
+      void queryClient.prefetchInfiniteQuery({ ...sessionsQuery, pages: 1, staleTime: SESSIONS_PREFETCH_STALE_MS })
+    }
   }
 
   function skipBreak() {

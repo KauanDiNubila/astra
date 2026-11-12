@@ -6,7 +6,7 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import type { InfiniteData } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api } from "@/lib/api"
-import { invalidateStudyStats, queryClient, queryKeys } from "@/lib/queryClient"
+import { invalidateStudyStats, queryClient, queryKeys, sessionsQuery } from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
@@ -23,8 +23,6 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
-
-const PAGE_SIZE = 30
 
 function combineDateWithNow(date: Date) {
   const now = new Date()
@@ -91,20 +89,14 @@ export function SessionsPage() {
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
   const confirmSessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const sessionsQuery = useInfiniteQuery({
-    queryKey: queryKeys.sessions,
-    queryFn: ({ pageParam, signal }) =>
-      api.get<Session[]>("/sessions", { signal, params: { page: pageParam, size: PAGE_SIZE } }).then((res) => res.data),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => (lastPage.length === PAGE_SIZE ? allPages.length : undefined),
-  })
+  const sessionsList = useInfiniteQuery(sessionsQuery)
   const sessions = useMemo(() => {
     const seen = new Set<string>()
-    return (sessionsQuery.data?.pages ?? []).flat().filter((session) => !seen.has(session.id) && seen.add(session.id))
-  }, [sessionsQuery.data])
-  const loading = sessionsQuery.isPending && !sessionsQuery.isError
-  const hasMore = sessionsQuery.hasNextPage
-  const loadingMore = sessionsQuery.isFetchingNextPage
+    return (sessionsList.data?.pages ?? []).flat().filter((session) => !seen.has(session.id) && seen.add(session.id))
+  }, [sessionsList.data])
+  const loading = sessionsList.isPending && !sessionsList.isError
+  const hasMore = sessionsList.hasNextPage
+  const loadingMore = sessionsList.isFetchingNextPage
 
   function updateSessions(update: (sessions: Session[]) => Session[]) {
     queryClient.setQueryData<InfiniteData<Session[], number>>(queryKeys.sessions, (data) =>
@@ -113,7 +105,7 @@ export function SessionsPage() {
   }
 
   function loadMoreSessions() {
-    sessionsQuery.fetchNextPage().then((result) => {
+    sessionsList.fetchNextPage().then((result) => {
       if (result.isError) toast.error("Não foi possível carregar mais sessões.")
     })
   }
