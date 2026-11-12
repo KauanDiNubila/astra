@@ -52,6 +52,13 @@ export const sessionsQuery = infiniteQueryOptions({
   getNextPageParam: (lastPage, allPages) => (lastPage.length === SESSIONS_PAGE_SIZE ? allPages.length : undefined),
 })
 
+const FOCUS_PREFETCH_STALE_MS = 30_000
+
+export function warmFocusData() {
+  void queryClient.prefetchQuery(dashboardQuery)
+  void queryClient.prefetchInfiniteQuery({ ...sessionsQuery, pages: 1, staleTime: FOCUS_PREFETCH_STALE_MS })
+}
+
 function invalidate(...keys: readonly (readonly unknown[])[]) {
   return Promise.all(
     keys.map((queryKey) => queryClient.invalidateQueries({ queryKey, refetchType: "all" })),

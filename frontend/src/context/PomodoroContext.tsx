@@ -6,11 +6,9 @@ import {
   fetchJson,
   invalidateCategories,
   invalidateCourses,
-  dashboardQuery,
   invalidateStudyStats,
-  queryClient,
   queryKeys,
-  sessionsQuery,
+  warmFocusData,
 } from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
@@ -19,8 +17,6 @@ import type { PomodoroSettings } from "@/lib/pomodoroSettings"
 import type { Category, CourseDetail, CourseSummary } from "@/lib/types"
 
 export type Mode = "focus" | "break"
-
-const SESSIONS_PREFETCH_STALE_MS = 30_000
 
 const NO_CATEGORIES: Category[] = []
 const NO_COURSES: CourseSummary[] = []
@@ -126,7 +122,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (focusMode) void queryClient.prefetchQuery(dashboardQuery)
+    if (focusMode) warmFocusData()
   }, [focusMode])
 
   const categoriesQuery = useQuery({ queryKey: queryKeys.categories, queryFn: fetchJson<Category[]>("/categories") })
@@ -317,10 +313,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   function handlePrimaryClick() {
     const startingUp = !running
     toggleRunning()
-    if (startingUp) {
-      setFocusMode(true)
-      void queryClient.prefetchInfiniteQuery({ ...sessionsQuery, pages: 1, staleTime: SESSIONS_PREFETCH_STALE_MS })
-    }
+    if (startingUp) setFocusMode(true)
   }
 
   function skipBreak() {
