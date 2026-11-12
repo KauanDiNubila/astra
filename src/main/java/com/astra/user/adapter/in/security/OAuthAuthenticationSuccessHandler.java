@@ -7,6 +7,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -16,6 +21,8 @@ import org.springframework.stereotype.Component;
 class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     static final String DESKTOP_CHALLENGE = "astraDesktopChallenge";
+    private static final String DESKTOP_RETURN_PAGE = loadDesktopReturnPage();
+    private static final Pattern DESKTOP_CODE_FORMAT = Pattern.compile("[A-Za-z0-9_-]+");
 
     private final IssueRefreshTokenUseCase issueRefreshTokenUseCase;
     private final CreateDesktopLoginCodeUseCase createDesktopLoginCodeUseCase;
@@ -56,17 +63,24 @@ class OAuthAuthenticationSuccessHandler implements AuthenticationSuccessHandler 
     }
 
     private void writeDesktopReturnPage(HttpServletResponse response, String code) throws IOException {
-        String link = "astra://auth?code=" + code;
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("text/html;charset=UTF-8");
         response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write("<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
-                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Astra</title></head>"
-                + "<body style=\"margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0a0a;"
-                + "color:#fafafa;font-family:system-ui,sans-serif;text-align:center\"><main>"
-                + "<h1>Login concluído</h1><p>Voltando para o Astra…</p>"
-                + "<p><a style=\"color:#fafafa\" href=\"" + link + "\">Abrir o Astra</a></p>"
-                + "<p style=\"opacity:.6\">Você já pode fechar esta aba.</p></main>"
-                + "<script>location.href=\"" + link + "\"</script></body></html>");
+        response.getWriter().write(renderDesktopReturnPage(code));
+    }
+
+    static String renderDesktopReturnPage(String code) {
+        if (!DESKTOP_CODE_FORMAT.matcher(code).matches()) {
+            throw new IllegalArgumentException("Unexpected desktop login code format");
+        }
+        return DESKTOP_RETURN_PAGE.replace("{{code}}", code);
+    }
+
+    private static String loadDesktopReturnPage() {
+        try (InputStream page = OAuthAuthenticationSuccessHandler.class.getResourceAsStream("/desktop-login-done.html")) {
+            return new String(Objects.requireNonNull(page).readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

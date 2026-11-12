@@ -1,6 +1,7 @@
 package com.astra.user.adapter.in.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -92,6 +93,15 @@ class DesktopLoginIntegrationTest {
     }
 
     @Test
+    void paginaDeRetornoRecusaCodigoComCaracteresQuePoderiamQuebrarOHtml() {
+        for (String code : new String[] {"", "abc\"</script><script>x", "a b", "a?b=c", "a'b"}) {
+            assertThatThrownBy(() -> OAuthAuthenticationSuccessHandler.renderDesktopReturnPage(code))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        assertThat(OAuthAuthenticationSuccessHandler.renderDesktopReturnPage("Ab3_-x9")).contains("code=Ab3_-x9");
+    }
+
+    @Test
     void iniciarLoginRecusaProvedorEDesafioInvalidos() throws Exception {
         Pkce pkce = newPkce();
 
@@ -120,6 +130,9 @@ class DesktopLoginIntegrationTest {
         Matcher matcher = CODE_IN_PAGE.matcher(response.getContentAsString());
         assertThat(matcher.find()).isTrue();
         String code = matcher.group(1);
+        assertThat(response.getContentAsString())
+                .contains("Login concluído", "Abrir o Astra", "location.href=\"astra://auth?code=" + code + "\"")
+                .doesNotContain("{{code}}");
 
         mockMvc.perform(post("/auth/desktop/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
