@@ -14,7 +14,8 @@
     "test:rows": "node perf/message-rows.mjs",
     "test:peers": "node perf/call-peers.mjs",
     "test:callview": "node perf/call-view.mjs",
-    "test:call": "node perf/call-smoke.mjs"
+    "test:call": "node perf/call-smoke.mjs",
+    "test:retry": "node perf/query-retry.mjs && node perf/network-retry.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
