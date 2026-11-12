@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowUpRight, Lock, RefreshCw } from "lucide-react"
 import { motion } from "motion/react"
@@ -39,6 +39,7 @@ export function GitHubInsightsPage() {
   })
   const activity = activityQuery.data ?? null
   const insights = insightsQuery.data ?? null
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [insights])
   const loading = connected && ((activityQuery.isPending && !activityQuery.isError) || (insightsQuery.isPending && !insightsQuery.isError))
 
   if (statusLoading || loading) {
@@ -78,8 +79,8 @@ export function GitHubInsightsPage() {
     { label: "Issues resolvidas", value: selected?.issueClosedCount ?? 0, hint: null },
     { label: "Repositórios ativos", value: selected?.activeRepoCount ?? 0, hint: null },
   ]
-  const range = chartRange(period, insights?.series ?? [], new Date().toISOString().slice(0, 10))
-  const contributions = range.buckets.reduce((sum, b) => sum + b.count, 0)
+  const range = period === "TODAY" ? null : chartRange(period, insights?.series ?? [], today)
+  const contributions = range?.buckets.reduce((sum, b) => sum + b.count, 0) ?? 0
 
   return (
     <div className="flex flex-col gap-8">
@@ -140,16 +141,18 @@ export function GitHubInsightsPage() {
         </motion.div>
       </div>
 
-      <section className="flex flex-col gap-5 rounded-2xl border p-5 sm:p-6">
-        <div>
-          <h2 className="text-sm font-medium">Atividade</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-            Últimos {range.days} dias{range.unit === "day" ? "" : range.unit === "week" ? ", por semana" : ", por mês"} · {contributions}{" "}
-            {contributions === 1 ? "contribuição" : "contribuições"}
-          </p>
-        </div>
-        <GitHubCommitChart key={period} buckets={range.buckets} unit={range.unit} />
-      </section>
+      {range && (
+        <section className="flex flex-col gap-5 rounded-2xl border p-5 sm:p-6">
+          <div>
+            <h2 className="text-sm font-medium">Atividade</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+              Últimos {range.days} dias{range.unit === "day" ? "" : range.unit === "week" ? ", por semana" : ", por mês"} · {contributions}{" "}
+              {contributions === 1 ? "contribuição" : "contribuições"}
+            </p>
+          </div>
+          <GitHubCommitChart key={period} buckets={range.buckets} unit={range.unit} />
+        </section>
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-5 rounded-2xl border p-5 sm:p-6">

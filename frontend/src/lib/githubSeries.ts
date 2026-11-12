@@ -8,8 +8,9 @@ export type ChartRange = { days: number; unit: BucketUnit; buckets: ChartBucket[
 
 const DAY_MS = 86_400_000
 
-const RANGES: Record<ActivityPeriod, { days: number; unit: BucketUnit }> = {
-  TODAY: { days: 7, unit: "day" },
+export type ChartPeriod = Exclude<ActivityPeriod, "TODAY">
+
+const RANGES: Record<ChartPeriod, { days: number; unit: BucketUnit }> = {
   WEEK: { days: 7, unit: "day" },
   MONTH: { days: 30, unit: "day" },
   QUARTER: { days: 90, unit: "week" },
@@ -25,7 +26,7 @@ function toKey(ms: number) {
   return new Date(ms).toISOString().slice(0, 10)
 }
 
-export function chartRange(period: ActivityPeriod, series: GitHubDailyPoint[], today: string): ChartRange {
+export function chartRange(period: ChartPeriod, series: GitHubDailyPoint[], today: string): ChartRange {
   const { days, unit } = RANGES[period]
   const counts = new Map(series.map((point) => [point.date, point.contributionCount]))
   const end = toMs(today)

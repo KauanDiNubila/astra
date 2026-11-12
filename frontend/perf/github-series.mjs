@@ -30,11 +30,6 @@ const total = (range) => range.buckets.reduce((sum, b) => sum + b.count, 0)
 }
 
 {
-  const range = chartRange("TODAY", year, TODAY)
-  assert.equal(range.buckets.length, 7)
-}
-
-{
   const range = chartRange("QUARTER", year, TODAY)
   assert.equal(range.unit, "week")
   assert.equal(range.buckets.length, 13)
