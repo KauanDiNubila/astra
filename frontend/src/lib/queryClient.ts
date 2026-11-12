@@ -1,8 +1,8 @@
-import { QueryClient, queryOptions } from "@tanstack/react-query"
+import { infiniteQueryOptions, QueryClient, queryOptions } from "@tanstack/react-query"
 import type { QueryFunctionContext } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { retryDelay, shouldRetry } from "@/lib/queryRetry"
-import type { Dashboard } from "@/lib/types"
+import type { Dashboard, Session } from "@/lib/types"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +41,23 @@ export const dashboardQuery = queryOptions({
   queryKey: queryKeys.dashboard,
   queryFn: fetchJson<Dashboard>("/dashboard"),
 })
+
+const SESSIONS_PAGE_SIZE = 30
+
+export const sessionsQuery = infiniteQueryOptions({
+  queryKey: queryKeys.sessions,
+  queryFn: ({ pageParam, signal }) =>
+    api.get<Session[]>("/sessions", { signal, params: { page: pageParam, size: SESSIONS_PAGE_SIZE } }).then((res) => res.data),
+  initialPageParam: 0,
+  getNextPageParam: (lastPage, allPages) => (lastPage.length === SESSIONS_PAGE_SIZE ? allPages.length : undefined),
+})
+
+const FOCUS_PREFETCH_STALE_MS = 30_000
+
+export function warmFocusData() {
+  void queryClient.prefetchQuery(dashboardQuery)
+  void queryClient.prefetchInfiniteQuery({ ...sessionsQuery, pages: 1, staleTime: FOCUS_PREFETCH_STALE_MS })
+}
 
 function invalidate(...keys: readonly (readonly unknown[])[]) {
   return Promise.all(

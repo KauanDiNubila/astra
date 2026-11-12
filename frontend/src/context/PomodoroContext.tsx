@@ -6,10 +6,9 @@ import {
   fetchJson,
   invalidateCategories,
   invalidateCourses,
-  dashboardQuery,
   invalidateStudyStats,
-  queryClient,
   queryKeys,
+  warmFocusData,
 } from "@/lib/queryClient"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
@@ -123,7 +122,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (focusMode) void queryClient.prefetchQuery(dashboardQuery)
+    if (focusMode) warmFocusData()
   }, [focusMode])
 
   const categoriesQuery = useQuery({ queryKey: queryKeys.categories, queryFn: fetchJson<Category[]>("/categories") })
