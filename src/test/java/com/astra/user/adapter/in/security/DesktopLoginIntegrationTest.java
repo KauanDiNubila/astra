@@ -120,6 +120,9 @@ class DesktopLoginIntegrationTest {
         Matcher matcher = CODE_IN_PAGE.matcher(response.getContentAsString());
         assertThat(matcher.find()).isTrue();
         String code = matcher.group(1);
+        assertThat(response.getContentAsString())
+                .contains("Login concluído", "Abrir o Astra", "location.href=\"astra://auth?code=" + code + "\"")
+                .doesNotContain("{{code}}");
 
         mockMvc.perform(post("/auth/desktop/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
