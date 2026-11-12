@@ -1,54 +1,73 @@
 import { useReducedMotion } from "motion/react"
-import { Bar, BarChart, XAxis } from "recharts"
-import type { GitHubDailyPoint } from "@/lib/types"
+import { Bar, BarChart, Cell, CartesianGrid, XAxis } from "recharts"
+import type { BucketUnit, ChartBucket } from "@/lib/githubSeries"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 
-function formatShortDate(dayKey: string): string {
+const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+
+function shortDate(dayKey: string) {
   const [, month, day] = dayKey.split("-")
   return `${day}/${month}`
 }
 
+function axisLabel(bucket: ChartBucket, unit: BucketUnit, currentYear: string) {
+  if (unit !== "month") return shortDate(bucket.from)
+  const [year, month] = bucket.to.split("-")
+  const name = MONTHS[Number(month) - 1]
+  return year === currentYear ? name : `${name}/${year.slice(2)}`
+}
+
+function tooltipLabel(bucket: ChartBucket, unit: BucketUnit) {
+  if (unit === "day" || bucket.from === bucket.to) return shortDate(bucket.from)
+  return `${shortDate(bucket.from)} – ${shortDate(bucket.to)}`
+}
+
 const chartConfig = {
-  contributionCount: {
+  count: {
     label: "Atividade",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig
 
-export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
+export function GitHubCommitChart({ buckets, unit }: { buckets: ChartBucket[]; unit: BucketUnit }) {
   const reducedMotion = useReducedMotion()
-  const hasData = data.some((p) => p.contributionCount > 0)
+  const currentYear = buckets.at(-1)?.to.slice(0, 4) ?? ""
+  const data = buckets.map((bucket) => ({
+    ...bucket,
+    label: axisLabel(bucket, unit, currentYear),
+    tooltip: tooltipLabel(bucket, unit),
+  }))
+  const hasData = data.some((p) => p.count > 0)
 
   if (!hasData) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
         Sem atividade nesse período.
       </div>
     )
   }
 
-  const tickIndexes = data.length > 1 ? [0, Math.floor((data.length - 1) / 2), data.length - 1] : [0]
-  const ticks = tickIndexes.map((i) => data[i].date)
+  const lastIndex = data.length - 1
 
   return (
-    <ChartContainer config={chartConfig} className="h-[200px] w-full">
-      <BarChart data={data} margin={{ left: 14, right: 14, top: 8, bottom: 0 }} barCategoryGap="18%">
+    <ChartContainer config={chartConfig} className="h-[220px] w-full">
+      <BarChart data={data} margin={{ left: 4, right: 4, top: 8, bottom: 0 }} barCategoryGap={unit === "day" && data.length > 14 ? "22%" : "32%"}>
+        <CartesianGrid vertical={false} strokeDasharray="3 4" stroke="var(--border)" />
         <XAxis
-          dataKey="date"
+          dataKey="label"
           tickLine={false}
           axisLine={false}
-          ticks={ticks}
-          interval={0}
-          tickFormatter={formatShortDate}
-          tickMargin={8}
-          fontSize={10}
+          interval={unit === "day" && data.length > 14 ? "preserveStartEnd" : 0}
+          minTickGap={18}
+          tickMargin={10}
+          fontSize={11}
         />
         <ChartTooltip
-          cursor={false}
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
           content={
             <ChartTooltipContent
               hideIndicator
-              labelFormatter={(value) => formatShortDate(value as string)}
+              labelFormatter={(_, payload) => payload?.[0]?.payload.tooltip}
               formatter={(value) => (
                 <span className="font-medium text-foreground tabular-nums">
                   {value as number} {(value as number) === 1 ? "contribuição" : "contribuições"}
@@ -58,18 +77,24 @@ export function GitHubCommitChart({ data }: { data: GitHubDailyPoint[] }) {
           }
         />
         <Bar
-          dataKey="contributionCount"
+          dataKey="count"
           name="Atividade"
-          fill="var(--color-contributionCount)"
-          radius={[3, 3, 1, 1]}
-          maxBarSize={22}
-          activeBar={{ fill: "var(--color-contributionCount)", fillOpacity: 1, stroke: "none" }}
-          fillOpacity={0.7}
+          radius={[4, 4, 1, 1]}
+          maxBarSize={28}
+          minPointSize={2}
           isAnimationActive={!reducedMotion}
-          animationBegin={250}
-          animationDuration={900}
+          animationBegin={0}
+          animationDuration={600}
           animationEasing="ease-out"
-        />
+        >
+          {data.map((bucket, index) => (
+            <Cell
+              key={bucket.from}
+              fill="var(--color-count)"
+              fillOpacity={index === lastIndex ? 1 : bucket.count === 0 ? 0.2 : 0.6}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ChartContainer>
   )
