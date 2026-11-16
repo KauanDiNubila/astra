@@ -2,13 +2,18 @@ import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { motion, useReducedMotion } from "motion/react"
-import { fetchJson, invalidateGoals, queryKeys } from "@/lib/queryClient"
+import {
+  byCategoryQuery,
+  dashboardQuery,
+  githubInsightsQuery,
+  heatmapQuery,
+  invalidateGoals,
+} from "@/lib/queryClient"
 import { useGitHub } from "@/context/GitHubContext"
 import { usePomodoro } from "@/context/PomodoroContext"
 import { formatMinutes } from "@/lib/format"
 import { dayKey } from "@/lib/studyStats"
 import { enterAt } from "@/lib/utils"
-import type { Dashboard, DailyMinutes, CategoryMinutes, GitHubDailyPoint } from "@/lib/types"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { GitHubActivityCard } from "@/components/GitHubActivityCard"
 import { Heatmap } from "@/components/Heatmap"
@@ -54,28 +59,20 @@ export function DashboardPage() {
   const [categoryPeriod, setCategoryPeriod] = useState<CategoryPeriodDays>(30)
   const [editGoalsOpen, setEditGoalsOpen] = useState(false)
 
-  const dashboardQuery = useQuery({ queryKey: queryKeys.dashboard, queryFn: fetchJson<Dashboard>("/dashboard") })
-  const heatmapQuery = useQuery({ queryKey: queryKeys.heatmap, queryFn: fetchJson<DailyMinutes[]>("/heatmap") })
-  const githubQuery = useQuery({
-    queryKey: queryKeys.githubInsights,
-    queryFn: fetchJson<{ series: GitHubDailyPoint[] }>("/github/insights"),
-    enabled: !!githubStatus?.connected,
-  })
-  const categoryQuery = useQuery({
-    queryKey: queryKeys.byCategory(categoryPeriod),
-    queryFn: fetchJson<CategoryMinutes[]>("/dashboard/by-category", { days: categoryPeriod }),
-    placeholderData: keepPreviousData,
-  })
+  const dashboardResult = useQuery(dashboardQuery)
+  const heatmapResult = useQuery(heatmapQuery)
+  const githubResult = useQuery({ ...githubInsightsQuery, enabled: !!githubStatus?.connected })
+  const categoryResult = useQuery({ ...byCategoryQuery(categoryPeriod), placeholderData: keepPreviousData })
 
-  const data = dashboardQuery.data ?? null
-  const heatmap = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
+  const data = dashboardResult.data ?? null
+  const heatmap = useMemo(() => heatmapResult.data ?? [], [heatmapResult.data])
   const githubHeatmap = useMemo(
-    () => (githubStatus?.connected ? (githubQuery.data?.series ?? []) : []),
-    [githubStatus?.connected, githubQuery.data],
+    () => (githubStatus?.connected ? (githubResult.data?.series ?? []) : []),
+    [githubStatus?.connected, githubResult.data],
   )
-  const categoryMinutes = useMemo(() => categoryQuery.data ?? [], [categoryQuery.data])
-  const loading = dashboardQuery.isPending || heatmapQuery.isPending
-  const error = (dashboardQuery.isError && !dashboardQuery.data) || (heatmapQuery.isError && !heatmapQuery.data)
+  const categoryMinutes = useMemo(() => categoryResult.data ?? [], [categoryResult.data])
+  const loading = dashboardResult.isPending || heatmapResult.isPending
+  const error = (dashboardResult.isError && !dashboardResult.data) || (heatmapResult.isError && !heatmapResult.data)
 
   const trendData = useMemo(() => {
     const byDay = new Map(heatmap.map((d) => [d.day, d.minutes]))

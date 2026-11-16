@@ -6,9 +6,9 @@ import { useGitHub } from "@/context/GitHubContext"
 import { useCountUp } from "@/hooks/use-count-up"
 import { formatRelativeTime } from "@/lib/format"
 import { chartRange } from "@/lib/githubSeries"
-import { fetchJson, queryKeys } from "@/lib/queryClient"
+import { githubActivityQuery, githubInsightsQuery } from "@/lib/queryClient"
 import { gridItem, gridStagger } from "@/lib/utils"
-import type { ActivityPeriod, GitHubActivityResponse, GitHubInsightsResponse } from "@/lib/types"
+import type { ActivityPeriod } from "@/lib/types"
 import { StatGridSkeleton } from "@/components/StatGridSkeleton"
 import { GitHubCommitChart } from "@/components/GitHubCommitChart"
 import { PillToggleButton } from "@/components/PillToggleButton"
@@ -27,16 +27,8 @@ export function GitHubInsightsPage() {
   const { status, loading: statusLoading, syncing, connect, sync } = useGitHub()
   const [period, setPeriod] = useState<ActivityPeriod>("MONTH")
   const connected = !!status?.connected
-  const activityQuery = useQuery({
-    queryKey: queryKeys.githubActivity,
-    queryFn: fetchJson<GitHubActivityResponse>("/github/activity"),
-    enabled: connected,
-  })
-  const insightsQuery = useQuery({
-    queryKey: queryKeys.githubInsights,
-    queryFn: fetchJson<GitHubInsightsResponse>("/github/insights"),
-    enabled: connected,
-  })
+  const activityQuery = useQuery({ ...githubActivityQuery, enabled: connected })
+  const insightsQuery = useQuery({ ...githubInsightsQuery, enabled: connected })
   const activity = activityQuery.data ?? null
   const insights = insightsQuery.data ?? null
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [insights])

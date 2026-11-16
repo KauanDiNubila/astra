@@ -3,10 +3,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { RefreshCw } from "lucide-react"
 import { motion } from "motion/react"
-import { fetchJson, queryKeys } from "@/lib/queryClient"
+import { rankingQuery } from "@/lib/queryClient"
 import { useAuth } from "@/context/AuthContext"
 import { formatMinutes } from "@/lib/format"
-import type { RankingEntry } from "@/lib/types"
 import { AdminBadge } from "@/components/AdminBadge"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { PillToggleButton } from "@/components/PillToggleButton"
@@ -99,11 +98,7 @@ export function RankingPage() {
   const { user } = useAuth()
   const [period, setPeriod] = useState<Period>("DAILY")
   const [scope, setScope] = useState<Scope>("FRIENDS")
-  const query = useQuery({
-    queryKey: queryKeys.ranking(period, scope),
-    queryFn: fetchJson<RankingEntry[]>("/ranking", { period, scope }),
-    placeholderData: keepPreviousData,
-  })
+  const query = useQuery({ ...rankingQuery(period, scope), placeholderData: keepPreviousData })
   const [shownData, setShownData] = useState(query.data)
   const [renderKey, setRenderKey] = useState(0)
   if (query.data !== shownData) {
