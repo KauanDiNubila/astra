@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useChat } from "@/context/ChatContext"
 import { useTheme } from "@/context/ThemeContext"
 import { baseURL } from "@/lib/api"
+import { useRouteIntent } from "@/hooks/useRouteWarmup"
 import { isLinkActive, navGroupsFor } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -139,6 +140,7 @@ export function AppSidebar() {
   const totalUnread = totalDmUnread + totalGroupUnread
   const { pathname } = useLocation()
   const visibleGroups = navGroupsFor(user?.role)
+  const intent = useRouteIntent()
   const { isMobile, state } = useSidebar()
 
   useEffect(() => {
@@ -192,7 +194,7 @@ export function AppSidebar() {
                       isActive={active}
                       className="relative z-10 data-active:bg-transparent"
                     >
-                      <NavLink to={link.to} end={link.end}>
+                      <NavLink to={link.to} end={link.end} {...intent(link.to)}>
                         <link.icon />
                         <span>{link.label}</span>
                         {link.to === "/chat" && totalUnread > 0 && (

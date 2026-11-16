@@ -8,8 +8,8 @@ import {
   invalidateCourses,
   invalidateStudyStats,
   queryKeys,
-  warmFocusData,
 } from "@/lib/queryClient"
+import { warmFocusData } from "@/lib/routeWarmup"
 import { loadPomodoroSettings, savePomodoroSettings } from "@/lib/pomodoroSettings"
 import { loadPomodoroSession, savePomodoroSession } from "@/lib/pomodoroSession"
 import { playChime } from "@/lib/sound"
