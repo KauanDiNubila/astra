@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { ArrowUpRight, Map as MapIcon, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { api } from "@/lib/api"
-import { fetchJson, invalidateRoadmaps, queryKeys } from "@/lib/queryClient"
+import { invalidateRoadmaps, roadmapsQuery } from "@/lib/queryClient"
 import { formatStructure } from "@/lib/roadmapProgress"
 import { cn, gridItem, gridStagger } from "@/lib/utils"
 import type { Roadmap } from "@/lib/types"
@@ -150,10 +150,10 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function RoadmapsPage() {
   const [modalOpen, setModalOpen] = useState(false)
-  const roadmapsQuery = useQuery({ queryKey: queryKeys.roadmaps, queryFn: fetchJson<Roadmap[]>("/roadmaps") })
-  const roadmaps = roadmapsQuery.data ?? []
+  const roadmapsResult = useQuery(roadmapsQuery)
+  const roadmaps = roadmapsResult.data ?? []
 
-  if (roadmapsQuery.isPending) {
+  if (roadmapsResult.isPending) {
     return <CardGridSkeleton />
   }
 

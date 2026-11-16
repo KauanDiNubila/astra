@@ -2,7 +2,16 @@ import { infiniteQueryOptions, QueryClient, queryOptions } from "@tanstack/react
 import type { QueryFunctionContext } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { retryDelay, shouldRetry } from "@/lib/queryRetry"
-import type { Dashboard, Session } from "@/lib/types"
+import type {
+  CategoryMinutes,
+  DailyMinutes,
+  Dashboard,
+  GitHubActivityResponse,
+  GitHubInsightsResponse,
+  RankingEntry,
+  Roadmap,
+  Session,
+} from "@/lib/types"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +51,38 @@ export const dashboardQuery = queryOptions({
   queryFn: fetchJson<Dashboard>("/dashboard"),
 })
 
+export const heatmapQuery = queryOptions({
+  queryKey: queryKeys.heatmap,
+  queryFn: fetchJson<DailyMinutes[]>("/heatmap"),
+})
+
+export const byCategoryQuery = (days: number) =>
+  queryOptions({
+    queryKey: queryKeys.byCategory(days),
+    queryFn: fetchJson<CategoryMinutes[]>("/dashboard/by-category", { days }),
+  })
+
+export const roadmapsQuery = queryOptions({
+  queryKey: queryKeys.roadmaps,
+  queryFn: fetchJson<Roadmap[]>("/roadmaps"),
+})
+
+export const rankingQuery = (period: string, scope: string) =>
+  queryOptions({
+    queryKey: queryKeys.ranking(period, scope),
+    queryFn: fetchJson<RankingEntry[]>("/ranking", { period, scope }),
+  })
+
+export const githubActivityQuery = queryOptions({
+  queryKey: queryKeys.githubActivity,
+  queryFn: fetchJson<GitHubActivityResponse>("/github/activity"),
+})
+
+export const githubInsightsQuery = queryOptions({
+  queryKey: queryKeys.githubInsights,
+  queryFn: fetchJson<GitHubInsightsResponse>("/github/insights"),
+})
+
 const SESSIONS_PAGE_SIZE = 30
 
 export const sessionsQuery = infiniteQueryOptions({
@@ -51,13 +92,6 @@ export const sessionsQuery = infiniteQueryOptions({
   initialPageParam: 0,
   getNextPageParam: (lastPage, allPages) => (lastPage.length === SESSIONS_PAGE_SIZE ? allPages.length : undefined),
 })
-
-const FOCUS_PREFETCH_STALE_MS = 30_000
-
-export function warmFocusData() {
-  void queryClient.prefetchQuery(dashboardQuery)
-  void queryClient.prefetchInfiniteQuery({ ...sessionsQuery, pages: 1, staleTime: FOCUS_PREFETCH_STALE_MS })
-}
 
 function invalidate(...keys: readonly (readonly unknown[])[]) {
   return Promise.all(

@@ -4,6 +4,7 @@ import { motion } from "motion/react"
 import { Sparkle } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useChat } from "@/context/ChatContext"
+import { useIdleWarmup } from "@/hooks/useRouteWarmup"
 import { useUnreadTabIndicator } from "@/hooks/useUnreadTabIndicator"
 import { pageTitleFor } from "@/lib/pageTitles"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { totalUnread, totalGroupUnread } = useChat()
   useUnreadTabIndicator(totalUnread + totalGroupUnread, pageTitleFor(pathname))
+  useIdleWarmup()
   // Chat se beneficia de ocupar a largura toda, igual apps de mensagem
   // dedicados — as outras páginas (texto/formulário) ficam melhor contidas.
   const isChatRoute = pathname.startsWith("/chat")

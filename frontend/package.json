@@ -17,6 +17,7 @@
     "test:call": "node perf/call-smoke.mjs",
     "test:retry": "node perf/query-retry.mjs && node perf/network-retry.mjs",
     "test:prefetch": "node perf/prefetch-sessions.mjs",
+    "test:warmup": "node perf/route-warmup.mjs",
     "test:ghseries": "node perf/github-series.mjs"
   },
   "dependencies": {

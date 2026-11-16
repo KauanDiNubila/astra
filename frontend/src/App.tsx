@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react"
+import { pageLoaders } from "@/lib/routeWarmup"
 import { Outlet, Route, Routes } from "react-router-dom"
 import { AppLoading } from "@/components/AppLoading"
 import { DesktopTitleBar } from "@/components/DesktopTitleBar"
@@ -15,24 +16,22 @@ const ProtectedLayout = lazy(() =>
 )
 const LandingPage = lazy(() => import("@/pages/LandingPage").then((m) => ({ default: m.LandingPage })))
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })))
-const ChatPage = lazy(() => import("@/pages/ChatPage").then((m) => ({ default: m.ChatPage })))
+const ChatPage = lazy(pageLoaders.chat)
 const CourseDetailPage = lazy(() =>
   import("@/pages/CourseDetailPage").then((m) => ({ default: m.CourseDetailPage })),
 )
-const CoursesPage = lazy(() => import("@/pages/CoursesPage").then((m) => ({ default: m.CoursesPage })))
-const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })))
-const FriendsPage = lazy(() => import("@/pages/FriendsPage").then((m) => ({ default: m.FriendsPage })))
-const GitHubInsightsPage = lazy(() =>
-  import("@/pages/GitHubInsightsPage").then((m) => ({ default: m.GitHubInsightsPage })),
-)
-const RankingPage = lazy(() => import("@/pages/RankingPage").then((m) => ({ default: m.RankingPage })))
+const CoursesPage = lazy(pageLoaders.courses)
+const DashboardPage = lazy(pageLoaders.dashboard)
+const FriendsPage = lazy(pageLoaders.friends)
+const GitHubInsightsPage = lazy(pageLoaders.github)
+const RankingPage = lazy(pageLoaders.ranking)
 const RoadmapDetailPage = lazy(() =>
   import("@/pages/RoadmapDetailPage").then((m) => ({ default: m.RoadmapDetailPage })),
 )
-const RoadmapsPage = lazy(() => import("@/pages/RoadmapsPage").then((m) => ({ default: m.RoadmapsPage })))
+const RoadmapsPage = lazy(pageLoaders.roadmaps)
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage").then((m) => ({ default: m.PrivacyPage })))
 const TermsPage = lazy(() => import("@/pages/TermsPage").then((m) => ({ default: m.TermsPage })))
-const SessionsPage = lazy(() => import("@/pages/SessionsPage").then((m) => ({ default: m.SessionsPage })))
+const SessionsPage = lazy(pageLoaders.sessions)
 
 function App() {
   return (
