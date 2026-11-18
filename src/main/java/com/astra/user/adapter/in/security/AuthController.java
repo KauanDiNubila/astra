@@ -9,6 +9,8 @@ import com.astra.user.application.port.in.IssueRefreshTokenUseCase;
 import com.astra.user.application.port.in.LogInUseCase;
 import com.astra.user.application.port.in.RedeemDesktopLoginCodeUseCase;
 import com.astra.user.application.port.in.RegisterUserUseCase;
+import com.astra.user.application.port.in.RequestPasswordResetUseCase;
+import com.astra.user.application.port.in.ResetPasswordUseCase;
 import com.astra.user.application.port.in.RevokeRefreshTokenUseCase;
 import com.astra.user.application.port.in.RotateRefreshTokenUseCase;
 import com.astra.user.application.port.in.UserResponse;
@@ -43,6 +45,8 @@ class AuthController {
     private final RotateRefreshTokenUseCase rotateRefreshTokenUseCase;
     private final RevokeRefreshTokenUseCase revokeRefreshTokenUseCase;
     private final RedeemDesktopLoginCodeUseCase redeemDesktopLoginCodeUseCase;
+    private final RequestPasswordResetUseCase requestPasswordResetUseCase;
+    private final ResetPasswordUseCase resetPasswordUseCase;
     private final JwtService jwtService;
     private final RefreshTokenCookie refreshTokenCookie;
 
@@ -50,8 +54,9 @@ class AuthController {
                    GetAuthInfoQuery getAuthInfoQuery, IssueRefreshTokenUseCase issueRefreshTokenUseCase,
                    RotateRefreshTokenUseCase rotateRefreshTokenUseCase,
                    RevokeRefreshTokenUseCase revokeRefreshTokenUseCase,
-                   RedeemDesktopLoginCodeUseCase redeemDesktopLoginCodeUseCase, JwtService jwtService,
-                   RefreshTokenCookie refreshTokenCookie) {
+                   RedeemDesktopLoginCodeUseCase redeemDesktopLoginCodeUseCase,
+                   RequestPasswordResetUseCase requestPasswordResetUseCase, ResetPasswordUseCase resetPasswordUseCase,
+                   JwtService jwtService, RefreshTokenCookie refreshTokenCookie) {
         this.registerUserUseCase = registerUserUseCase;
         this.logInUseCase = logInUseCase;
         this.getUserQuery = getUserQuery;
@@ -60,6 +65,8 @@ class AuthController {
         this.rotateRefreshTokenUseCase = rotateRefreshTokenUseCase;
         this.revokeRefreshTokenUseCase = revokeRefreshTokenUseCase;
         this.redeemDesktopLoginCodeUseCase = redeemDesktopLoginCodeUseCase;
+        this.requestPasswordResetUseCase = requestPasswordResetUseCase;
+        this.resetPasswordUseCase = resetPasswordUseCase;
         this.jwtService = jwtService;
         this.refreshTokenCookie = refreshTokenCookie;
     }
@@ -94,6 +101,18 @@ class AuthController {
             revokeRefreshTokenUseCase.revoke(refreshToken);
         }
         refreshTokenCookie.clear(response);
+    }
+
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        requestPasswordResetUseCase.request(request.email());
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        resetPasswordUseCase.reset(request.toCommand());
     }
 
     @GetMapping("/desktop/login")

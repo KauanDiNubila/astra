@@ -19,18 +19,18 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final LoginRateLimitFilter loginRateLimitFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final GoogleOidcUserService googleOidcUserService;
     private final GitHubOAuth2UserService gitHubOAuth2UserService;
     private final OAuthAuthenticationSuccessHandler oAuthAuthenticationSuccessHandler;
     private final OAuthAuthenticationFailureHandler oAuthAuthenticationFailureHandler;
 
-    SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, LoginRateLimitFilter loginRateLimitFilter,
+    SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, AuthRateLimitFilter authRateLimitFilter,
             GoogleOidcUserService googleOidcUserService, GitHubOAuth2UserService gitHubOAuth2UserService,
             OAuthAuthenticationSuccessHandler oAuthAuthenticationSuccessHandler,
             OAuthAuthenticationFailureHandler oAuthAuthenticationFailureHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.loginRateLimitFilter = loginRateLimitFilter;
+        this.authRateLimitFilter = authRateLimitFilter;
         this.googleOidcUserService = googleOidcUserService;
         this.gitHubOAuth2UserService = gitHubOAuth2UserService;
         this.oAuthAuthenticationSuccessHandler = oAuthAuthenticationSuccessHandler;
@@ -60,7 +60,7 @@ class SecurityConfig {
                                 .userService(gitHubOAuth2UserService))
                         .successHandler(oAuthAuthenticationSuccessHandler)
                         .failureHandler(oAuthAuthenticationFailureHandler))
-                .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

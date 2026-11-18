@@ -1,18 +1,11 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
-import { motion } from "motion/react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { getErrorMessage } from "@/lib/api"
 import { OAuthButtons } from "@/components/OAuthButtons"
+import { AuthCard } from "@/components/AuthCard"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -43,65 +36,58 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-app items-center justify-center bg-background p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-sm"
-      >
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl">Entrar no Astra</CardTitle>
-            <CardDescription>Acesse sua conta para registrar seu tempo.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="text"
-                  inputMode="email"
-                  autoComplete="email"
-                  pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                  title="Digite um e-mail válido"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Não tem conta?{" "}
-                <Link to="/register" className="underline underline-offset-4">
-                  Cadastre-se
-                </Link>
-              </p>
-            </form>
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">ou</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <OAuthButtons />
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+    <AuthCard title="Entrar no Astra" description="Acesse sua conta para registrar seu tempo.">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
+            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+            title="Digite um e-mail válido"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Senha</Label>
+            <Link
+              to="/forgot-password"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Esqueceu a senha?
+            </Link>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          Não tem conta?{" "}
+          <Link to="/register" className="underline underline-offset-4">
+            Cadastre-se
+          </Link>
+        </p>
+      </form>
+      <div className="my-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">ou</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <OAuthButtons />
+    </AuthCard>
   )
 }
