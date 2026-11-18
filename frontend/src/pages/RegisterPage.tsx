@@ -1,19 +1,12 @@
 import { useState } from "react"
 import type { FormEvent } from "react"
-import { motion } from "motion/react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { getErrorMessage } from "@/lib/api"
 import { OAuthButtons } from "@/components/OAuthButtons"
 import { LegalLink } from "@/context/LegalContext"
+import { AuthCard } from "@/components/AuthCard"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -42,97 +35,82 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-app items-center justify-center bg-background p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-sm"
-      >
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl">Criar conta</CardTitle>
-            <CardDescription>Comece a acompanhar seu tempo de estudo.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  pattern="[^#]*"
-                  title="Nome não pode conter '#'"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="text"
-                  inputMode="email"
-                  autoComplete="email"
-                  pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                  title="Digite um e-mail válido"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Senha (min. 8 caracteres)</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  required
-                  className="mt-0.5 size-4 shrink-0 accent-primary"
-                />
-                <span>
-                  Li e aceito os{" "}
-                  <LegalLink doc="terms" className="text-foreground underline underline-offset-4">
-                    Termos de Uso
-                  </LegalLink>{" "}
-                  e a{" "}
-                  <LegalLink doc="privacy" className="text-foreground underline underline-offset-4">
-                    Política de Privacidade
-                  </LegalLink>
-                  .
-                </span>
-              </label>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" disabled={loading}>
-                {loading ? "Criando..." : "Criar conta"}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Já tem conta?{" "}
-                <Link to="/login" className="underline underline-offset-4">
-                  Entrar
-                </Link>
-              </p>
-            </form>
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">ou</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <OAuthButtons />
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+    <AuthCard title="Criar conta" description="Comece a acompanhar seu tempo de estudo.">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="name">Nome</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            pattern="[^#]*"
+            title="Nome não pode conter '#'"
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
+            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+            title="Digite um e-mail válido"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="password">Senha (min. 8 caracteres)</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            required
+            className="mt-0.5 size-4 shrink-0 accent-primary"
+          />
+          <span>
+            Li e aceito os{" "}
+            <LegalLink doc="terms" className="text-foreground underline underline-offset-4">
+              Termos de Uso
+            </LegalLink>{" "}
+            e a{" "}
+            <LegalLink doc="privacy" className="text-foreground underline underline-offset-4">
+              Política de Privacidade
+            </LegalLink>
+            .
+          </span>
+        </label>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Criando..." : "Criar conta"}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          Já tem conta?{" "}
+          <Link to="/login" className="underline underline-offset-4">
+            Entrar
+          </Link>
+        </p>
+      </form>
+      <div className="my-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">ou</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <OAuthButtons />
+    </AuthCard>
   )
 }
