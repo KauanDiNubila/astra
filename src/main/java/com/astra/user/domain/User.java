@@ -89,6 +89,10 @@ public class User {
         this.passwordHash = Objects.requireNonNull(passwordHash);
     }
 
+    public void resetPasswordHash(String passwordHash) {
+        this.passwordHash = Objects.requireNonNull(passwordHash);
+    }
+
     public void checkCanDeleteOwnAccount() {
         if (role == Role.OWNER) {
             throw new ConflictException("A conta owner não pode ser excluída por aqui");

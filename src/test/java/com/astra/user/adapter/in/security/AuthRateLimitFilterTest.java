@@ -12,7 +12,7 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-class LoginRateLimitFilterTest {
+class AuthRateLimitFilterTest {
 
     private static final class MovingClock extends Clock {
         private Instant now = Instant.parse("2026-11-09T12:00:00Z");
@@ -38,10 +38,14 @@ class LoginRateLimitFilterTest {
     }
 
     private final MovingClock clock = new MovingClock();
-    private final LoginRateLimitFilter filter = new LoginRateLimitFilter(clock);
+    private final AuthRateLimitFilter filter = new AuthRateLimitFilter(clock);
 
     private int login(String ip) throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/auth/login");
+        return post("/auth/login", ip);
+    }
+
+    private int post(String uri, String ip) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", uri);
         request.setRemoteAddr(ip);
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.doFilter(request, response, new MockFilterChain());
@@ -58,6 +62,24 @@ class LoginRateLimitFilterTest {
 
         clock.advance(Duration.ofSeconds(61));
         assertThat(login("10.0.0.1")).isEqualTo(200);
+    }
+
+    @Test
+    void percentEncodedLoginPathCountsAsLogin() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            assertThat(post("/auth/%6Cogin", "10.0.0.3")).isEqualTo(200);
+        }
+        assertThat(login("10.0.0.3")).isEqualTo(429);
+    }
+
+    @Test
+    void passwordResetEndpointsHaveTheirOwnLimit() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            assertThat(post("/auth/forgot-password", "10.0.0.4")).isEqualTo(200);
+        }
+        assertThat(post("/auth/forgot-password", "10.0.0.4")).isEqualTo(429);
+        assertThat(login("10.0.0.4")).isEqualTo(200);
+        assertThat(post("/auth/reset-password", "10.0.0.4")).isEqualTo(200);
     }
 
     @Test

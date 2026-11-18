@@ -7,26 +7,37 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
-class LoginRateLimitFilter extends OncePerRequestFilter {
+class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_ATTEMPTS = 5;
     private static final long WINDOW_SECONDS = 60;
     private static final int CLEANUP_THRESHOLD = 10_000;
+    private static final Map<String, RequestMatcher> LIMITED_ENDPOINTS = Stream.of("/auth/login",
+                    "/auth/forgot-password", "/auth/reset-password")
+            .collect(Collectors.toMap(path -> path,
+                    path -> PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, path)));
 
     private final ConcurrentHashMap<String, Window> attemptsByIp = new ConcurrentHashMap<>();
     private final Clock clock;
 
-    LoginRateLimitFilter() {
+    AuthRateLimitFilter() {
         this(Clock.systemUTC());
     }
 
-    LoginRateLimitFilter(Clock clock) {
+    AuthRateLimitFilter(Clock clock) {
         this.clock = clock;
     }
 
@@ -37,20 +48,29 @@ class LoginRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        if ("POST".equalsIgnoreCase(request.getMethod()) && "/auth/login".equals(request.getRequestURI())) {
+        Optional<String> limitedPath = limitedPath(request);
+        if (limitedPath.isPresent()) {
             if (attemptsByIp.size() > CLEANUP_THRESHOLD) {
                 Instant now = clock.instant();
                 attemptsByIp.values().removeIf(w -> w.isExpired(now));
             }
-            Window window = attemptsByIp.computeIfAbsent(request.getRemoteAddr(), key -> new Window(clock.instant()));
+            Window window = attemptsByIp.computeIfAbsent(limitedPath.get() + "|" + request.getRemoteAddr(),
+                    key -> new Window(clock.instant()));
             if (window.tooManyAttempts(clock.instant())) {
                 response.setStatus(429);
                 response.setContentType("application/json");
-                response.getWriter().write("{\"message\":\"Muitas tentativas de login. Tente novamente em instantes.\"}");
+                response.getWriter().write("{\"message\":\"Muitas tentativas. Tente novamente em instantes.\"}");
                 return;
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private static Optional<String> limitedPath(HttpServletRequest request) {
+        return LIMITED_ENDPOINTS.entrySet().stream()
+                .filter(endpoint -> endpoint.getValue().matches(request))
+                .map(Map.Entry::getKey)
+                .findFirst();
     }
 
     private static final class Window {
