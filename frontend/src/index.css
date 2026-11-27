@@ -6,6 +6,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --animate-loading-appear: astra-loading-appear 150ms ease-out 300ms forwards;
+    --animate-loading-slide: astra-loading-slide 1.1s ease-in-out infinite;
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -166,6 +168,15 @@ html.has-titlebar body {
 @keyframes astra-focus-breathe {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 0.8; transform: scale(1.04); }
+}
+
+@keyframes astra-loading-appear {
+  to { opacity: 1; }
+}
+
+@keyframes astra-loading-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
 }
 
 @keyframes astra-shimmer {

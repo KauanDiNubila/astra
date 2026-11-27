@@ -94,6 +94,20 @@ function errorCode(error: unknown) {
   return "erro inesperado"
 }
 
+function LoadingLine() {
+  return (
+    <div
+      role="progressbar"
+      aria-label="Carregando ranking"
+      className="absolute inset-x-0 top-0 z-10 h-0.5 animate-loading-appear overflow-hidden opacity-0"
+    >
+      <div className="h-full animate-loading-slide motion-reduce:animate-none">
+        <span className="block h-full w-[35%] bg-foreground motion-reduce:w-full motion-reduce:opacity-50" />
+      </div>
+    </div>
+  )
+}
+
 export function RankingPage() {
   const { user } = useAuth()
   const [period, setPeriod] = useState<Period>("DAILY")
@@ -108,6 +122,11 @@ export function RankingPage() {
   const entries = query.data ?? []
   const failed = query.isError && query.data === undefined
   const switching = query.isPlaceholderData
+  const emptyMessage = switching
+    ? "Carregando ranking…"
+    : scope === "FRIENDS"
+      ? "Ninguém do seu grupo de amigos registrou tempo neste período ainda."
+      : "Ninguém registrou tempo neste período."
 
   if (query.isPending) {
     return <PageSkeleton rows={5} />
@@ -150,12 +169,13 @@ export function RankingPage() {
 
       <div
         aria-busy={switching}
-        className={cn("overflow-hidden rounded-2xl border transition-opacity duration-200", switching && "opacity-50")}
+        className="relative overflow-hidden rounded-2xl border"
       >
+        {switching && <LoadingLine />}
           <motion.div
             key={renderKey}
             initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: switching ? 0.5 : 1, y: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
             {failed ? (
@@ -177,9 +197,7 @@ export function RankingPage() {
               </div>
             ) : entries.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">
-                {scope === "FRIENDS"
-                  ? "Ninguém do seu grupo de amigos registrou tempo neste período ainda."
-                  : "Ninguém registrou tempo neste período."}
+                {emptyMessage}
               </p>
             ) : (
               <ul className="divide-y">
