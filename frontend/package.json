@@ -18,6 +18,7 @@
     "test:retry": "node perf/query-retry.mjs && node perf/network-retry.mjs",
     "test:prefetch": "node perf/prefetch-sessions.mjs",
     "test:warmup": "node perf/route-warmup.mjs",
+    "test:rankingload": "node perf/ranking-loading.mjs",
     "test:ghseries": "node perf/github-series.mjs"
   },
   "dependencies": {
